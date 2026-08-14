@@ -28,3 +28,21 @@ forbidden-materials:
 
 # Worlds where assembly is disabled (world UUIDs).
 disabled-worlds:
+
+# Buoyancy master switch.
+buoyancy-enabled: true
+
+# Server ticks between physics integrations.
+physics-ticks: 1
+
+# Maximum vertical bob amplitude around equilibrium (blocks).
+bob-amplitude: 0.5
+
+# Maximum vertical rise from the build site (blocks).
+max-rise: 16.0
+
+# Physics constants.
+gravity: 0.05
+water-density: 1.0
+block-density: 0.5
+damping: 0.9

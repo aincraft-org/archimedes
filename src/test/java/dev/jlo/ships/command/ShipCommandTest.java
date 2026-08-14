@@ -203,7 +203,8 @@ class ShipCommandTest {
   }
 
   private static ShipConfig config() {
-    return new ShipConfig(64, 5, java.util.Set.of(), java.util.Set.of());
+    return new ShipConfig(
+        64, 5, java.util.Set.of(), java.util.Set.of(), true, 1, 0.5, 16.0, 0.05, 1.0, 0.5, 0.9);
   }
 
   @Test
