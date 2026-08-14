@@ -93,7 +93,7 @@ Runtime verification uses `./gradlew runServer`: build a small connected hull, a
 
 ## Explicitly Deferred
 
-- Ship movement, steering, acceleration, rotation, and buoyancy
+- Horizontal ship movement, steering, acceleration, and rotation (buoyancy itself is implemented per `2026-08-14-buoyancy-design.md`)
 - Engines, turbines, fuel, power networks, or propulsion
 - Seats, passengers, weapons, damage, docking, or ship-to-ship merging
 - Freeform display transforms and decorative non-grid parts

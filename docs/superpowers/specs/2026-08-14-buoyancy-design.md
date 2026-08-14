@@ -1,5 +1,7 @@
 # Buoyancy Design
 
+> **Status: implemented** (2026-08-14). See `2026-08-14-buoyancy.md` (implementation plan) and the `feat:`/`fix:` commits after $dd7ad46$.
+
 ## Goal
 
 Give assembled ships a rigid-body vertical buoyancy: a ship floats on water, rises/sinks to its equilibrium waterline, and bobs vertically with a damped oscillation driven by real buoyancy mechanics (buoyancy force vs. weight). No horizontal movement, steering, or rotation — there are no horizontal movement vectors yet.
