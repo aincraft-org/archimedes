@@ -6,9 +6,18 @@ import java.util.Collection;
 
 /** Transactional composition of renderer and collision runtime. */
 public final class ShipRuntimeImpl implements ShipRuntime {
+  /** Renderer adapter used by the runtime. */
   private final ShipRendererLike renderer;
+
+  /** Collision adapter used by the runtime. */
   private final CollisionVolumeManager collisions;
 
+  /**
+   * Creates a transactional runtime from renderer and collision adapters.
+   *
+   * @param renderer renderer adapter
+   * @param collisions collision adapter
+   */
   public ShipRuntimeImpl(ShipRendererLike renderer, CollisionVolumeManager collisions) {
     this.renderer = renderer;
     this.collisions = collisions;
@@ -19,15 +28,15 @@ public final class ShipRuntimeImpl implements ShipRuntime {
     collisions.spawn(ship);
     try {
       renderer.render(ship, ignored -> {});
-    } catch (RuntimeException failure) {
+    } catch (ShipRuntimeException failure) {
       try {
         renderer.removeRuntime(ship);
-      } catch (RuntimeException cleanup) {
+      } catch (ShipRuntimeException cleanup) {
         failure.addSuppressed(cleanup);
       }
       try {
         collisions.remove(ship.id());
-      } catch (RuntimeException cleanup) {
+      } catch (ShipRuntimeException cleanup) {
         failure.addSuppressed(cleanup);
       }
       throw failure;
@@ -39,16 +48,16 @@ public final class ShipRuntimeImpl implements ShipRuntime {
     try {
       renderer.reposition(ship, oldY, newY);
       collisions.move(ship);
-    } catch (RuntimeException failure) {
+    } catch (ShipRuntimeException failure) {
       try {
         collisions.rollback(ship, oldY);
-      } catch (RuntimeException cleanup) {
+      } catch (ShipRuntimeException cleanup) {
         failure.addSuppressed(cleanup);
       }
       ship.setPose(new dev.jlo.ships.model.ShipPose(oldY));
       try {
         renderer.reposition(ship, newY, oldY);
-      } catch (RuntimeException cleanup) {
+      } catch (ShipRuntimeException cleanup) {
         failure.addSuppressed(cleanup);
       }
       throw failure;

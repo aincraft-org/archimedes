@@ -12,6 +12,7 @@ public final class BuoyancyImpl implements Buoyancy {
   /** Runtime for atomic pose, display, and collision movement. */
   private final ShipRuntime runtime;
 
+  /** Surface used to evaluate water and clearance. */
   private final BuoyancySurface surface;
 
   /** Force integrator. */
@@ -116,7 +117,7 @@ public final class BuoyancyImpl implements Buoyancy {
       ship.setPose(new ShipPose(newY));
       runtime.move(ship, oldY, newY);
       return true;
-    } catch (RuntimeException failure) {
+    } catch (dev.jlo.ships.ship.ShipRuntimeException failure) {
       ship.setPose(new ShipPose(oldY));
       return false;
     }

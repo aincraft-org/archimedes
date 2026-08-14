@@ -163,7 +163,7 @@ class ShipServiceImplTest {
           @Override
           public void spawn(Ship ship) {
             if (ship.id().equals(second.id())) {
-              throw new IllegalStateException("spawn failed");
+              throw new ShipRuntimeException(new IllegalStateException("spawn failed"));
             }
           }
 
@@ -357,7 +357,7 @@ class ShipServiceImplTest {
         new ShipRendererLike() {
           @Override
           public void render(Ship s, ShipHolder holder) {
-            throw new IllegalStateException("no display slots");
+            throw new ShipRuntimeException(new IllegalStateException("no display slots"));
           }
 
           @Override
@@ -408,7 +408,7 @@ class ShipServiceImplTest {
           @Override
           public void render(Ship s, ShipHolder holder) {
             holder.accept(s);
-            throw new IllegalStateException("second phase failed");
+            throw new ShipRuntimeException(new IllegalStateException("second phase failed"));
           }
 
           @Override

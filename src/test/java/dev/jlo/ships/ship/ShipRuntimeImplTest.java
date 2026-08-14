@@ -65,7 +65,7 @@ class ShipRuntimeImplTest {
     @Override
     public void render(Ship ship, ShipHolder holder) {
       if (renderFailure) {
-        throw new IllegalStateException("render");
+        throw new ShipRuntimeException(new IllegalStateException("render"));
       }
       rendered++;
       holder.accept(ship);
@@ -91,14 +91,14 @@ class ShipRuntimeImplTest {
     @Override
     public void spawn(Ship ship) {
       if (spawnFailure) {
-        throw new IllegalStateException("collision");
+        throw new ShipRuntimeException(new IllegalStateException("collision"));
       }
     }
 
     @Override
     public void move(Ship ship) {
       if (moveFailure) {
-        throw new IllegalStateException("move");
+        throw new ShipRuntimeException(new IllegalStateException("move"));
       }
     }
 

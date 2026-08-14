@@ -17,12 +17,24 @@ import org.bukkit.persistence.PersistentDataType;
 
 /** Bukkit collision manager using non-persistent Shulkers for exposed ship blocks. */
 public final class BukkitCollisionVolumeManager implements CollisionVolumeManager {
+  /** Bukkit world containing collision entities. */
   private final World world;
+
+  /** Persistent key identifying plugin-owned collision entities. */
   private final NamespacedKey ownerKey;
+
+  /** Persistent key identifying the relative block represented by an entity. */
   private final NamespacedKey blockKey;
+
+  /** Collision volumes indexed by ship and relative block position. */
   private final Map<UUID, Map<BlockPos, CollisionVolume>> volumes = new HashMap<>();
 
-  /** Creates a manager. */
+  /**
+   * Creates a manager for the supplied Bukkit world and owner key.
+   *
+   * @param world Bukkit world containing collision entities
+   * @param ownerKey persistent key identifying plugin-owned entities
+   */
   public BukkitCollisionVolumeManager(World world, NamespacedKey ownerKey) {
     this.world = world;
     this.ownerKey = ownerKey;
@@ -60,7 +72,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
         spawned.put(relative, new BukkitShulkerCollisionVolume(ship.id(), shulker));
       }
       volumes.put(ship.id(), spawned);
-    } catch (RuntimeException failure) {
+    } catch (dev.jlo.ships.ship.ShipRuntimeException failure) {
       for (CollisionVolume volume : spawned.values()) {
         volume.remove();
       }
@@ -85,16 +97,17 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
         BlockPos cell = ShipTransform.cell(ship, entry.getKey());
         volume.move(cell.x(), cell.y(), cell.z());
       }
-    } catch (RuntimeException failure) {
+    } catch (dev.jlo.ships.ship.ShipRuntimeException failure) {
+      dev.jlo.ships.ship.ShipRuntimeException wrapped = failure;
       for (Map.Entry<CollisionVolume, BlockPos> entry : previous.entrySet()) {
         BlockPos cell = entry.getValue();
         try {
           entry.getKey().move(cell.x(), cell.y(), cell.z());
-        } catch (RuntimeException cleanup) {
-          failure.addSuppressed(cleanup);
+        } catch (dev.jlo.ships.ship.ShipRuntimeException cleanup) {
+          wrapped.addSuppressed(cleanup);
         }
       }
-      throw failure;
+      throw wrapped;
     }
   }
 
@@ -124,9 +137,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
   @Override
   public void removeAll() {
     for (Shulker shulker : world.getEntitiesByClass(Shulker.class)) {
-      if (shulker
-          .getPersistentDataContainer()
-          .has(ownerKey, PersistentDataType.STRING)) {
+      if (shulker.getPersistentDataContainer().has(ownerKey, PersistentDataType.STRING)) {
         shulker.remove();
       }
     }
@@ -134,6 +145,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
       remove(shipId);
     }
   }
+
   /** Removes every plugin-owned collision entity, including stale entities. */
   public void removeAllTagged() {
     removeAll();
@@ -143,10 +155,20 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     return position.x() + "," + position.y() + "," + position.z();
   }
 
+  /** Collision volume backed by a Bukkit Shulker entity. */
   private static final class BukkitShulkerCollisionVolume implements CollisionVolume {
+    /** Owning ship identifier. */
     private final UUID shipId;
+
+    /** Backing Bukkit entity. */
     private final Shulker entity;
 
+    /**
+     * Creates a collision volume for an entity.
+     *
+     * @param shipId owning ship identifier
+     * @param entity backing Bukkit entity
+     */
     private BukkitShulkerCollisionVolume(UUID shipId, Shulker entity) {
       this.shipId = shipId;
       this.entity = entity;

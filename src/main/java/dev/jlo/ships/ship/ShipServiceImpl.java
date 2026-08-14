@@ -13,20 +13,53 @@ import java.util.UUID;
 
 /** Default ship service for persistence, world mutation, and runtime lifecycle. */
 public final class ShipServiceImpl implements ShipService {
+  /** Persistence backend. */
   private final ShipStoreLike store;
+
+  /** Component scanner. */
   private final ComponentScanner scanner;
+
+  /** Runtime composition. */
   private final ShipRuntime runtime;
+
+  /** World block mutator. */
   private final WorldMutator mutator;
+
+  /** Buoyancy controller. */
   private final dev.jlo.ships.buoyancy.Buoyancy buoyancy;
+
+  /** Whether buoyancy is enabled globally. */
   private final boolean buoyancyEnabled;
+
+  /** World in which this service operates. */
   private final UUID worldId;
+
+  /** Loaded ships keyed by identifier. */
   private final Map<UUID, Ship> ships = new LinkedHashMap<>();
+
+  /** Most recent user-facing failure message. */
   private String lastError;
-  /** Returns the runtime composition for plugin lifecycle cleanup. */
+
+  /**
+   * Returns the runtime composition for plugin lifecycle cleanup.
+   *
+   * @return runtime composition
+   */
   public ShipRuntime runtime() {
     return runtime;
   }
 
+  /**
+   * Creates a ship service.
+   *
+   * @param store persistence backend
+   * @param scanner component scanner
+   * @param runtime runtime composition
+   * @param mutator world block mutator
+   * @param buoyancy buoyancy controller
+   * @param buoyancyEnabled whether buoyancy is enabled globally
+   * @param worldId operating world identifier
+   */
   public ShipServiceImpl(
       ShipStoreLike store,
       ComponentScanner scanner,
@@ -69,7 +102,7 @@ public final class ShipServiceImpl implements ShipService {
       runtime.spawn(ship);
       ships.put(ship.id(), ship);
       persistAll();
-    } catch (RuntimeException failure) {
+    } catch (ShipRuntimeException failure) {
       rollback(ship, failure.getMessage());
       return null;
     }
@@ -145,17 +178,17 @@ public final class ShipServiceImpl implements ShipService {
         spawned.add(ship);
         ships.put(ship.id(), ship);
       }
-    } catch (RuntimeException failure) {
+    } catch (ShipRuntimeException failure) {
       for (Ship ship : spawned) {
         try {
           runtime.remove(ship);
-        } catch (RuntimeException cleanup) {
+        } catch (ShipRuntimeException cleanup) {
           failure.addSuppressed(cleanup);
         }
       }
       try {
         runtime.removeAllTagged();
-      } catch (RuntimeException cleanup) {
+      } catch (ShipRuntimeException cleanup) {
         failure.addSuppressed(cleanup);
       }
       ships.clear();
