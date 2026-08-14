@@ -17,6 +17,12 @@ public final class Ship {
   /** Captured blocks in deterministic order. */
   private final List<ShipBlock> blocks;
 
+  /** Runtime vertical pose. */
+  private ShipPose pose;
+
+  /** Whether buoyancy is active for this ship. */
+  private boolean buoyancyEnabled;
+
   /**
    * Creates a ship.
    *
@@ -26,10 +32,32 @@ public final class Ship {
    * @param blocks the captured blocks
    */
   public Ship(UUID id, UUID ownerId, ShipOrigin origin, List<ShipBlock> blocks) {
+    this(id, ownerId, origin, blocks, new ShipPose(0), true);
+  }
+
+  /**
+   * Creates a ship with an explicit pose and buoyancy flag.
+   *
+   * @param id the ship identifier
+   * @param ownerId the owning player identifier
+   * @param origin the absolute world origin
+   * @param blocks the captured blocks
+   * @param pose the runtime vertical pose
+   * @param buoyancyEnabled whether buoyancy is active
+   */
+  public Ship(
+      UUID id,
+      UUID ownerId,
+      ShipOrigin origin,
+      List<ShipBlock> blocks,
+      ShipPose pose,
+      boolean buoyancyEnabled) {
     this.id = id;
     this.ownerId = ownerId;
     this.origin = origin;
     this.blocks = List.copyOf(blocks);
+    this.pose = pose;
+    this.buoyancyEnabled = buoyancyEnabled;
   }
 
   /**
@@ -65,5 +93,37 @@ public final class Ship {
    */
   public int blockCount() {
     return blocks.size();
+  }
+
+  /**
+   * @return the runtime vertical pose
+   */
+  public ShipPose pose() {
+    return pose;
+  }
+
+  /**
+   * Sets the runtime vertical pose.
+   *
+   * @param pose the new pose
+   */
+  public void setPose(ShipPose pose) {
+    this.pose = pose;
+  }
+
+  /**
+   * @return whether buoyancy is active
+   */
+  public boolean buoyancyEnabled() {
+    return buoyancyEnabled;
+  }
+
+  /**
+   * Sets whether buoyancy is active.
+   *
+   * @param enabled the new flag
+   */
+  public void setBuoyancyEnabled(boolean enabled) {
+    this.buoyancyEnabled = enabled;
   }
 }
