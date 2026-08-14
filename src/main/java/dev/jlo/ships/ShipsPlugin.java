@@ -19,10 +19,13 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
-/** Lifecycle entry point wiring configuration, services, and commands. */
+/** Main plugin entry point. */
 public final class ShipsPlugin extends JavaPlugin {
-  /** The active ship service. */
+  /** Active ship service. */
   private ShipService service;
+
+  /** Debug collision fixture service. */
+  private dev.jlo.ships.collision.CollisionDebugService collisionDebug;
 
   @Override
   public void onEnable() {
@@ -41,7 +44,7 @@ public final class ShipsPlugin extends JavaPlugin {
     StoreAdapter storeAdapter = new StoreAdapter(store);
     org.bukkit.World world = binding.world();
     try {
-      dev.jlo.ships.render.RenderSurface surface = RenderSurface.of(world);
+      RenderSurface surface = RenderSurface.of(world);
       BukkitShipRenderer renderer = new BukkitShipRenderer(surface, shipKey());
       dev.jlo.ships.deck.DeckManager deck =
           new dev.jlo.ships.deck.DeckManager(new dev.jlo.ships.bukkit.BukkitDeckSurface(world));
@@ -73,7 +76,12 @@ public final class ShipsPlugin extends JavaPlugin {
       getServer().getPluginManager().disablePlugin(this);
       return;
     }
-    registerCommand();
+    collisionDebug =
+        new dev.jlo.ships.collision.CollisionDebugServiceImpl(
+            new dev.jlo.ships.bukkit.BukkitCollisionVolumeManager(
+                world, new NamespacedKey(this, "collision-owner")),
+            world);
+    registerCommand(config);
     if (config.buoyancyEnabled()) {
       getServer()
           .getScheduler()
@@ -84,12 +92,15 @@ public final class ShipsPlugin extends JavaPlugin {
 
   @Override
   public void onDisable() {
+    if (collisionDebug != null) {
+      collisionDebug.removeAll();
+    }
     if (service != null) {
       service.removeAllRuntime();
     }
   }
 
-  private void registerCommand() {
+  private void registerCommand(ShipConfig config) {
     PluginCommand command = getCommand("ship");
     if (command == null) {
       getLogger().warning("ship command not registered in plugin.yml");
@@ -98,14 +109,11 @@ public final class ShipsPlugin extends JavaPlugin {
     ShipCommand executor =
         new ShipCommand(
             service,
-            loadConfig(),
-            new dev.jlo.ships.command.BukkitTargetResolver(loadConfig().targetDistance()));
+            config,
+            new dev.jlo.ships.command.BukkitTargetResolver(config.targetDistance()),
+            collisionDebug);
     command.setExecutor(executor);
     command.setTabCompleter(new ShipTabCompleter());
-  }
-
-  private ShipConfig loadConfig() {
-    return ShipConfigLoader.load(getConfig());
   }
 
   private NamespacedKey shipKey() {
@@ -118,9 +126,10 @@ public final class ShipsPlugin extends JavaPlugin {
 
   /** Resolves the primary world used for ship assembly in this version. */
   private static final class WorldBinding {
-    /** The primary world. */
+    /** World used for ship assembly. */
     private final org.bukkit.World world;
 
+    /** Creates a binding to the server's primary world. */
     WorldBinding() {
       this.world = org.bukkit.Bukkit.getWorlds().get(0);
     }
@@ -130,11 +139,16 @@ public final class ShipsPlugin extends JavaPlugin {
     }
   }
 
-  /** Adapts the JSON store to the service contract with runtime wrapping. */
+  /** Adapts the JSON store to the ship service contract. */
   private static final class StoreAdapter implements dev.jlo.ships.ship.ShipStoreLike {
-    /** The underlying JSON store. */
+    /** Persistent store. */
     private final ShipStore store;
 
+    /**
+     * Creates an adapter around the persistent store.
+     *
+     * @param store persistent store
+     */
     StoreAdapter(ShipStore store) {
       this.store = store;
     }

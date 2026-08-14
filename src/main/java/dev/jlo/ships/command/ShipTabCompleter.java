@@ -5,11 +5,11 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 
-/** Tab completion for {@code /ship}: offers the three known subcommands. */
+/** Tab completion for {@code /ship}. */
 public final class ShipTabCompleter implements org.bukkit.command.TabCompleter {
   /** Known ship subcommands. */
   private static final List<String> SUBCOMMANDS =
-      List.of("assemble", "inspect", "disassemble", "buoyancy", "sink");
+      List.of("assemble", "inspect", "disassemble", "buoyancy", "sink", "collision-test");
 
   @Override
   public List<String> onTabComplete(
