@@ -19,6 +19,12 @@ import org.junit.jupiter.api.Test;
 
 /** Behavior tests for the ship assembly service. */
 class ShipServiceImplTest {
+  /** Common capturable material. */
+  private static final String STONE = "minecraft:stone";
+
+  /** Single-block origin key. */
+  private static final String ORIGIN_KEY = "100,200,300";
+
   private static final UUID WORLD = UUID.fromString("00000000-0000-0000-0000-000000000001");
   private static final UUID OWNER = UUID.fromString("00000000-0000-0000-0000-000000000002");
 
@@ -26,6 +32,7 @@ class ShipServiceImplTest {
   private static final class Fakes implements WorldMutator {
     final Map<UUID, Ship> persisted = new HashMap<>();
     final List<Ship> rendered = new ArrayList<>();
+
     final List<Ship> removedRuntime = new ArrayList<>();
     final Map<String, String> blocks = new HashMap<>();
     boolean restoreValid = true;
@@ -34,15 +41,18 @@ class ShipServiceImplTest {
 
     @Override
     public String blockDataAt(int x, int y, int z) {
-      return blocks.getOrDefault(x + "," + y + "," + z, "minecraft:stone");
+      return blocks.getOrDefault(x + "," + y + "," + z, STONE);
     }
 
     @Override
     public boolean clearBlocks(Ship ship) {
       for (var block : ship.blocks()) {
-        blocks.remove((ship.origin().x() + block.pos().x()) + ","
-            + (ship.origin().y() + block.pos().y()) + ","
-            + (ship.origin().z() + block.pos().z()));
+        blocks.remove(
+            (ship.origin().x() + block.pos().x())
+                + ","
+                + (ship.origin().y() + block.pos().y())
+                + ","
+                + (ship.origin().z() + block.pos().z()));
       }
       return true;
     }
@@ -55,9 +65,13 @@ class ShipServiceImplTest {
     @Override
     public boolean restoreBlocks(Ship ship) {
       for (var block : ship.blocks()) {
-        blocks.put((ship.origin().x() + block.pos().x()) + ","
-            + (ship.origin().y() + block.pos().y()) + ","
-            + (ship.origin().z() + block.pos().z()), block.blockData());
+        blocks.put(
+            (ship.origin().x() + block.pos().x())
+                + ","
+                + (ship.origin().y() + block.pos().y())
+                + ","
+                + (ship.origin().z() + block.pos().z()),
+            block.blockData());
       }
       return true;
     }
@@ -76,7 +90,7 @@ class ShipServiceImplTest {
             UUID.randomUUID(),
             OWNER,
             fakes.origin,
-            List.of(new ShipBlock(new BlockPos(0, 0, 0), "minecraft:stone")));
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
     fakes.persisted.put(ship.id(), ship);
     ShipService service =
         new ShipServiceImpl(
@@ -100,7 +114,7 @@ class ShipServiceImplTest {
             UUID.randomUUID(),
             OWNER,
             fakes.origin,
-            List.of(new ShipBlock(new BlockPos(0, 0, 0), "minecraft:stone")));
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
     fakes.persisted.put(ship.id(), ship);
     ShipService service =
         new ShipServiceImpl(
@@ -123,7 +137,7 @@ class ShipServiceImplTest {
             UUID.randomUUID(),
             OWNER,
             fakes.origin,
-            List.of(new ShipBlock(new BlockPos(0, 0, 0), "minecraft:stone")));
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
     fakes.persisted.put(ship.id(), ship);
     ShipService service =
         new ShipServiceImpl(
@@ -148,7 +162,7 @@ class ShipServiceImplTest {
             UUID.randomUUID(),
             OWNER,
             fakes.origin,
-            List.of(new ShipBlock(new BlockPos(0, 0, 0), "minecraft:stone")));
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
     fakes.persisted.put(ship.id(), ship);
     ShipService service =
         new ShipServiceImpl(
@@ -184,7 +198,7 @@ class ShipServiceImplTest {
   @Test
   void assembleRollsBackWhenRenderFails() {
     Fakes fakes = new Fakes();
-    fakes.blocks.put("100,200,300", "minecraft:stone");
+    fakes.blocks.put(ORIGIN_KEY, STONE);
     ShipRendererLike throwing =
         new ShipRendererLike() {
           @Override
@@ -208,13 +222,13 @@ class ShipServiceImplTest {
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNull(result);
     assertEquals(0, fakes.persisted.size());
-    assertEquals("minecraft:stone", fakes.blocks.get("100,200,300"));
+    assertEquals(STONE, fakes.blocks.get(ORIGIN_KEY));
   }
 
   @Test
   void assemblePersistsRollbackWhenHolderAlreadySaved() {
     Fakes fakes = new Fakes();
-    fakes.blocks.put("100,200,300", "minecraft:stone");
+    fakes.blocks.put(ORIGIN_KEY, STONE);
     ShipRendererLike holderThenThrow =
         new ShipRendererLike() {
           @Override
@@ -240,7 +254,7 @@ class ShipServiceImplTest {
     assertNull(result);
     // The store must not retain the half-saved ship after rollback.
     assertEquals(0, fakes.persisted.size());
-    assertEquals("minecraft:stone", fakes.blocks.get("100,200,300"));
+    assertEquals(STONE, fakes.blocks.get(ORIGIN_KEY));
   }
 
   private record MemoryStore(Fakes fakes) implements ShipStoreLike {
@@ -269,28 +283,29 @@ class ShipServiceImplTest {
     }
   }
 }
+
 /** A deck manager that never blocks. */
 final class NoopDeck extends dev.jlo.ships.deck.DeckManager {
   NoopDeck() {
-      super(
-          new dev.jlo.ships.deck.DeckSurface() {
-            @Override
-            public boolean canPlace(int x, int y, int z) {
-              return true;
-            }
+    super(
+        new dev.jlo.ships.deck.DeckSurface() {
+          @Override
+          public boolean canPlace(int x, int y, int z) {
+            return true;
+          }
 
-            @Override
-            public boolean isClear(int x, int y, int z) {
-              return true;
-            }
+          @Override
+          public boolean isClear(int x, int y, int z) {
+            return true;
+          }
 
-            @Override
-            public boolean placeBarrier(int x, int y, int z) {
-              return true;
-            }
+          @Override
+          public boolean placeBarrier(int x, int y, int z) {
+            return true;
+          }
 
-            @Override
-            public void removeBarrier(int x, int y, int z) {}
-          });
-    }
+          @Override
+          public void removeBarrier(int x, int y, int z) {}
+        });
   }
+}

@@ -12,20 +12,34 @@ import org.bukkit.entity.BlockDisplay;
 import org.bukkit.persistence.PersistentDataType;
 
 /**
- * Bukkit-backed renderer adapter: creates a non-persistent block display per
- * block carrying the ship's identifier, and removes every tagged display on
- * disassembly through the surface's world query.
+ * Bukkit-backed renderer adapter: creates a non-persistent block display per block carrying the
+ * ship's identifier, and removes every tagged display on disassembly through the surface's world
+ * query.
  */
 public final class BukkitShipRenderer implements ShipRendererLike {
+  /** The rendering surface. */
   private final RenderSurface surface;
+
+  /** Tag key carrying the ship identifier. */
   private final NamespacedKey shipKey;
 
-  /** Creates the renderer for a surface and namespace key. */
+  /**
+   * Creates the renderer for a surface and namespace key.
+   *
+   * @param surface the rendering surface
+   * @param shipKey the ship identifier tag key
+   */
   public BukkitShipRenderer(RenderSurface surface, NamespacedKey shipKey) {
     this.surface = surface;
     this.shipKey = shipKey;
   }
 
+  /**
+   * Renders the ship as tagged non-persistent block displays.
+   *
+   * @param ship the ship to render
+   * @param holder the finalization receiver
+   */
   @Override
   public void render(Ship ship, ShipHolder holder) {
     List<BlockDisplay> displays = new ArrayList<>(ship.blockCount());
@@ -46,6 +60,11 @@ public final class BukkitShipRenderer implements ShipRendererLike {
     holder.accept(ship);
   }
 
+  /**
+   * Removes every tagged display for the ship.
+   *
+   * @param ship the ship to clean up
+   */
   @Override
   public void removeRuntime(Ship ship) {
     surface.removeTagged(shipKey, ship.id().toString());

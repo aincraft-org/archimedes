@@ -9,16 +9,12 @@
     </module>
     <module name="TreeWalker">
         <module name="AvoidStarImport"/>
-        <module name="EmptyLineSeparator"/>
         <module name="ExplicitInitialization"/>
         <module name="FinalClass"/>
         <module name="HiddenField">
-        <property name="ignoreConstructorParameter" value="true"/>
-    </module>
+            <property name="ignoreConstructorParameter" value="true"/>
+        </module>
         <module name="IllegalCatch"/>
-        <module name="JavadocMethod"/>
-        <module name="JavadocType"/>
-        <module name="JavadocVariable"/>
         <module name="MissingSwitchDefault"/>
         <module name="OneStatementPerLine"/>
         <module name="ParameterAssignment"/>

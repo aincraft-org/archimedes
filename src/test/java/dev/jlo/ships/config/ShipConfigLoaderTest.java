@@ -14,7 +14,9 @@ class ShipConfigLoaderTest {
     YamlConfiguration config = new YamlConfiguration();
     config.set(ShipConfigLoader.MAXIMUM_BLOCKS_KEY, 500);
     config.set(ShipConfigLoader.TARGET_DISTANCE_KEY, 8);
-    config.set(ShipConfigLoader.FORBIDDEN_MATERIALS_KEY, java.util.List.of("minecraft:water", "minecraft:lava"));
+    config.set(
+        ShipConfigLoader.FORBIDDEN_MATERIALS_KEY,
+        java.util.List.of("minecraft:water", "minecraft:lava"));
     ShipConfig loaded = ShipConfigLoader.load(config);
     assertEquals(500, loaded.maximumBlocks());
     assertEquals(8, loaded.targetDistance());

@@ -21,6 +21,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 /** Lifecycle entry point wiring configuration, services, and commands. */
 public final class ShipsPlugin extends JavaPlugin {
+  /** The active ship service. */
   private ShipService service;
 
   @Override
@@ -49,7 +50,7 @@ public final class ShipsPlugin extends JavaPlugin {
               new dev.jlo.ships.deck.DeckManager(new dev.jlo.ships.bukkit.BukkitDeckSurface(world)),
               world.getUID());
       service.loadAll();
-    } catch (RuntimeException failure) {
+    } catch (IllegalStateException failure) {
       getLogger().severe("Failed to load ships: " + failure.getMessage());
       getServer().getPluginManager().disablePlugin(this);
       return;
@@ -85,7 +86,9 @@ public final class ShipsPlugin extends JavaPlugin {
     var manager = getServer().getPluginManager();
     manager.addPermission(
         new org.bukkit.permissions.Permission(
-            "ships.command", "Base ship command access", org.bukkit.permissions.PermissionDefault.TRUE));
+            "ships.command",
+            "Base ship command access",
+            org.bukkit.permissions.PermissionDefault.TRUE));
     manager.addPermission(
         new org.bukkit.permissions.Permission(
             "ships.assemble", "Assemble ships", org.bukkit.permissions.PermissionDefault.TRUE));
@@ -94,7 +97,9 @@ public final class ShipsPlugin extends JavaPlugin {
             "ships.inspect", "Inspect ships", org.bukkit.permissions.PermissionDefault.TRUE));
     manager.addPermission(
         new org.bukkit.permissions.Permission(
-            "ships.disassemble", "Disassemble ships", org.bukkit.permissions.PermissionDefault.TRUE));
+            "ships.disassemble",
+            "Disassemble ships",
+            org.bukkit.permissions.PermissionDefault.TRUE));
   }
 
   private NamespacedKey shipKey() {
@@ -107,6 +112,7 @@ public final class ShipsPlugin extends JavaPlugin {
 
   /** Resolves the primary world used for ship assembly in this version. */
   private static final class WorldBinding {
+    /** The primary world. */
     private final org.bukkit.World world;
 
     WorldBinding() {
@@ -120,6 +126,7 @@ public final class ShipsPlugin extends JavaPlugin {
 
   /** Adapts the JSON store to the service contract with runtime wrapping. */
   private static final class StoreAdapter implements dev.jlo.ships.ship.ShipStoreLike {
+    /** The underlying JSON store. */
     private final ShipStore store;
 
     StoreAdapter(ShipStore store) {

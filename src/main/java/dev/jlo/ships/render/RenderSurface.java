@@ -1,45 +1,90 @@
 package dev.jlo.ships.render;
 
 import dev.jlo.ships.model.ShipOrigin;
+import java.util.Collection;
 import java.util.UUID;
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Entity;
-import org.bukkit.NamespacedKey;
+import org.bukkit.persistence.PersistentDataType;
 
 /**
- * World rendering surface the ship renderer needs, separated for unit
- * testing and forward compatibility with different Paper display APIs.
+ * World rendering surface the ship renderer needs, separated for unit testing and forward
+ * compatibility with different Paper display APIs.
  */
 public interface RenderSurface {
-  /** Spawns a block display at a location with initial configuration. */
-  BlockDisplay spawnBlockDisplay(Location location, java.util.function.Consumer<BlockDisplay> config);
+  /**
+   * Spawns a block display at a location with initial configuration.
+   *
+   * @param location the spawn location
+   * @param config the initial configuration consumer
+   * @return the spawned block display
+   */
+  BlockDisplay spawnBlockDisplay(
+      Location location, java.util.function.Consumer<BlockDisplay> config);
 
-  /** Resolves block data from its string form. */
+  /**
+   * Resolves block data from its string form.
+   *
+   * @param serialized the serialized block data
+   * @return the resolved block data
+   */
   BlockData blockData(String serialized);
 
-  /** Teleports an entity to an absolute location. */
+  /**
+   * Teleports an entity to an absolute location.
+   *
+   * @param entity the entity to teleport
+   * @param location the destination location
+   */
   void teleport(Entity entity, Location location);
 
-  /** Identifies the world owning this surface. */
+  /**
+   * @return the world owning this surface
+   */
   UUID worldUuid();
 
-  /** Builds an absolute location for a ship block. */
+  /**
+   * Builds an absolute location for a ship block.
+   *
+   * @param origin the ship origin
+   * @param dx the relative x offset
+   * @param dy the relative y offset
+   * @param dz the relative z offset
+   * @return the absolute location
+   */
   Location location(ShipOrigin origin, int dx, int dy, int dz);
 
-  /** Notifies the surface of a newly rendered ship. */
-  void shipRendered(UUID shipId, java.util.Collection<BlockDisplay> displays);
+  /**
+   * Notifies the surface of a newly rendered ship.
+   *
+   * @param shipId the ship identifier
+   * @param displays the spawned displays
+   */
+  void shipRendered(UUID shipId, Collection<BlockDisplay> displays);
 
-  /** Removes every entity carrying the ship identifier in its tag. */
+  /**
+   * Removes every entity carrying the ship identifier in its tag.
+   *
+   * @param key the tag key
+   * @param shipId the ship identifier
+   */
   void removeTagged(NamespacedKey key, String shipId);
 
-  /** Wraps a Bukkit world. */
+  /**
+   * Wraps a Bukkit world.
+   *
+   * @param world the Bukkit world
+   * @return a render surface over the world
+   */
   static RenderSurface of(World world) {
     return new RenderSurface() {
       @Override
-      public BlockDisplay spawnBlockDisplay(Location location, java.util.function.Consumer<BlockDisplay> config) {
+      public BlockDisplay spawnBlockDisplay(
+          Location location, java.util.function.Consumer<BlockDisplay> config) {
         return world.spawn(location, BlockDisplay.class, config::accept);
       }
 
@@ -49,7 +94,7 @@ public interface RenderSurface {
       }
 
       @Override
-      public void teleport(org.bukkit.entity.Entity entity, Location location) {
+      public void teleport(Entity entity, Location location) {
         entity.teleport(location);
       }
 
@@ -60,22 +105,19 @@ public interface RenderSurface {
 
       @Override
       public Location location(ShipOrigin origin, int dx, int dy, int dz) {
-        return new Location(world, origin.x() + dx + 0.5, origin.y() + dy + 0.5, origin.z() + dz + 0.5);
+        return new Location(
+            world, origin.x() + dx + 0.5, origin.y() + dy + 0.5, origin.z() + dz + 0.5);
       }
 
       @Override
-      public void shipRendered(UUID shipId, java.util.Collection<BlockDisplay> displays) {
+      public void shipRendered(UUID shipId, Collection<BlockDisplay> displays) {
         // Rendered displays are tracked in their tags and removed by tag.
       }
 
       @Override
       public void removeTagged(NamespacedKey key, String shipId) {
-        for (org.bukkit.entity.Entity entity :
-            world.getEntitiesByClass(BlockDisplay.class)) {
-          String tag =
-              entity
-                  .getPersistentDataContainer()
-                  .get(key, org.bukkit.persistence.PersistentDataType.STRING);
+        for (Entity entity : world.getEntitiesByClass(BlockDisplay.class)) {
+          String tag = entity.getPersistentDataContainer().get(key, PersistentDataType.STRING);
           if (shipId.equals(tag)) {
             entity.remove();
           }

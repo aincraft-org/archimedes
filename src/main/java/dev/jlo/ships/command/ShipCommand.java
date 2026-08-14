@@ -3,7 +3,6 @@ package dev.jlo.ships.command;
 import dev.jlo.ships.config.ShipConfig;
 import dev.jlo.ships.model.Ship;
 import dev.jlo.ships.ship.ShipService;
-import java.util.List;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -11,14 +10,22 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Executor for {@code /ship assemble|inspect|disassemble}. Targets the block
- * the player is looking at and delegates state transitions to the service.
+ * Executor for {@code /ship assemble|inspect|disassemble}. Targets the block the player is looking
+ * at and delegates state transitions to the service.
  */
 public final class ShipCommand implements org.bukkit.command.CommandExecutor {
+  /** The ship service. */
   private final ShipService service;
+
+  /** The ship configuration. */
   private final ShipConfig config;
 
-  /** Creates the ship command bound to a service and configuration. */
+  /**
+   * Creates the ship command bound to a service and configuration.
+   *
+   * @param service the ship service
+   * @param config the ship configuration
+   */
   public ShipCommand(ShipService service, ShipConfig config) {
     this.service = service;
     this.config = config;
@@ -72,7 +79,8 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
   private boolean assemble(Player player) {
     var target = player.getTargetBlockExact(config.targetDistance());
     if (target == null || target.getType().isAir()) {
-      player.sendMessage(ChatColor.RED + "No target block within " + config.targetDistance() + " blocks.");
+      player.sendMessage(
+          ChatColor.RED + "No target block within " + config.targetDistance() + " blocks.");
       return true;
     }
     Ship ship =
@@ -87,7 +95,12 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
       return true;
     }
     player.sendMessage(
-        ChatColor.GREEN + "Assembled ship " + ship.id().toString().substring(0, 8) + " with " + ship.blockCount() + " blocks.");
+        ChatColor.GREEN
+            + "Assembled ship "
+            + ship.id().toString().substring(0, 8)
+            + " with "
+            + ship.blockCount()
+            + " blocks.");
     return true;
   }
 

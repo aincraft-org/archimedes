@@ -5,12 +5,26 @@ import java.util.UUID;
 
 /** Immutable assembled ship with its owner, origin, and captured blocks. */
 public final class Ship {
+  /** Ship identifier. */
   private final UUID id;
+
+  /** Owning player identifier. */
   private final UUID ownerId;
+
+  /** Absolute world origin. */
   private final ShipOrigin origin;
+
+  /** Captured blocks in deterministic order. */
   private final List<ShipBlock> blocks;
 
-  /** Creates a ship. */
+  /**
+   * Creates a ship.
+   *
+   * @param id the ship identifier
+   * @param ownerId the owning player identifier
+   * @param origin the absolute world origin
+   * @param blocks the captured blocks
+   */
   public Ship(UUID id, UUID ownerId, ShipOrigin origin, List<ShipBlock> blocks) {
     this.id = id;
     this.ownerId = ownerId;
@@ -18,27 +32,37 @@ public final class Ship {
     this.blocks = List.copyOf(blocks);
   }
 
-  /** Returns the ship identifier. */
+  /**
+   * @return the ship identifier
+   */
   public UUID id() {
     return id;
   }
 
-  /** Returns the owning player identifier. */
+  /**
+   * @return the owning player identifier
+   */
   public UUID ownerId() {
     return ownerId;
   }
 
-  /** Returns the absolute world origin. */
+  /**
+   * @return the absolute world origin
+   */
   public ShipOrigin origin() {
     return origin;
   }
 
-  /** Returns the captured blocks in deterministic order. */
+  /**
+   * @return the captured blocks in deterministic order
+   */
   public List<ShipBlock> blocks() {
     return blocks;
   }
 
-  /** Returns the number of captured blocks. */
+  /**
+   * @return the number of captured blocks
+   */
   public int blockCount() {
     return blocks.size();
   }

@@ -12,7 +12,6 @@ import dev.jlo.ships.model.Ship;
 import dev.jlo.ships.model.ShipBlock;
 import dev.jlo.ships.model.ShipOrigin;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -23,23 +22,35 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Loads and saves {@link Ship} records as {@code ships.json}. Writes go to a
- * temporary sibling file first and are atomically moved into place so an
- * interrupted save cannot corrupt the primary file.
+ * Loads and saves {@link Ship} records as {@code ships.json}. Writes go to a temporary sibling file
+ * first and are atomically moved into place so an interrupted save cannot corrupt the primary file.
  */
 public final class ShipStore {
+  /** Primary persistence file name. */
   private static final String DEFAULT_FILE = "ships.json";
+
+  /** JSON serializer with deterministic formatting. */
   private static final Gson GSON =
       new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
+  /** The primary persistence file. */
   private final Path file;
 
-  /** Creates a store backed by {@code dataDirectory/ships.json}. */
+  /**
+   * Creates a store backed by {@code dataDirectory/ships.json}.
+   *
+   * @param dataDirectory the plugin data directory
+   */
   public ShipStore(Path dataDirectory) {
     this.file = dataDirectory.resolve(DEFAULT_FILE);
   }
 
-  /** Loads all persisted ships keyed by identifier in deterministic order. */
+  /**
+   * Loads all persisted ships keyed by identifier in deterministic order.
+   *
+   * @return the persisted ships keyed by identifier
+   * @throws IOException when the file cannot be read
+   */
   public Map<UUID, Ship> loadAll() throws IOException {
     if (!Files.exists(file)) {
       return Map.of();
@@ -53,17 +64,26 @@ public final class ShipStore {
     return ships;
   }
 
-  /** Saves all ships transactionally. */
+  /**
+   * Saves all ships transactionally.
+   *
+   * @param ships the ships to save
+   * @throws IOException when the file cannot be written
+   */
   public void saveAll(Map<UUID, Ship> ships) throws IOException {
     JsonArray root = new JsonArray();
     for (Ship ship : ships.values()) {
       root.add(toJson(ship));
     }
-    Files.createDirectories(file.getParent());
+    Path parent = file.getParent();
+    if (parent != null) {
+      Files.createDirectories(parent);
+    }
     Path temporary = file.resolveSibling(file.getFileName() + ".tmp");
     Files.writeString(temporary, GSON.toJson(root));
     try {
-      Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+      Files.move(
+          temporary, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
     } catch (java.nio.file.AtomicMoveNotSupportedException e) {
       Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING);
     }

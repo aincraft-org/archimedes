@@ -7,7 +7,6 @@ import dev.jlo.ships.model.BlockPos;
 import dev.jlo.ships.model.Ship;
 import dev.jlo.ships.model.ShipBlock;
 import dev.jlo.ships.model.ShipOrigin;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -49,9 +48,7 @@ class ShipStoreTest {
     assertEquals(300, restored.origin().z());
     assertEquals(2, restored.blocks().size());
     assertTrue(
-        restored
-            .blocks()
-            .stream()
+        restored.blocks().stream()
             .anyMatch(
                 b ->
                     b.blockData().equals("minecraft:oak_planks")
@@ -59,9 +56,7 @@ class ShipStoreTest {
                         && b.pos().y() == 0
                         && b.pos().z() == 0));
     assertTrue(
-        restored
-            .blocks()
-            .stream()
+        restored.blocks().stream()
             .anyMatch(
                 b ->
                     b.blockData().equals("minecraft:stone[waterlogged=true]")

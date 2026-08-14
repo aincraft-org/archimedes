@@ -1,7 +1,6 @@
 package dev.jlo.ships.deck;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.jlo.ships.model.BlockPos;
@@ -65,7 +64,8 @@ class DeckSurfaceTest {
   }
 
   private static Ship shipWith(BlockPos... positions) {
-    ShipOrigin origin = new ShipOrigin(UUID.fromString("00000000-0000-0000-0000-000000000001"), 100, 200, 300);
+    ShipOrigin origin =
+        new ShipOrigin(UUID.fromString("00000000-0000-0000-0000-000000000001"), 100, 200, 300);
     List<ShipBlock> blocks =
         java.util.Arrays.stream(positions)
             .map(pos -> new ShipBlock(pos, "minecraft:stone"))

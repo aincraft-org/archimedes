@@ -6,9 +6,17 @@ import java.util.UUID;
 
 /** Persistence backend the ship service depends on. */
 public interface ShipStoreLike {
-  /** Loads all persisted ships. */
+  /**
+   * Loads all persisted ships.
+   *
+   * @return all persisted ships keyed by identifier
+   */
   Map<UUID, Ship> loadAll();
 
-  /** Saves all ships. */
+  /**
+   * Saves all ships.
+   *
+   * @param ships the ships to save
+   */
   void saveAll(Map<UUID, Ship> ships);
 }

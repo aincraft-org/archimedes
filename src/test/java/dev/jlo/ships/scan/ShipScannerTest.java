@@ -11,6 +11,9 @@ import org.junit.jupiter.api.Test;
 
 /** Behavior tests for the six-directional assembly scanner. */
 class ShipScannerTest {
+  /** Common capturable material. */
+  private static final String STONE = "minecraft:stone";
+
   /** A world reporting a rectangular solid of capturable blocks. */
   private static final class TestWorld implements ScannerWorld {
     private final int sizeX;
@@ -74,14 +77,14 @@ class ShipScannerTest {
 
   @Test
   void collectsWholeComponentFromSeed() {
-    TestWorld world = new TestWorld(3, 2, 3, "minecraft:stone");
+    TestWorld world = new TestWorld(3, 2, 3, STONE);
     ScanResult result = ShipScanner.scan(world, new Seed(1, 1, 1), Integer.MAX_VALUE, Set.of());
     assertEquals(18, result.captured().size());
   }
 
   @Test
   void stopsAtConfiguredLimitWithoutMutating() {
-    TestWorld world = new TestWorld(10, 10, 10, "minecraft:stone");
+    TestWorld world = new TestWorld(10, 10, 10, STONE);
     ScanResult result = ShipScanner.scan(world, new Seed(5, 5, 5), 10, Set.of());
     assertFalse(result.complete());
     assertNull(result.captured());
@@ -98,7 +101,7 @@ class ShipScannerTest {
 
   @Test
   void doesNotCrossAirGaps() {
-    TestWorld world = new TestWorld(3, 3, 3, "minecraft:stone");
+    TestWorld world = new TestWorld(3, 3, 3, STONE);
     world.setAir(0, 1, 1);
     ScanResult result = ShipScanner.scan(world, new Seed(1, 1, 1), Integer.MAX_VALUE, Set.of());
     assertEquals(26, result.captured().size());
@@ -106,7 +109,7 @@ class ShipScannerTest {
 
   @Test
   void reportsComponentRootAtSeed() {
-    TestWorld world = new TestWorld(3, 3, 3, "minecraft:stone");
+    TestWorld world = new TestWorld(3, 3, 3, STONE);
     ScanResult result = ShipScanner.scan(world, new Seed(1, 1, 1), Integer.MAX_VALUE, Set.of());
     assertEquals(1, result.rootX());
     assertEquals(1, result.rootY());
@@ -115,17 +118,11 @@ class ShipScannerTest {
 
   @Test
   void capturesRelativePositionsOnly() {
-    TestWorld world = new TestWorld(3, 3, 3, "minecraft:stone");
+    TestWorld world = new TestWorld(3, 3, 3, STONE);
     ScanResult result = ShipScanner.scan(world, new Seed(1, 1, 1), Integer.MAX_VALUE, Set.of());
     assertTrue(
-        result
-            .captured()
-            .stream()
-            .anyMatch(pos -> pos.x() == 0 && pos.y() == 0 && pos.z() == 0));
+        result.captured().stream().anyMatch(pos -> pos.x() == 0 && pos.y() == 0 && pos.z() == 0));
     assertTrue(
-        result
-            .captured()
-            .stream()
-            .anyMatch(pos -> pos.x() == 1 && pos.y() == 1 && pos.z() == 1));
+        result.captured().stream().anyMatch(pos -> pos.x() == 1 && pos.y() == 1 && pos.z() == 1));
   }
 }

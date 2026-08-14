@@ -1,15 +1,34 @@
 package dev.jlo.ships.scan;
 
+import dev.jlo.ships.model.BlockPos;
+import java.util.List;
+
 /** Bounded result of a ship assembly scan. */
 public final class ScanResult {
+  /** Whether the whole component fit within the limit. */
   private final boolean complete;
-  private final int rootX;
-  private final int rootY;
-  private final int rootZ;
-  private final java.util.List<dev.jlo.ships.model.BlockPos> captured;
 
-  /** Creates a successful scan result. */
-  public ScanResult(int rootX, int rootY, int rootZ, java.util.List<dev.jlo.ships.model.BlockPos> captured) {
+  /** Scan seed x coordinate. */
+  private final int rootX;
+
+  /** Scan seed y coordinate. */
+  private final int rootY;
+
+  /** Scan seed z coordinate. */
+  private final int rootZ;
+
+  /** Captured relative positions, or null when incomplete. */
+  private final List<BlockPos> captured;
+
+  /**
+   * Creates a successful scan result.
+   *
+   * @param rootX the scan seed x coordinate
+   * @param rootY the scan seed y coordinate
+   * @param rootZ the scan seed z coordinate
+   * @param captured the captured relative positions
+   */
+  public ScanResult(int rootX, int rootY, int rootZ, List<BlockPos> captured) {
     this.complete = true;
     this.rootX = rootX;
     this.rootY = rootY;
@@ -26,28 +45,38 @@ public final class ScanResult {
     this.captured = null;
   }
 
-  /** Returns true when the whole component fit within the limit. */
+  /**
+   * @return true when the whole component fit within the limit
+   */
   public boolean complete() {
     return complete;
   }
 
-  /** Returns the scan seed x coordinate. */
+  /**
+   * @return the scan seed x coordinate
+   */
   public int rootX() {
     return rootX;
   }
 
-  /** Returns the scan seed y coordinate. */
+  /**
+   * @return the scan seed y coordinate
+   */
   public int rootY() {
     return rootY;
   }
 
-  /** Returns the scan seed z coordinate. */
+  /**
+   * @return the scan seed z coordinate
+   */
   public int rootZ() {
     return rootZ;
   }
 
-  /** Returns captured relative positions, or null when incomplete. */
-  public java.util.List<dev.jlo.ships.model.BlockPos> captured() {
+  /**
+   * @return captured relative positions, or null when incomplete
+   */
+  public List<BlockPos> captured() {
     return captured;
   }
 }

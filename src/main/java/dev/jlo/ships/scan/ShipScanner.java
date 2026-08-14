@@ -5,28 +5,38 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 /**
- * Captures a face-connected, material-valid component using a bounded
- * six-directional breadth-first traversal. Scanning never mutates the world.
+ * Captures a face-connected, material-valid component using a bounded six-directional breadth-first
+ * traversal. Scanning never mutates the world.
  */
 public final class ShipScanner {
+  /** X deltas for the six face directions. */
   private static final int[] DX = {1, -1, 0, 0, 0, 0};
+
+  /** Y deltas for the six face directions. */
   private static final int[] DY = {0, 0, 1, -1, 0, 0};
+
+  /** Z deltas for the six face directions. */
   private static final int[] DZ = {0, 0, 0, 0, 1, -1};
 
   private ShipScanner() {}
 
   /**
-   * Scans the component containing {@code seed} up to {@code maximumBlocks}
-   * blocks. Forbidden material names are lowered before comparison. Returns an
-   * incomplete result with no captured list when the component exceeds the
-   * limit or contains a forbidden material.
+   * Scans the component containing the seed up to {@code maximumBlocks} blocks. Forbidden material
+   * names are lowered before comparison.
+   *
+   * @param world the world to scan
+   * @param seed the seed block
+   * @param maximumBlocks the maximum captured blocks
+   * @param forbidden forbidden material registry names
+   * @return an incomplete result with no captured list when invalid
    */
-  public static ScanResult scan(ScannerWorld world, Seed seed, int maximumBlocks, Set<String> forbidden) {
+  public static ScanResult scan(
+      ScannerWorld world, Seed seed, int maximumBlocks, Set<String> forbidden) {
     Set<CoordKey> visited = new HashSet<>();
     Deque<int[]> queue = new ArrayDeque<>();
     List<BlockPos> captured = new ArrayList<>();

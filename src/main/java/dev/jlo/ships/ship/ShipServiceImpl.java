@@ -1,5 +1,6 @@
 package dev.jlo.ships.ship;
 
+import dev.jlo.ships.deck.DeckManager;
 import dev.jlo.ships.model.BlockPos;
 import dev.jlo.ships.model.Ship;
 import dev.jlo.ships.model.ShipBlock;
@@ -12,28 +13,52 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Default ship service: scans a connected component, snapshots each block's
- * exact data, removes source blocks, persists the model, then renders it.
- * Disassembly validates destination occupancy, restores blocks, removes
- * runtime entities, and only then persists removal. Any failure rolls back.
+ * Default ship service: scans a connected component, snapshots each block's exact data, removes
+ * source blocks, persists the model, then renders it. Disassembly validates destination occupancy,
+ * restores blocks, removes runtime entities and supports, and only then persists removal. Any
+ * failure rolls back.
  */
 public final class ShipServiceImpl implements ShipService {
+  /** Persistence backend. */
   private final ShipStoreLike store;
+
+  /** Component scanner. */
   private final ComponentScanner scanner;
+
+  /** Runtime renderer. */
   private final ShipRendererLike renderer;
+
+  /** World mutator. */
   private final WorldMutator mutator;
-  private final dev.jlo.ships.deck.DeckManager deck;
+
+  /** Deck support manager. */
+  private final DeckManager deck;
+
+  /** World this service is bound to. */
   private final UUID worldId;
+
+  /** Registered ships keyed by identifier. */
   private final Map<UUID, Ship> ships = new LinkedHashMap<>();
+
+  /** Last operation failure message. */
   private String lastError;
 
-  /** Creates the service. */
+  /**
+   * Creates the service.
+   *
+   * @param store the persistence backend
+   * @param scanner the component scanner
+   * @param renderer the runtime renderer
+   * @param mutator the world mutator
+   * @param deck the deck support manager
+   * @param worldId the bound world identifier
+   */
   public ShipServiceImpl(
       ShipStoreLike store,
       ComponentScanner scanner,
       ShipRendererLike renderer,
       WorldMutator mutator,
-      dev.jlo.ships.deck.DeckManager deck,
+      DeckManager deck,
       UUID worldId) {
     this.store = store;
     this.scanner = scanner;
@@ -44,8 +69,8 @@ public final class ShipServiceImpl implements ShipService {
   }
 
   @Override
-  public Ship assembleAt(UUID playerId, int x, int y, int z, UUID worldId) {
-    if (!worldId.equals(this.worldId)) {
+  public Ship assembleAt(UUID playerId, int x, int y, int z, UUID targetWorldId) {
+    if (!targetWorldId.equals(worldId)) {
       lastError = "Ship assembly is not permitted in this world";
       return null;
     }
@@ -59,7 +84,7 @@ public final class ShipServiceImpl implements ShipService {
       blocks.add(new ShipBlock(pos, mutator.blockDataAt(x + pos.x(), y + pos.y(), z + pos.z())));
     }
     Ship ship =
-        new Ship(UUID.randomUUID(), playerId, new ShipOrigin(worldId, x, y, z), blocks);
+        new Ship(UUID.randomUUID(), playerId, new ShipOrigin(targetWorldId, x, y, z), blocks);
     // Remove source blocks first; if that fails, nothing is persisted or rendered.
     if (!mutator.clearBlocks(ship)) {
       lastError = mutator.lastError();
@@ -74,25 +99,32 @@ public final class ShipServiceImpl implements ShipService {
     }
     try {
       renderer.render(ship, this::storeAndRegister);
-    } catch (RuntimeException failure) {
+    } catch (IllegalStateException failure) {
       // Render failed after mutation: restore exact snapshots, clear any
       // partial runtime entities and supports, and persist the removal so a
       // restart cannot resurrect a half-assembled ship.
-      deck.remove(ship);
-      mutator.restoreBlocks(ship);
-      renderer.removeRuntime(ship);
-      ships.remove(ship.id());
-      persistAll();
-      lastError = "Assembly failed: " + failure.getMessage();
+      rollback(ship, failure.getMessage());
+      return null;
+    } catch (IllegalArgumentException failure) {
+      rollback(ship, failure.getMessage());
       return null;
     }
     return ships.get(ship.id());
   }
 
+  private void rollback(Ship ship, String message) {
+    deck.remove(ship);
+    mutator.restoreBlocks(ship);
+    renderer.removeRuntime(ship);
+    ships.remove(ship.id());
+    persistAll();
+    lastError = "Assembly failed: " + message;
+  }
+
   @Override
-  public Ship findOwnedInWorld(UUID playerId, UUID worldId) {
+  public Ship findOwnedInWorld(UUID playerId, UUID targetWorldId) {
     for (Ship ship : ships.values()) {
-      if (ship.ownerId().equals(playerId) && ship.origin().worldId().equals(worldId)) {
+      if (ship.ownerId().equals(playerId) && ship.origin().worldId().equals(targetWorldId)) {
         return ship;
       }
     }

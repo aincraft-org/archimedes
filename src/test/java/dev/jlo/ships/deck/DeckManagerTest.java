@@ -17,9 +17,13 @@ class DeckManagerTest {
   /** In-memory world recording barrier placement and clearing. */
   private static final class FakeWorld implements DeckSurface {
     final Set<String> barriers = new HashSet<>();
+
     final Set<String> blocked = new HashSet<>();
+
     final List<String> placements = new ArrayList<>();
+
     final List<String> removals = new ArrayList<>();
+
     final Set<String> alwaysBlocked = new HashSet<>();
 
     @Override
@@ -86,5 +90,4 @@ class DeckManagerTest {
     assertTrue(world.barriers.isEmpty());
     assertEquals(world.placements, world.removals);
   }
-
 }

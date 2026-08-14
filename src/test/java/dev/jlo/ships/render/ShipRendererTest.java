@@ -2,7 +2,6 @@ package dev.jlo.ships.render;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.jlo.ships.model.BlockPos;
 import dev.jlo.ships.model.Ship;
@@ -23,6 +22,9 @@ import org.junit.jupiter.api.Test;
 
 /** Behavior tests for the block-display ship renderer. */
 class ShipRendererTest {
+  /** Common capturable material. */
+  private static final String STONE = "minecraft:stone";
+
   /** An in-memory fake implementing the display contract via proxy. */
   private static final class FakeDisplay {
     BlockData block;
@@ -82,12 +84,14 @@ class ShipRendererTest {
 
   private static final class SpySurface implements RenderSurface {
     final List<BlockDisplay> spawned = new ArrayList<>();
+
     final List<Location> teleports = new ArrayList<>();
     final Map<String, BlockData> dataById = new HashMap<>();
     final List<UUID> renderedShips = new ArrayList<>();
 
     @Override
-    public BlockDisplay spawnBlockDisplay(Location location, java.util.function.Consumer<BlockDisplay> config) {
+    public BlockDisplay spawnBlockDisplay(
+        Location location, java.util.function.Consumer<BlockDisplay> config) {
       FakeDisplay fake = new FakeDisplay();
       fake.location = location;
       BlockDisplay proxy = fake.proxy();
@@ -114,7 +118,8 @@ class ShipRendererTest {
 
     @Override
     public Location location(ShipOrigin origin, int dx, int dy, int dz) {
-      return new Location(null, origin.x() + dx + 0.5, origin.y() + dy + 0.5, origin.z() + dz + 0.5);
+      return new Location(
+          null, origin.x() + dx + 0.5, origin.y() + dy + 0.5, origin.z() + dz + 0.5);
     }
 
     @Override
@@ -131,7 +136,7 @@ class ShipRendererTest {
   @Test
   void rendersSpawnedDisplayAtAdjustedLocation() {
     SpySurface surface = new SpySurface();
-    Ship ship = shipWithBlock(10, 20, 30, "minecraft:stone");
+    Ship ship = shipWithBlock(10, 20, 30, STONE);
     new ShipRenderer().render(ship, surface);
     BlockDisplay display = surface.spawned.get(0);
     assertFalse(display.isPersistent());
@@ -143,22 +148,23 @@ class ShipRendererTest {
   @Test
   void appliesBlockDataToDisplay() {
     SpySurface surface = new SpySurface();
-    Ship ship = shipWithBlock(0, 0, 0, "minecraft:stone");
+    Ship ship = shipWithBlock(0, 0, 0, STONE);
     new ShipRenderer().render(ship, surface);
-    assertEquals(surface.dataById.get("minecraft:stone"), surface.spawned.get(0).getBlock());
+    assertEquals(surface.dataById.get(STONE), surface.spawned.get(0).getBlock());
   }
 
   @Test
   void reportsRenderedShipToSurface() {
     SpySurface surface = new SpySurface();
-    Ship ship = shipWithBlock(0, 0, 0, "minecraft:stone");
+    Ship ship = shipWithBlock(0, 0, 0, STONE);
     new ShipRenderer().render(ship, surface);
     assertEquals(1, surface.renderedShips.size());
     assertEquals(ship.id(), surface.renderedShips.get(0));
   }
 
   private static Ship shipWithBlock(int dx, int dy, int dz, String data) {
-    ShipOrigin origin = new ShipOrigin(UUID.fromString("00000000-0000-0000-0000-000000000001"), 100, 200, 300);
+    ShipOrigin origin =
+        new ShipOrigin(UUID.fromString("00000000-0000-0000-0000-000000000001"), 100, 200, 300);
     return new Ship(
         UUID.randomUUID(),
         UUID.randomUUID(),

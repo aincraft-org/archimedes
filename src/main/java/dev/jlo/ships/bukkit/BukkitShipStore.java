@@ -9,13 +9,23 @@ import java.util.UUID;
 
 /** Adapts the JSON {@link ShipStore} to the service's store contract. */
 public final class BukkitShipStore implements ShipStoreLike {
+  /** The underlying JSON store. */
   private final ShipStore store;
 
-  /** Creates the adapter around a JSON store. */
+  /**
+   * Creates the adapter around a JSON store.
+   *
+   * @param store the JSON store
+   */
   public BukkitShipStore(ShipStore store) {
     this.store = store;
   }
 
+  /**
+   * Loads all persisted ships.
+   *
+   * @return all persisted ships keyed by identifier
+   */
   @Override
   public Map<UUID, Ship> loadAll() {
     try {
@@ -25,6 +35,11 @@ public final class BukkitShipStore implements ShipStoreLike {
     }
   }
 
+  /**
+   * Saves all ships.
+   *
+   * @param ships the ships to save
+   */
   @Override
   public void saveAll(Map<UUID, Ship> ships) {
     try {

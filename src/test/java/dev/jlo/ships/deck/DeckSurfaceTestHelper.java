@@ -14,7 +14,8 @@ public final class DeckSurfaceTestHelper {
 
   /** Builds a ship at origin (100,200,300) from relative positions. */
   public static Ship shipWith(BlockPos... positions) {
-    ShipOrigin origin = new ShipOrigin(UUID.fromString("00000000-0000-0000-0000-000000000001"), 100, 200, 300);
+    ShipOrigin origin =
+        new ShipOrigin(UUID.fromString("00000000-0000-0000-0000-000000000001"), 100, 200, 300);
     List<ShipBlock> blocks =
         Arrays.stream(positions).map(pos -> new ShipBlock(pos, "minecraft:stone")).toList();
     return new Ship(UUID.randomUUID(), UUID.randomUUID(), origin, blocks);

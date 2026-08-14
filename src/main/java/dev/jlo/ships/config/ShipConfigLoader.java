@@ -1,6 +1,7 @@
 package dev.jlo.ships.config;
 
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -9,18 +10,24 @@ import org.bukkit.configuration.file.FileConfiguration;
 public final class ShipConfigLoader {
   /** Key for the maximum assembled blocks setting. */
   public static final String MAXIMUM_BLOCKS_KEY = "maximum-blocks";
+
   /** Key for the command targeting distance setting. */
   public static final String TARGET_DISTANCE_KEY = "target-distance";
+
   /** Key for the forbidden material list setting. */
   public static final String FORBIDDEN_MATERIALS_KEY = "forbidden-materials";
+
   /** Key for the disabled world identifier list setting. */
   public static final String DISABLED_WORLDS_KEY = "disabled-worlds";
 
   private ShipConfigLoader() {}
 
   /**
-   * Builds a configuration, throwing {@link IllegalArgumentException} when a
-   * value is missing or unsafe.
+   * Builds a configuration, throwing {@link IllegalArgumentException} when a value is missing or
+   * unsafe.
+   *
+   * @param configuration the Bukkit file configuration
+   * @return the validated ship configuration
    */
   public static ShipConfig load(FileConfiguration configuration) {
     int maximumBlocks = configuration.getInt(MAXIMUM_BLOCKS_KEY, 0);
@@ -34,7 +41,7 @@ public final class ShipConfigLoader {
     Set<String> forbidden = new HashSet<>();
     for (String value : configuration.getStringList(FORBIDDEN_MATERIALS_KEY)) {
       if (!value.isBlank()) {
-        forbidden.add(value.toLowerCase(java.util.Locale.ROOT));
+        forbidden.add(value.toLowerCase(Locale.ROOT));
       }
     }
     Set<UUID> disabledWorlds = new HashSet<>();

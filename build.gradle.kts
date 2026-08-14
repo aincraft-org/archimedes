@@ -11,6 +11,13 @@ plugins {
 checkstyle {
     toolVersion = "10.26.1"
     configFile = file("config/checkstyle/checkstyle.xml")
+    configDirectory = file("config/checkstyle")
+}
+
+tasks.withType<Checkstyle>().configureEach {
+    if (name.contains("Test")) {
+        configFile = file("config/checkstyle/checkstyle-test.xml")
+    }
 }
 
 pmd {
@@ -38,6 +45,7 @@ tasks.jar {
 }
 
 tasks.withType<com.github.spotbugs.snom.SpotBugsTask>().configureEach {
+    excludeFilter.set(file("config/spotbugs/exclude-filter.xml"))
     reports {
         create("html") {
             required = true
