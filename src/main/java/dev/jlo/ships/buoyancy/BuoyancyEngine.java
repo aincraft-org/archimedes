@@ -57,6 +57,11 @@ public final class BuoyancyEngine {
     return new Step(newY, newVelocity);
   }
 
-  /** One integration result. */
+  /**
+   * One integration result.
+   *
+   * @param y the new pose y
+   * @param velocity the new vertical velocity
+   */
   public record Step(double y, double velocity) {}
 }

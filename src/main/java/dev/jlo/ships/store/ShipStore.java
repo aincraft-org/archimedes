@@ -148,7 +148,8 @@ public final class ShipStore {
       poseY = object.getAsJsonObject("pose").get("y").getAsDouble();
     }
     boolean buoyancyEnabled = !object.has("buoyancy") || object.get("buoyancy").getAsBoolean();
-    return new Ship(id, owner, new ShipOrigin(world, x, y, z), blocks, new ShipPose(poseY), buoyancyEnabled);
+    return new Ship(
+        id, owner, new ShipOrigin(world, x, y, z), blocks, new ShipPose(poseY), buoyancyEnabled);
   }
 
   private static String requireString(JsonObject object, String key) {

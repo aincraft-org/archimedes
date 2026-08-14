@@ -105,10 +105,10 @@ public final class Ship {
   /**
    * Sets the runtime vertical pose.
    *
-   * @param pose the new pose
+   * @param newPose the new pose
    */
-  public void setPose(ShipPose pose) {
-    this.pose = pose;
+  public void setPose(ShipPose newPose) {
+    this.pose = newPose;
   }
 
   /**

@@ -106,7 +106,17 @@ public final class ShipConfigLoader {
       throw new IllegalArgumentException("damping must be a finite number between 0 and 1");
     }
     return new ShipConfig(
-        maximumBlocks, targetDistance, forbidden, disabledWorlds, buoyancyEnabled, physicsTicks,
-        bobAmplitude, maxRise, gravity, waterDensity, blockDensity, damping);
+        maximumBlocks,
+        targetDistance,
+        forbidden,
+        disabledWorlds,
+        buoyancyEnabled,
+        physicsTicks,
+        bobAmplitude,
+        maxRise,
+        gravity,
+        waterDensity,
+        blockDensity,
+        damping);
   }
 }
