@@ -115,7 +115,9 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
       rollbackMoved(previous, failure);
       throw failure;
     } catch (IllegalArgumentException failure) {
-      throw new ShipRuntimeException(failure);
+      ShipRuntimeException wrapped = new ShipRuntimeException(failure);
+      rollbackMoved(previous, wrapped);
+      throw wrapped;
     }
   }
 
