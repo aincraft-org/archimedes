@@ -11,6 +11,7 @@ import dev.jlo.ships.model.BlockPos;
 import dev.jlo.ships.model.Ship;
 import dev.jlo.ships.model.ShipBlock;
 import dev.jlo.ships.model.ShipOrigin;
+import dev.jlo.ships.model.ShipPose;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -99,6 +100,14 @@ public final class ShipStore {
     origin.addProperty("y", ship.origin().y());
     origin.addProperty("z", ship.origin().z());
     object.add("origin", origin);
+    if (ship.pose().y() != 0) {
+      JsonObject pose = new JsonObject();
+      pose.addProperty("y", ship.pose().y());
+      object.add("pose", pose);
+    }
+    if (!ship.buoyancyEnabled()) {
+      object.addProperty("buoyancy", false);
+    }
     JsonArray blocks = new JsonArray();
     for (ShipBlock block : ship.blocks()) {
       JsonObject entry = new JsonObject();
@@ -134,7 +143,12 @@ public final class ShipStore {
                   posJson.get("z").getAsInt()),
               requireString(blockJson, "data")));
     }
-    return new Ship(id, owner, new ShipOrigin(world, x, y, z), blocks);
+    double poseY = 0;
+    if (object.has("pose")) {
+      poseY = object.getAsJsonObject("pose").get("y").getAsDouble();
+    }
+    boolean buoyancyEnabled = !object.has("buoyancy") || object.get("buoyancy").getAsBoolean();
+    return new Ship(id, owner, new ShipOrigin(world, x, y, z), blocks, new ShipPose(poseY), buoyancyEnabled);
   }
 
   private static String requireString(JsonObject object, String key) {

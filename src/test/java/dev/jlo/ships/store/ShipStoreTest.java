@@ -1,12 +1,15 @@
 package dev.jlo.ships.store;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.jlo.ships.model.BlockPos;
 import dev.jlo.ships.model.Ship;
 import dev.jlo.ships.model.ShipBlock;
 import dev.jlo.ships.model.ShipOrigin;
+import dev.jlo.ships.model.ShipPose;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -118,5 +121,42 @@ class ShipStoreTest {
 
     Map<UUID, Ship> loaded = store.loadAll();
     assertEquals(ship.id(), loaded.keySet().iterator().next());
+  }
+
+  @Test
+  void persistsPoseAndBuoyancyFlag() throws Exception {
+    UUID shipId = UUID.randomUUID();
+    Ship ship =
+        new Ship(
+            shipId,
+            UUID.randomUUID(),
+            new ShipOrigin(UUID.randomUUID(), 1, 2, 3),
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), "minecraft:oak_planks")),
+            new ShipPose(12.5),
+            false);
+    Map<UUID, Ship> ships = new LinkedHashMap<>();
+    ships.put(shipId, ship);
+
+    ShipStore store = new ShipStore(tempDir);
+    store.saveAll(ships);
+
+    Ship restored = store.loadAll().get(shipId);
+    assertEquals(12.5, restored.pose().y());
+    assertFalse(restored.buoyancyEnabled());
+  }
+
+  @Test
+  void loadsLegacyFileWithoutPose() throws Exception {
+    Path file = tempDir.resolve("ships.json");
+    Files.writeString(
+        file,
+        "[{\"id\":\"00000000-0000-0000-0000-000000000001\","
+            + "\"owner\":\"00000000-0000-0000-0000-000000000002\","
+            + "\"origin\":{\"world\":\"00000000-0000-0000-0000-000000000003\",\"x\":1,\"y\":2,\"z\":3},"
+            + "\"blocks\":[{\"pos\":{\"x\":0,\"y\":0,\"z\":0},\"data\":\"minecraft:stone\"}]}]");
+    ShipStore store = new ShipStore(tempDir);
+    Ship restored = store.loadAll().values().iterator().next();
+    assertEquals(0.0, restored.pose().y());
+    assertTrue(restored.buoyancyEnabled());
   }
 }
