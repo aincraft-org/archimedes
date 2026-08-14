@@ -150,7 +150,7 @@ public final class ShipsPlugin extends JavaPlugin {
       try {
         return store.loadAll();
       } catch (java.io.IOException failure) {
-        throw new IllegalStateException("Failed to load ships", failure);
+        throw new dev.jlo.ships.ship.ShipRuntimeException(failure);
       }
     }
 
@@ -159,7 +159,7 @@ public final class ShipsPlugin extends JavaPlugin {
       try {
         store.saveAll(ships);
       } catch (java.io.IOException failure) {
-        throw new IllegalStateException("Failed to save ships", failure);
+        throw new dev.jlo.ships.ship.ShipRuntimeException(failure);
       }
     }
   }

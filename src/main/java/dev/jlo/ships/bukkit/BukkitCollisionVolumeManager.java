@@ -74,16 +74,23 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
       }
       volumes.put(ship.id(), spawned);
     } catch (ShipRuntimeException failure) {
-      for (CollisionVolume volume : spawned.values()) {
-        try {
-          volume.remove();
-        } catch (ShipRuntimeException cleanup) {
-          failure.addSuppressed(cleanup);
-        }
-      }
+      cleanupSpawned(spawned, failure);
       throw failure;
     } catch (IllegalArgumentException failure) {
-      throw new ShipRuntimeException(failure);
+      ShipRuntimeException wrapped = new ShipRuntimeException(failure);
+      cleanupSpawned(spawned, wrapped);
+      throw wrapped;
+    }
+  }
+
+  private static void cleanupSpawned(
+      Map<BlockPos, CollisionVolume> spawned, ShipRuntimeException failure) {
+    for (CollisionVolume volume : spawned.values()) {
+      try {
+        volume.remove();
+      } catch (ShipRuntimeException cleanup) {
+        failure.addSuppressed(cleanup);
+      }
     }
   }
 
@@ -105,8 +112,8 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
         volume.move(cell.x(), cell.y(), cell.z());
       }
     } catch (ShipRuntimeException failure) {
-      ShipRuntimeException wrapped = failure;
-      rollbackMoved(previous, wrapped);
+      rollbackMoved(previous, failure);
+      throw failure;
     } catch (IllegalArgumentException failure) {
       throw new ShipRuntimeException(failure);
     }

@@ -103,12 +103,20 @@ public interface RenderSurface {
       @Override
       public BlockDisplay spawnBlockDisplay(
           Location location, java.util.function.Consumer<BlockDisplay> config) {
-        return world.spawn(location, BlockDisplay.class, config::accept);
+        try {
+          return world.spawn(location, BlockDisplay.class, config::accept);
+        } catch (IllegalArgumentException failure) {
+          throw new dev.jlo.ships.ship.ShipRuntimeException(failure);
+        }
       }
 
       @Override
       public BlockData blockData(String serialized) {
-        return org.bukkit.Bukkit.createBlockData(serialized);
+        try {
+          return org.bukkit.Bukkit.createBlockData(serialized);
+        } catch (IllegalArgumentException failure) {
+          throw new dev.jlo.ships.ship.ShipRuntimeException(failure);
+        }
       }
 
       @Override
