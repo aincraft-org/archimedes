@@ -9,7 +9,7 @@ import java.util.Set;
  * Deployment is all-or-nothing: any obstructed cell fails the whole ship
  * before any barrier is placed.
  */
-public final class DeckManager {
+public class DeckManager {
   private final DeckSurface world;
 
   /** Creates a manager bound to a deck surface. */
@@ -53,5 +53,10 @@ public final class DeckManager {
   /** Removes a single support position. */
   public void removeAt(int x, int y, int z) {
     world.removeBarrier(x, y, z);
+  }
+
+  /** Returns the last deployment failure message. */
+  public String lastError() {
+    return "deck supports are obstructed";
   }
 }

@@ -22,6 +22,7 @@ public final class ShipServiceImpl implements ShipService {
   private final ComponentScanner scanner;
   private final ShipRendererLike renderer;
   private final WorldMutator mutator;
+  private final dev.jlo.ships.deck.DeckManager deck;
   private final UUID worldId;
   private final Map<UUID, Ship> ships = new LinkedHashMap<>();
   private String lastError;
@@ -32,11 +33,13 @@ public final class ShipServiceImpl implements ShipService {
       ComponentScanner scanner,
       ShipRendererLike renderer,
       WorldMutator mutator,
+      dev.jlo.ships.deck.DeckManager deck,
       UUID worldId) {
     this.store = store;
     this.scanner = scanner;
     this.renderer = renderer;
     this.mutator = mutator;
+    this.deck = deck;
     this.worldId = worldId;
   }
 
@@ -62,12 +65,20 @@ public final class ShipServiceImpl implements ShipService {
       lastError = mutator.lastError();
       return null;
     }
+    // Deploy walkable deck supports before rendering so a blocked cell
+    // aborts the whole assembly with the world still restorable.
+    if (!deck.deploy(ship)) {
+      mutator.restoreBlocks(ship);
+      lastError = "Deck supports are obstructed: " + deck.lastError();
+      return null;
+    }
     try {
       renderer.render(ship, this::storeAndRegister);
     } catch (RuntimeException failure) {
       // Render failed after mutation: restore exact snapshots, clear any
-      // partial runtime entities, and persist the removal so a restart
-      // cannot resurrect a half-assembled ship.
+      // partial runtime entities and supports, and persist the removal so a
+      // restart cannot resurrect a half-assembled ship.
+      deck.remove(ship);
       mutator.restoreBlocks(ship);
       renderer.removeRuntime(ship);
       ships.remove(ship.id());
@@ -109,6 +120,7 @@ public final class ShipServiceImpl implements ShipService {
       renderer.render(ship, ignored -> {});
       return false;
     }
+    deck.remove(ship);
     renderer.removeRuntime(ship);
     ships.remove(shipId);
     persistAll();
@@ -136,6 +148,7 @@ public final class ShipServiceImpl implements ShipService {
   public void removeAllRuntime() {
     for (Ship ship : ships.values()) {
       renderer.removeRuntime(ship);
+      deck.remove(ship);
     }
   }
 

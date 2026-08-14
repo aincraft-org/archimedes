@@ -1,0 +1,30 @@
+# Maximum blocks a single ship may contain.
+maximum-blocks: 2048
+
+# Maximum distance in blocks for looking at a target block.
+target-distance: 8
+
+# Materials that cannot be captured into a ship (registry names).
+forbidden-materials:
+  - "minecraft:water"
+  - "minecraft:lava"
+  - "minecraft:air"
+  - "minecraft:cave_air"
+  - "minecraft:void_air"
+  - "minecraft:barrier"
+  - "minecraft:structure_void"
+  - "minecraft:command_block"
+  - "minecraft:chain_command_block"
+  - "minecraft:repeating_command_block"
+  - "minecraft:structure_block"
+  - "minecraft:jigsaw"
+  - "minecraft:debug_stick"
+  - "minecraft:light"
+  - "minecraft:bedrock"
+  - "minecraft:end_portal"
+  - "minecraft:end_gateway"
+  - "minecraft:nether_portal"
+  - "minecraft:moving_piston"
+
+# Worlds where assembly is disabled (world UUIDs).
+disabled-worlds:

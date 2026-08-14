@@ -23,6 +23,15 @@ public interface DeckSurface {
   void removeBarrier(int x, int y, int z);
 
   /**
+   * Returns every absolute support position for the ship, in deterministic
+   * order, in a form this surface can consume. The default implementation
+   * wraps {@link #supportPositions(Ship)}.
+   */
+  default java.util.Collection<long[]> supportsFor(Ship ship) {
+    return SupportResolver.resolve(ship);
+  }
+
+  /**
    * Walks the ship model and computes every absolute position, in
    * deterministic order, that needs a support: one above each block whose
    * upper neighbor is neither a ship block nor already a support.
@@ -35,7 +44,7 @@ public interface DeckSurface {
   final class SupportResolver {
     private SupportResolver() {}
 
-    /** Returns absolute support positions as packed long keys. */
+    /** Returns absolute support positions. */
     public static Set<long[]> resolve(Ship ship) {
       Set<long[]> supports = new java.util.LinkedHashSet<>();
       Set<String> occupied = new java.util.HashSet<>();

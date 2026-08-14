@@ -84,6 +84,7 @@ class ShipServiceImplTest {
             (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
             new RecordingRenderer(fakes),
             fakes,
+            new NoopDeck(),
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNotNull(result);
@@ -107,6 +108,7 @@ class ShipServiceImplTest {
             (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
             new RecordingRenderer(fakes),
             fakes,
+            new NoopDeck(),
             WORLD);
     service.loadAll();
     Ship found = service.findOwnedInWorld(OWNER, WORLD);
@@ -129,6 +131,7 @@ class ShipServiceImplTest {
             (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
             new RecordingRenderer(fakes),
             fakes,
+            new NoopDeck(),
             WORLD);
     service.loadAll();
     boolean ok = service.disassemble(ship.id(), OWNER, false);
@@ -153,6 +156,7 @@ class ShipServiceImplTest {
             (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
             new RecordingRenderer(fakes),
             fakes,
+            new NoopDeck(),
             WORLD);
     service.loadAll();
     boolean ok = service.disassemble(ship.id(), UUID.randomUUID(), false);
@@ -169,6 +173,7 @@ class ShipServiceImplTest {
             (x, y, z) -> null,
             new RecordingRenderer(fakes),
             fakes,
+            new NoopDeck(),
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNull(result);
@@ -198,6 +203,7 @@ class ShipServiceImplTest {
             (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
             throwing,
             fakes,
+            new NoopDeck(),
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNull(result);
@@ -228,6 +234,7 @@ class ShipServiceImplTest {
             (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
             holderThenThrow,
             fakes,
+            new NoopDeck(),
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNull(result);
@@ -262,3 +269,28 @@ class ShipServiceImplTest {
     }
   }
 }
+/** A deck manager that never blocks. */
+final class NoopDeck extends dev.jlo.ships.deck.DeckManager {
+  NoopDeck() {
+      super(
+          new dev.jlo.ships.deck.DeckSurface() {
+            @Override
+            public boolean canPlace(int x, int y, int z) {
+              return true;
+            }
+
+            @Override
+            public boolean isClear(int x, int y, int z) {
+              return true;
+            }
+
+            @Override
+            public boolean placeBarrier(int x, int y, int z) {
+              return true;
+            }
+
+            @Override
+            public void removeBarrier(int x, int y, int z) {}
+          });
+    }
+  }

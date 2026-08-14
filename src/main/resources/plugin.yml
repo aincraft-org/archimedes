@@ -4,3 +4,21 @@ main: dev.jlo.ships.ShipsPlugin
 description: Build stationary block-display ships with walkable decks
 api-version: '26.2'
 author: jlo
+commands:
+  ship:
+    description: Build and manage ships
+    usage: /ship assemble|inspect|disassemble
+    permission: ships.command
+permissions:
+  ships.command:
+    description: Base ship command access
+    default: true
+  ships.assemble:
+    description: Assemble ships
+    default: true
+  ships.inspect:
+    description: Inspect ships
+    default: true
+  ships.disassemble:
+    description: Disassemble ships
+    default: true
