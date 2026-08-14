@@ -6,11 +6,15 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.HashSet;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 /** Behavior tests for the six-directional assembly scanner. */
 class ShipScannerTest {
+  /** Common forbidden water material. */
+  private static final String WATER = "minecraft:water";
+
   /** Common capturable material. */
   private static final String STONE = "minecraft:stone";
 
@@ -67,6 +71,30 @@ class ShipScannerTest {
     }
   }
 
+  /** A world with a capturable hull touching a forbidden water region. */
+  private static final class HullAndWaterWorld implements ScannerWorld {
+    private final Set<String> hull = new HashSet<>();
+
+    HullAndWaterWorld() {
+      hull.add("0,0,0");
+      hull.add("1,0,0");
+    }
+
+    @Override
+    public String materialAt(int x, int y, int z) {
+      return hull.contains(key(x, y, z)) ? STONE : WATER;
+    }
+
+    @Override
+    public boolean airAt(int x, int y, int z) {
+      return false;
+    }
+
+    private static String key(int x, int y, int z) {
+      return x + "," + y + "," + z;
+    }
+  }
+
   @Test
   void visitedKeysDistinguishOverlappingPackedCoordinates() {
     CoordKey origin = new CoordKey(0, 0, 0);
@@ -92,11 +120,20 @@ class ShipScannerTest {
 
   @Test
   void rejectsForbiddenMaterial() {
-    RejectingWorld world = new RejectingWorld("minecraft:water");
+    RejectingWorld world = new RejectingWorld(WATER);
     ScanResult result =
-        ShipScanner.scan(world, new Seed(0, 0, 0), Integer.MAX_VALUE, Set.of("minecraft:water"));
+        ShipScanner.scan(world, new Seed(0, 0, 0), Integer.MAX_VALUE, Set.of(WATER));
     assertFalse(result.complete());
     assertNull(result.captured());
+  }
+
+  @Test
+  void doesNotCrossForbiddenWater() {
+    HullAndWaterWorld world = new HullAndWaterWorld();
+    ScanResult result =
+        ShipScanner.scan(world, new Seed(0, 0, 0), Integer.MAX_VALUE, Set.of(WATER));
+    assertTrue(result.complete());
+    assertEquals(2, result.captured().size());
   }
 
   @Test

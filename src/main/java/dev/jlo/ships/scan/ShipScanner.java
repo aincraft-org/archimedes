@@ -64,6 +64,10 @@ public final class ShipScanner {
         if (world.airAt(nx, ny, nz)) {
           continue;
         }
+        String material = world.materialAt(nx, ny, nz).toLowerCase(Locale.ROOT);
+        if (forbidden.contains(material)) {
+          continue;
+        }
         if (visited.add(new CoordKey(nx, ny, nz))) {
           queue.add(new int[] {nx, ny, nz});
         }

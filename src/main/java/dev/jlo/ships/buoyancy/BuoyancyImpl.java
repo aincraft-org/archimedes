@@ -146,7 +146,7 @@ public final class BuoyancyImpl implements Buoyancy {
         int ax = ship.origin().x() + block.pos().x();
         int ay = ship.origin().y() + y + block.pos().y();
         int az = ship.origin().z() + block.pos().z();
-        if (!surface.isClear(ax, ay, az)) {
+        if (!surface.isClear(ax, ay, az) && !surface.isWater(ax, ay, az)) {
           return false;
         }
       }
