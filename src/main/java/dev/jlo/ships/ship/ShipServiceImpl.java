@@ -37,6 +37,9 @@ public final class ShipServiceImpl implements ShipService {
   /** Buoyancy engine. */
   private final dev.jlo.ships.buoyancy.Buoyancy buoyancy;
 
+  /** Whether buoyancy is enabled globally. */
+  private final boolean buoyancyEnabled;
+
   /** World this service is bound to. */
   private final UUID worldId;
 
@@ -55,6 +58,7 @@ public final class ShipServiceImpl implements ShipService {
    * @param mutator the world mutator
    * @param deck the deck support manager
    * @param buoyancy the buoyancy engine
+   * @param buoyancyEnabled whether buoyancy is enabled globally
    * @param worldId the bound world identifier
    */
   public ShipServiceImpl(
@@ -64,6 +68,7 @@ public final class ShipServiceImpl implements ShipService {
       WorldMutator mutator,
       DeckManager deck,
       dev.jlo.ships.buoyancy.Buoyancy buoyancy,
+      boolean buoyancyEnabled,
       UUID worldId) {
     this.store = store;
     this.scanner = scanner;
@@ -71,6 +76,7 @@ public final class ShipServiceImpl implements ShipService {
     this.mutator = mutator;
     this.deck = deck;
     this.buoyancy = buoyancy;
+    this.buoyancyEnabled = buoyancyEnabled;
     this.worldId = worldId;
   }
 
@@ -115,7 +121,7 @@ public final class ShipServiceImpl implements ShipService {
       rollback(ship, failure.getMessage());
       return null;
     }
-    if (!buoyancy.rise(ship)) {
+    if (buoyancyEnabled && !buoyancy.rise(ship)) {
       rollback(ship, "Buoyancy path blocked");
       return null;
     }
@@ -214,8 +220,8 @@ public final class ShipServiceImpl implements ShipService {
   }
 
   @Override
-  public boolean toggleBuoyancy(UUID requesterId, UUID worldId) {
-    Ship ship = findOwnedInWorld(requesterId, worldId);
+  public boolean toggleBuoyancy(UUID requesterId, UUID targetWorldId) {
+    Ship ship = findOwnedInWorld(requesterId, targetWorldId);
     if (ship == null) {
       lastError = "No ship in this world";
       return false;
@@ -226,8 +232,8 @@ public final class ShipServiceImpl implements ShipService {
   }
 
   @Override
-  public boolean sink(UUID requesterId, UUID worldId, int blocks) {
-    Ship ship = findOwnedInWorld(requesterId, worldId);
+  public boolean sink(UUID requesterId, UUID targetWorldId, int blocks) {
+    Ship ship = findOwnedInWorld(requesterId, targetWorldId);
     if (ship == null) {
       lastError = "No ship in this world";
       return false;

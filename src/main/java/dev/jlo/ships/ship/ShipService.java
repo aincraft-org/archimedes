@@ -64,9 +64,7 @@ public interface ShipService {
    */
   Collection<Ship> all();
 
-  /**
-   * Integrates one buoyancy tick for every registered ship.
-   */
+  /** Integrates one buoyancy tick for every registered ship. */
   void tick();
 
   /**

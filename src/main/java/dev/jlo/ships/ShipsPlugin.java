@@ -65,6 +65,7 @@ public final class ShipsPlugin extends JavaPlugin {
               new BukkitWorldMutator(world),
               deck,
               buoyancy,
+              config.buoyancyEnabled(),
               world.getUID());
       service.loadAll();
     } catch (IllegalStateException failure) {
