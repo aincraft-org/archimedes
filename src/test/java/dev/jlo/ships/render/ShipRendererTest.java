@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.BlockDisplay;
 import org.junit.jupiter.api.Test;
@@ -119,6 +120,11 @@ class ShipRendererTest {
     @Override
     public void shipRendered(UUID shipId, Collection<BlockDisplay> displays) {
       renderedShips.add(shipId);
+    }
+
+    @Override
+    public void removeTagged(NamespacedKey key, String shipId) {
+      // Test surface: no live entities to remove.
     }
   }
 

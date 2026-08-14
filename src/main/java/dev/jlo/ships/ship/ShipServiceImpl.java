@@ -66,10 +66,12 @@ public final class ShipServiceImpl implements ShipService {
       renderer.render(ship, this::storeAndRegister);
     } catch (RuntimeException failure) {
       // Render failed after mutation: restore exact snapshots, clear any
-      // partial runtime entities, and leave no persisted ship.
+      // partial runtime entities, and persist the removal so a restart
+      // cannot resurrect a half-assembled ship.
       mutator.restoreBlocks(ship);
       renderer.removeRuntime(ship);
       ships.remove(ship.id());
+      persistAll();
       lastError = "Assembly failed: " + failure.getMessage();
       return null;
     }

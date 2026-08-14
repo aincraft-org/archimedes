@@ -6,8 +6,8 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.BlockDisplay;
-import org.bukkit.entity.EntityType;
-import org.bukkit.util.Transformation;
+import org.bukkit.entity.Entity;
+import org.bukkit.NamespacedKey;
 
 /**
  * World rendering surface the ship renderer needs, separated for unit
@@ -21,7 +21,7 @@ public interface RenderSurface {
   BlockData blockData(String serialized);
 
   /** Teleports an entity to an absolute location. */
-  void teleport(org.bukkit.entity.Entity entity, Location location);
+  void teleport(Entity entity, Location location);
 
   /** Identifies the world owning this surface. */
   UUID worldUuid();
@@ -31,6 +31,9 @@ public interface RenderSurface {
 
   /** Notifies the surface of a newly rendered ship. */
   void shipRendered(UUID shipId, java.util.Collection<BlockDisplay> displays);
+
+  /** Removes every entity carrying the ship identifier in its tag. */
+  void removeTagged(NamespacedKey key, String shipId);
 
   /** Wraps a Bukkit world. */
   static RenderSurface of(World world) {
@@ -62,7 +65,21 @@ public interface RenderSurface {
 
       @Override
       public void shipRendered(UUID shipId, java.util.Collection<BlockDisplay> displays) {
-        // No-op surface does not track spawned displays.
+        // Rendered displays are tracked in their tags and removed by tag.
+      }
+
+      @Override
+      public void removeTagged(NamespacedKey key, String shipId) {
+        for (org.bukkit.entity.Entity entity :
+            world.getEntitiesByClass(BlockDisplay.class)) {
+          String tag =
+              entity
+                  .getPersistentDataContainer()
+                  .get(key, org.bukkit.persistence.PersistentDataType.STRING);
+          if (shipId.equals(tag)) {
+            entity.remove();
+          }
+        }
       }
     };
   }
