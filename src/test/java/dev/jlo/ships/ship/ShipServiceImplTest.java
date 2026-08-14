@@ -134,6 +134,7 @@ class ShipServiceImplTest {
             fakes,
             new NoopDeck(),
             new RecordingBuoyancy(),
+            true,
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNotNull(result);
@@ -159,6 +160,7 @@ class ShipServiceImplTest {
             fakes,
             new NoopDeck(),
             new RecordingBuoyancy(),
+            true,
             WORLD);
     service.loadAll();
     Ship found = service.findOwnedInWorld(OWNER, WORLD);
@@ -183,6 +185,7 @@ class ShipServiceImplTest {
             fakes,
             new NoopDeck(),
             new RecordingBuoyancy(),
+            true,
             WORLD);
     service.loadAll();
     boolean ok = service.disassemble(ship.id(), OWNER, false);
@@ -209,6 +212,7 @@ class ShipServiceImplTest {
             fakes,
             new NoopDeck(),
             new RecordingBuoyancy(),
+            true,
             WORLD);
     service.loadAll();
     boolean ok = service.disassemble(ship.id(), UUID.randomUUID(), false);
@@ -236,6 +240,7 @@ class ShipServiceImplTest {
             fakes,
             new NoopDeck(),
             new RecordingBuoyancy(),
+            true,
             WORLD);
     service.loadAll();
     boolean ok = service.disassemble(ship.id(), OWNER, false);
@@ -255,6 +260,7 @@ class ShipServiceImplTest {
             fakes,
             new NoopDeck(),
             new RecordingBuoyancy(),
+            true,
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNull(result);
@@ -289,6 +295,7 @@ class ShipServiceImplTest {
             fakes,
             new NoopDeck(),
             new RecordingBuoyancy(),
+            true,
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNull(result);
@@ -324,6 +331,7 @@ class ShipServiceImplTest {
             fakes,
             new NoopDeck(),
             new RecordingBuoyancy(),
+            true,
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNull(result);
@@ -344,6 +352,7 @@ class ShipServiceImplTest {
             fakes,
             new NoopDeck(),
             buoyancy,
+            true,
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNotNull(result);
@@ -364,6 +373,7 @@ class ShipServiceImplTest {
             fakes,
             new NoopDeck(),
             buoyancy,
+            true,
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNull(result);
@@ -390,6 +400,7 @@ class ShipServiceImplTest {
             fakes,
             new NoopDeck(),
             buoyancy,
+            true,
             WORLD);
     service.loadAll();
     service.disassemble(ship.id(), OWNER, false);

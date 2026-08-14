@@ -35,6 +35,12 @@ class ShipCommandTest {
   /** Disassemble subcommand label. */
   private static final String SUB_DISASSEMBLE = "disassemble";
 
+  /** Sink subcommand label. */
+  private static final String SUB_SINK = "sink";
+
+  /** Buoyancy subcommand label. */
+  private static final String SUB_BUOYANCY = "buoyancy";
+
   /** Common world identifier. */
   private static final UUID WORLD_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
@@ -113,7 +119,7 @@ class ShipCommandTest {
 
     @Override
     public boolean sink(UUID requesterId, UUID worldId, int blocks) {
-      calls.add("sink");
+      calls.add(SUB_SINK);
       lastSinkBlocks = blocks;
       return sinkResult;
     }
@@ -357,8 +363,8 @@ class ShipCommandTest {
     RecordingService service = new RecordingService();
     service.owned = ship();
     Player player = player(service, true);
-    commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {"sink", "3"});
-    assertTrue(service.calls.contains("sink"));
+    commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {SUB_SINK, "3"});
+    assertTrue(service.calls.contains(SUB_SINK));
     assertEquals(3, service.lastSinkBlocks);
   }
 
@@ -367,7 +373,7 @@ class ShipCommandTest {
     RecordingService service = new RecordingService();
     service.owned = ship();
     Player player = player(service, true);
-    commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {"sink", "abc"});
+    commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {SUB_SINK, "abc"});
     assertTrue(service.messages.get(0).contains("Invalid block count"));
     assertTrue(service.calls.isEmpty());
   }

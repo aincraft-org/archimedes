@@ -35,7 +35,9 @@ class BuoyancyEngineTest {
     ShipOrigin origin =
         new ShipOrigin(UUID.fromString("00000000-0000-0000-0000-000000000001"), 100, 200, 300);
     List<ShipBlock> blocks =
-        java.util.Arrays.stream(positions).map(pos -> new ShipBlock(pos, "minecraft:stone")).toList();
+        java.util.Arrays.stream(positions)
+            .map(pos -> new ShipBlock(pos, "minecraft:stone"))
+            .toList();
     return new Ship(UUID.randomUUID(), UUID.randomUUID(), origin, blocks, pose, true);
   }
 

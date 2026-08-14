@@ -26,6 +26,9 @@ class ShipRendererTest {
   /** Common capturable material. */
   private static final String STONE = "minecraft:stone";
 
+  /** Common world identifier. */
+  private static final UUID WORLD = UUID.fromString("00000000-0000-0000-0000-000000000001");
+
   /** An in-memory fake implementing the display contract via proxy. */
   private static final class FakeDisplay {
     BlockData block;
@@ -114,7 +117,7 @@ class ShipRendererTest {
 
     @Override
     public UUID worldUuid() {
-      return UUID.fromString("00000000-0000-0000-0000-000000000001");
+      return WORLD;
     }
 
     @Override
@@ -175,8 +178,7 @@ class ShipRendererTest {
         new Ship(
             UUID.randomUUID(),
             UUID.randomUUID(),
-            new ShipOrigin(
-                UUID.fromString("00000000-0000-0000-0000-000000000001"), 100, 200, 300),
+            new ShipOrigin(WORLD, 100, 200, 300),
             List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)),
             new ShipPose(2.5),
             true);
@@ -193,22 +195,19 @@ class ShipRendererTest {
         new Ship(
             UUID.randomUUID(),
             UUID.randomUUID(),
-            new ShipOrigin(
-                UUID.fromString("00000000-0000-0000-0000-000000000001"), 100, 200, 300),
+            new ShipOrigin(WORLD, 100, 200, 300),
             List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)),
             new ShipPose(2.5),
             true);
     new ShipRenderer().render(ship, surface);
-    new dev.jlo.ships.bukkit.BukkitShipRenderer(
-            surface, new NamespacedKey("ships", "test"))
+    new dev.jlo.ships.bukkit.BukkitShipRenderer(surface, new NamespacedKey("ships", "test"))
         .reposition(ship, 2.5, 4.0);
     // teleported to origin.y(200) + newPose(4.0) + rel(0) + 0.5 = 204.5
     assertEquals(204.5, surface.teleports.get(surface.teleports.size() - 1).getY(), 0.001);
   }
 
   private static Ship shipWithBlock(int dx, int dy, int dz, String data) {
-    ShipOrigin origin =
-        new ShipOrigin(UUID.fromString("00000000-0000-0000-0000-000000000001"), 100, 200, 300);
+    ShipOrigin origin = new ShipOrigin(WORLD, 100, 200, 300);
     return new Ship(
         UUID.randomUUID(),
         UUID.randomUUID(),
