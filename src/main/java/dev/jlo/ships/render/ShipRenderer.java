@@ -23,7 +23,8 @@ public final class ShipRenderer {
     List<BlockDisplay> displays = new ArrayList<>(ship.blockCount());
     for (ShipBlock block : ship.blocks()) {
       Location location =
-          surface.location(ship.origin(), block.pos().x(), block.pos().y(), block.pos().z());
+          surface.location(
+              ship.origin(), block.pos().x(), ship.pose().y() + block.pos().y(), block.pos().z());
       BlockData data = surface.blockData(block.blockData());
       BlockDisplay display = surface.spawnBlockDisplay(location, d -> d.setBlock(data));
       display.setPersistent(false);

@@ -47,7 +47,11 @@ public final class BukkitShipRenderer implements ShipRendererLike {
       BlockData data = surface.blockData(block.blockData());
       BlockDisplay display =
           surface.spawnBlockDisplay(
-              surface.location(ship.origin(), block.pos().x(), block.pos().y(), block.pos().z()),
+              surface.location(
+                  ship.origin(),
+                  block.pos().x(),
+                  ship.pose().y() + block.pos().y(),
+                  block.pos().z()),
               d -> {
                 d.setBlock(data);
                 d.setPersistent(false);
@@ -68,5 +72,23 @@ public final class BukkitShipRenderer implements ShipRendererLike {
   @Override
   public void removeRuntime(Ship ship) {
     surface.removeTagged(shipKey, ship.id().toString());
+  }
+
+  /**
+   * Teleports every tagged display to the new pose, preserving relative offsets.
+   *
+   * @param ship the ship to reposition
+   * @param oldY the previous pose y
+   * @param newY the new pose y
+   */
+  @Override
+  public void reposition(Ship ship, double oldY, double newY) {
+    for (BlockDisplay display : surface.tagged(shipKey, ship.id().toString())) {
+      org.bukkit.Location loc = display.getLocation();
+      double relX = loc.getX() - (ship.origin().x() + 0.5);
+      double relY = loc.getY() - (ship.origin().y() + oldY + 0.5);
+      double relZ = loc.getZ() - (ship.origin().z() + 0.5);
+      surface.teleport(display, surface.location(ship.origin(), relX, newY + relY, relZ));
+    }
   }
 }

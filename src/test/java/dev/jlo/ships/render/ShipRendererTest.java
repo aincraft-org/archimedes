@@ -7,6 +7,7 @@ import dev.jlo.ships.model.BlockPos;
 import dev.jlo.ships.model.Ship;
 import dev.jlo.ships.model.ShipBlock;
 import dev.jlo.ships.model.ShipOrigin;
+import dev.jlo.ships.model.ShipPose;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -117,9 +118,14 @@ class ShipRendererTest {
     }
 
     @Override
-    public Location location(ShipOrigin origin, int dx, int dy, int dz) {
+    public Location location(ShipOrigin origin, double dx, double dy, double dz) {
       return new Location(
           null, origin.x() + dx + 0.5, origin.y() + dy + 0.5, origin.z() + dz + 0.5);
+    }
+
+    @Override
+    public Collection<BlockDisplay> tagged(NamespacedKey key, String shipId) {
+      return List.copyOf(spawned);
     }
 
     @Override
@@ -160,6 +166,44 @@ class ShipRendererTest {
     new ShipRenderer().render(ship, surface);
     assertEquals(1, surface.renderedShips.size());
     assertEquals(ship.id(), surface.renderedShips.get(0));
+  }
+
+  @Test
+  void rendersDisplayAtPose() {
+    SpySurface surface = new SpySurface();
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(
+                UUID.fromString("00000000-0000-0000-0000-000000000001"), 100, 200, 300),
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)),
+            new ShipPose(2.5),
+            true);
+    new ShipRenderer().render(ship, surface);
+    BlockDisplay display = surface.spawned.get(0);
+    // origin.y(200) + pose(2.5) + rel(0) + 0.5 = 203.0
+    assertEquals(203.0, display.getLocation().getY(), 0.001);
+  }
+
+  @Test
+  void repositionTeleportsDisplayToNewPose() {
+    SpySurface surface = new SpySurface();
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(
+                UUID.fromString("00000000-0000-0000-0000-000000000001"), 100, 200, 300),
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)),
+            new ShipPose(2.5),
+            true);
+    new ShipRenderer().render(ship, surface);
+    new dev.jlo.ships.bukkit.BukkitShipRenderer(
+            surface, new NamespacedKey("ships", "test"))
+        .reposition(ship, 2.5, 4.0);
+    // teleported to origin.y(200) + newPose(4.0) + rel(0) + 0.5 = 204.5
+    assertEquals(204.5, surface.teleports.get(surface.teleports.size() - 1).getY(), 0.001);
   }
 
   private static Ship shipWithBlock(int dx, int dy, int dz, String data) {

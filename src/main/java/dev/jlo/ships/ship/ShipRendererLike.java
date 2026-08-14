@@ -18,4 +18,13 @@ public interface ShipRendererLike {
    * @param ship the ship to clean up
    */
   void removeRuntime(Ship ship);
+
+  /**
+   * Repositions an already-rendered ship's displays from one pose to another.
+   *
+   * @param ship the ship to reposition
+   * @param oldY the previous pose y
+   * @param newY the new pose y
+   */
+  void reposition(Ship ship, double oldY, double newY);
 }

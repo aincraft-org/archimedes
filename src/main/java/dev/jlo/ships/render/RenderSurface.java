@@ -1,7 +1,9 @@
 package dev.jlo.ships.render;
 
 import dev.jlo.ships.model.ShipOrigin;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
@@ -52,11 +54,11 @@ public interface RenderSurface {
    *
    * @param origin the ship origin
    * @param dx the relative x offset
-   * @param dy the relative y offset
+   * @param dy the relative y offset (fractional, includes pose)
    * @param dz the relative z offset
    * @return the absolute location
    */
-  Location location(ShipOrigin origin, int dx, int dy, int dz);
+  Location location(ShipOrigin origin, double dx, double dy, double dz);
 
   /**
    * Notifies the surface of a newly rendered ship.
@@ -73,6 +75,15 @@ public interface RenderSurface {
    * @param shipId the ship identifier
    */
   void removeTagged(NamespacedKey key, String shipId);
+
+  /**
+   * Returns every entity carrying the ship identifier in its tag.
+   *
+   * @param key the tag key
+   * @param shipId the ship identifier
+   * @return the tagged displays
+   */
+  Collection<BlockDisplay> tagged(NamespacedKey key, String shipId);
 
   /**
    * Wraps a Bukkit world.
@@ -104,7 +115,7 @@ public interface RenderSurface {
       }
 
       @Override
-      public Location location(ShipOrigin origin, int dx, int dy, int dz) {
+      public Location location(ShipOrigin origin, double dx, double dy, double dz) {
         return new Location(
             world, origin.x() + dx + 0.5, origin.y() + dy + 0.5, origin.z() + dz + 0.5);
       }
@@ -122,6 +133,18 @@ public interface RenderSurface {
             entity.remove();
           }
         }
+      }
+
+      @Override
+      public Collection<BlockDisplay> tagged(NamespacedKey key, String shipId) {
+        final List<BlockDisplay> found = new ArrayList<>();
+        for (Entity entity : world.getEntitiesByClass(BlockDisplay.class)) {
+          String tag = entity.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+          if (shipId.equals(tag)) {
+            found.add((BlockDisplay) entity);
+          }
+        }
+        return found;
       }
     };
   }

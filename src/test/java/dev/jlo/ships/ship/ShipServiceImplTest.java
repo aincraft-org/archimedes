@@ -210,6 +210,9 @@ class ShipServiceImplTest {
           public void removeRuntime(Ship s) {
             fakes.removedRuntime.add(s);
           }
+
+          @Override
+          public void reposition(Ship s, double oldY, double newY) {}
         };
     ShipService service =
         new ShipServiceImpl(
@@ -241,6 +244,9 @@ class ShipServiceImplTest {
           public void removeRuntime(Ship s) {
             fakes.removedRuntime.add(s);
           }
+
+          @Override
+          public void reposition(Ship s, double oldY, double newY) {}
         };
     ShipService service =
         new ShipServiceImpl(
@@ -281,6 +287,9 @@ class ShipServiceImplTest {
     public void removeRuntime(Ship ship) {
       fakes.removedRuntime.add(ship);
     }
+
+    @Override
+    public void reposition(Ship ship, double oldY, double newY) {}
   }
 }
 
