@@ -10,6 +10,7 @@ import dev.jlo.ships.model.BlockPos;
 import dev.jlo.ships.model.Ship;
 import dev.jlo.ships.model.ShipBlock;
 import dev.jlo.ships.model.ShipOrigin;
+import dev.jlo.ships.model.ShipPose;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -50,7 +51,7 @@ class ShipServiceImplTest {
         blocks.remove(
             (ship.origin().x() + block.pos().x())
                 + ","
-                + (ship.origin().y() + block.pos().y())
+                + (baseY(ship) + block.pos().y())
                 + ","
                 + (ship.origin().z() + block.pos().z()));
       }
@@ -68,7 +69,7 @@ class ShipServiceImplTest {
         blocks.put(
             (ship.origin().x() + block.pos().x())
                 + ","
-                + (ship.origin().y() + block.pos().y())
+                + (baseY(ship) + block.pos().y())
                 + ","
                 + (ship.origin().z() + block.pos().z()),
             block.blockData());
@@ -79,6 +80,10 @@ class ShipServiceImplTest {
     @Override
     public String lastError() {
       return "world mutation failed";
+    }
+
+    private static int baseY(Ship ship) {
+      return ship.origin().y() + ship.pose().anchorDy();
     }
   }
 
@@ -176,6 +181,33 @@ class ShipServiceImplTest {
     boolean ok = service.disassemble(ship.id(), UUID.randomUUID(), false);
     assertFalse(ok);
     assertEquals(1, fakes.persisted.size());
+  }
+
+  @Test
+  void disassembleRestoresAtPoseAnchor() {
+    Fakes fakes = new Fakes();
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            OWNER,
+            fakes.origin,
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)),
+            new ShipPose(3.0),
+            true);
+    fakes.persisted.put(ship.id(), ship);
+    ShipService service =
+        new ShipServiceImpl(
+            new MemoryStore(fakes),
+            (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
+            new RecordingRenderer(fakes),
+            fakes,
+            new NoopDeck(),
+            WORLD);
+    service.loadAll();
+    boolean ok = service.disassemble(ship.id(), OWNER, false);
+    assertTrue(ok);
+    // restored at origin.y(200) + anchor(3) = 203
+    assertEquals(STONE, fakes.blocks.get("100,203,300"));
   }
 
   @Test

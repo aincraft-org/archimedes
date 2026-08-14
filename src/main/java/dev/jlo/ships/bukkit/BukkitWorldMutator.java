@@ -26,6 +26,10 @@ public final class BukkitWorldMutator implements WorldMutator {
     this.world = world;
   }
 
+  private static int baseY(Ship ship) {
+    return ship.origin().y() + ship.pose().anchorDy();
+  }
+
   /**
    * Returns the serialized block data at an absolute position.
    *
@@ -49,7 +53,7 @@ public final class BukkitWorldMutator implements WorldMutator {
   public boolean clearBlocks(Ship ship) {
     for (var block : ship.blocks()) {
       int ax = ship.origin().x() + block.pos().x();
-      int ay = ship.origin().y() + block.pos().y();
+      int ay = baseY(ship) + block.pos().y();
       int az = ship.origin().z() + block.pos().z();
       world.getBlockAt(ax, ay, az).setType(Material.AIR, false);
     }
@@ -66,7 +70,7 @@ public final class BukkitWorldMutator implements WorldMutator {
   public boolean validateRestore(Ship ship) {
     for (var block : ship.blocks()) {
       int ax = ship.origin().x() + block.pos().x();
-      int ay = ship.origin().y() + block.pos().y();
+      int ay = baseY(ship) + block.pos().y();
       int az = ship.origin().z() + block.pos().z();
       Block current = world.getBlockAt(ax, ay, az);
       if (!current.getType().isAir()) {
@@ -87,7 +91,7 @@ public final class BukkitWorldMutator implements WorldMutator {
   public boolean restoreBlocks(Ship ship) {
     for (var block : ship.blocks()) {
       int ax = ship.origin().x() + block.pos().x();
-      int ay = ship.origin().y() + block.pos().y();
+      int ay = baseY(ship) + block.pos().y();
       int az = ship.origin().z() + block.pos().z();
       world
           .getBlockAt(ax, ay, az)
