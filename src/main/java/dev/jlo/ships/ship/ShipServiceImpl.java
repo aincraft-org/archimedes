@@ -1,6 +1,5 @@
 package dev.jlo.ships.ship;
 
-import dev.jlo.ships.deck.DeckManager;
 import dev.jlo.ships.model.BlockPos;
 import dev.jlo.ships.model.Ship;
 import dev.jlo.ships.model.ShipBlock;
@@ -12,69 +11,50 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Default ship service: scans a connected component, snapshots each block's exact data, removes
- * source blocks, persists the model, then renders it. Disassembly validates destination occupancy,
- * restores blocks, removes runtime entities and supports, and only then persists removal. Any
- * failure rolls back.
- */
+/** Default ship service for persistence, world mutation, and runtime lifecycle. */
 public final class ShipServiceImpl implements ShipService {
-  /** Persistence backend. */
   private final ShipStoreLike store;
-
-  /** Component scanner. */
   private final ComponentScanner scanner;
-
-  /** Runtime renderer. */
-  private final ShipRendererLike renderer;
-
-  /** World mutator. */
+  private final ShipRuntime runtime;
   private final WorldMutator mutator;
-
-  /** Deck support manager. */
-  private final DeckManager deck;
-
-  /** Buoyancy engine. */
   private final dev.jlo.ships.buoyancy.Buoyancy buoyancy;
-
-  /** Whether buoyancy is enabled globally. */
   private final boolean buoyancyEnabled;
-
-  /** World this service is bound to. */
   private final UUID worldId;
-
-  /** Registered ships keyed by identifier. */
   private final Map<UUID, Ship> ships = new LinkedHashMap<>();
-
-  /** Last operation failure message. */
   private String lastError;
 
-  /**
-   * Creates the service.
-   *
-   * @param store the persistence backend
-   * @param scanner the component scanner
-   * @param renderer the runtime renderer
-   * @param mutator the world mutator
-   * @param deck the deck support manager
-   * @param buoyancy the buoyancy engine
-   * @param buoyancyEnabled whether buoyancy is enabled globally
-   * @param worldId the bound world identifier
-   */
+  /** Compatibility constructor for legacy tests; deck operations are ignored. */
   public ShipServiceImpl(
       ShipStoreLike store,
       ComponentScanner scanner,
       ShipRendererLike renderer,
       WorldMutator mutator,
-      DeckManager deck,
+      dev.jlo.ships.deck.DeckManager ignoredDeck,
+      dev.jlo.ships.buoyancy.Buoyancy buoyancy,
+      boolean buoyancyEnabled,
+      UUID worldId) {
+    this(
+        store,
+        scanner,
+        new LegacyRuntime(renderer),
+        mutator,
+        buoyancy,
+        buoyancyEnabled,
+        worldId);
+  }
+
+  public ShipServiceImpl(
+      ShipStoreLike store,
+      ComponentScanner scanner,
+      ShipRuntime runtime,
+      WorldMutator mutator,
       dev.jlo.ships.buoyancy.Buoyancy buoyancy,
       boolean buoyancyEnabled,
       UUID worldId) {
     this.store = store;
     this.scanner = scanner;
-    this.renderer = renderer;
+    this.runtime = runtime;
     this.mutator = mutator;
-    this.deck = deck;
     this.buoyancy = buoyancy;
     this.buoyancyEnabled = buoyancyEnabled;
     this.worldId = worldId;
@@ -97,27 +77,15 @@ public final class ShipServiceImpl implements ShipService {
     }
     Ship ship =
         new Ship(UUID.randomUUID(), playerId, new ShipOrigin(targetWorldId, x, y, z), blocks);
-    // Remove source blocks first; if that fails, nothing is persisted or rendered.
     if (!mutator.clearBlocks(ship)) {
       lastError = mutator.lastError();
       return null;
     }
-    // Deploy walkable deck supports before rendering so a blocked cell
-    // aborts the whole assembly with the world still restorable.
-    if (!deck.deploy(ship)) {
-      mutator.restoreBlocks(ship);
-      lastError = "Deck supports are obstructed: " + deck.lastError();
-      return null;
-    }
     try {
-      renderer.render(ship, this::storeAndRegister);
-    } catch (IllegalStateException failure) {
-      // Render failed after mutation: restore exact snapshots, clear any
-      // partial runtime entities and supports, and persist the removal so a
-      // restart cannot resurrect a half-assembled ship.
-      rollback(ship, failure.getMessage());
-      return null;
-    } catch (IllegalArgumentException failure) {
+      runtime.spawn(ship);
+      ships.put(ship.id(), ship);
+      persistAll();
+    } catch (RuntimeException failure) {
       rollback(ship, failure.getMessage());
       return null;
     }
@@ -129,9 +97,8 @@ public final class ShipServiceImpl implements ShipService {
   }
 
   private void rollback(Ship ship, String message) {
-    deck.remove(ship);
     mutator.restoreBlocks(ship);
-    renderer.removeRuntime(ship);
+    runtime.remove(ship);
     buoyancy.clear(ship);
     ships.remove(ship.id());
     persistAll();
@@ -159,18 +126,16 @@ public final class ShipServiceImpl implements ShipService {
       lastError = "You do not own this ship";
       return false;
     }
-    // Validate every destination before mutating anything.
     if (!mutator.validateRestore(ship)) {
       lastError = mutator.lastError();
       return false;
     }
     if (!mutator.restoreBlocks(ship)) {
       lastError = mutator.lastError();
-      renderer.render(ship, ignored -> {});
+      runtime.spawn(ship);
       return false;
     }
-    deck.remove(ship);
-    renderer.removeRuntime(ship);
+    runtime.remove(ship);
     buoyancy.clear(ship);
     ships.remove(shipId);
     persistAll();
@@ -186,6 +151,9 @@ public final class ShipServiceImpl implements ShipService {
   public Map<UUID, Ship> loadAll() {
     ships.clear();
     ships.putAll(store.loadAll());
+    for (Ship ship : ships.values()) {
+      runtime.spawn(ship);
+    }
     return ships;
   }
 
@@ -196,11 +164,7 @@ public final class ShipServiceImpl implements ShipService {
 
   @Override
   public void removeAllRuntime() {
-    for (Ship ship : ships.values()) {
-      renderer.removeRuntime(ship);
-      deck.remove(ship);
-      buoyancy.clear(ship);
-    }
+    runtime.removeAll(ships.values());
   }
 
   @Override
@@ -246,9 +210,34 @@ public final class ShipServiceImpl implements ShipService {
     return true;
   }
 
-  private void storeAndRegister(Ship ship) {
-    ships.put(ship.id(), ship);
-    persistAll();
+  private static final class LegacyRuntime implements ShipRuntime {
+    private final ShipRendererLike renderer;
+
+    private LegacyRuntime(ShipRendererLike renderer) {
+      this.renderer = renderer;
+    }
+
+    @Override
+    public void spawn(Ship ship) {
+      renderer.render(ship, ignored -> {});
+    }
+
+    @Override
+    public void move(Ship ship, double oldY, double newY) {
+      renderer.reposition(ship, oldY, newY);
+    }
+
+    @Override
+    public void remove(Ship ship) {
+      renderer.removeRuntime(ship);
+    }
+
+    @Override
+    public void removeAll(Collection<Ship> ships) {
+      for (Ship ship : ships) {
+        remove(ship);
+      }
+    }
   }
 
   private void persistAll() {

@@ -1,5 +1,5 @@
 package dev.jlo.ships;
-
+import dev.jlo.ships.bukkit.BukkitCollisionVolumeManager;
 import dev.jlo.ships.bukkit.BukkitScannerWorld;
 import dev.jlo.ships.bukkit.BukkitShipRenderer;
 import dev.jlo.ships.bukkit.BukkitWorldMutator;
@@ -9,6 +9,8 @@ import dev.jlo.ships.config.ShipConfig;
 import dev.jlo.ships.config.ShipConfigLoader;
 import dev.jlo.ships.model.Ship;
 import dev.jlo.ships.render.RenderSurface;
+import dev.jlo.ships.ship.ShipRuntime;
+import dev.jlo.ships.ship.ShipRuntimeImpl;
 import dev.jlo.ships.ship.ShipService;
 import dev.jlo.ships.ship.ShipServiceImpl;
 import dev.jlo.ships.store.ShipStore;
@@ -23,9 +25,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class ShipsPlugin extends JavaPlugin {
   /** Active ship service. */
   private ShipService service;
-
-  /** Debug collision fixture service. */
-  private dev.jlo.ships.collision.CollisionDebugService collisionDebug;
 
   @Override
   public void onEnable() {
@@ -46,8 +45,9 @@ public final class ShipsPlugin extends JavaPlugin {
     try {
       RenderSurface surface = RenderSurface.of(world);
       BukkitShipRenderer renderer = new BukkitShipRenderer(surface, shipKey());
-      dev.jlo.ships.deck.DeckManager deck =
-          new dev.jlo.ships.deck.DeckManager(new dev.jlo.ships.bukkit.BukkitDeckSurface(world));
+      BukkitCollisionVolumeManager collisions =
+          new BukkitCollisionVolumeManager(world, new NamespacedKey(this, "collision-owner"));
+      ShipRuntime runtime = new ShipRuntimeImpl(renderer, collisions);
       dev.jlo.ships.buoyancy.BuoyancySurface buoyancySurface =
           new dev.jlo.ships.bukkit.BukkitBuoyancySurface(world);
       dev.jlo.ships.buoyancy.BuoyancyEngine engine =
@@ -59,14 +59,13 @@ public final class ShipsPlugin extends JavaPlugin {
               config.physicsTicks());
       dev.jlo.ships.buoyancy.BuoyancyImpl buoyancy =
           new dev.jlo.ships.buoyancy.BuoyancyImpl(
-              buoyancySurface, engine, renderer, deck, config.maxRise(), config.bobAmplitude());
+              buoyancySurface, engine, renderer, null, config.maxRise(), config.bobAmplitude());
       service =
           new ShipServiceImpl(
               storeAdapter,
               new BukkitScannerWorld(world, config.maximumBlocks(), forbidden),
-              renderer,
+              runtime,
               new BukkitWorldMutator(world),
-              deck,
               buoyancy,
               config.buoyancyEnabled(),
               world.getUID());
@@ -76,11 +75,6 @@ public final class ShipsPlugin extends JavaPlugin {
       getServer().getPluginManager().disablePlugin(this);
       return;
     }
-    collisionDebug =
-        new dev.jlo.ships.collision.CollisionDebugServiceImpl(
-            new dev.jlo.ships.bukkit.BukkitCollisionVolumeManager(
-                world, new NamespacedKey(this, "collision-owner")),
-            world);
     registerCommand(config);
     if (config.buoyancyEnabled()) {
       getServer()
@@ -92,9 +86,6 @@ public final class ShipsPlugin extends JavaPlugin {
 
   @Override
   public void onDisable() {
-    if (collisionDebug != null) {
-      collisionDebug.removeAll();
-    }
     if (service != null) {
       service.removeAllRuntime();
     }
@@ -111,8 +102,7 @@ public final class ShipsPlugin extends JavaPlugin {
             service,
             config,
             new dev.jlo.ships.command.BukkitTargetResolver(config.targetDistance()),
-            collisionDebug);
-    command.setExecutor(executor);
+            null);
     command.setTabCompleter(new ShipTabCompleter());
   }
 
