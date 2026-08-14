@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.jlo.ships.model.BlockPos;
@@ -12,6 +13,7 @@ import dev.jlo.ships.model.ShipBlock;
 import dev.jlo.ships.model.ShipOrigin;
 import dev.jlo.ships.model.ShipPose;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -116,6 +118,91 @@ class ShipServiceImplTest {
     }
   }
 
+  private static ShipRuntime runtime(Fakes fakes) {
+    return new ShipRuntime() {
+      @Override
+      public void spawn(Ship ship) {
+        fakes.rendered.add(ship);
+      }
+
+      @Override
+      public void move(Ship ship, double oldY, double newY) {}
+
+      @Override
+      public void remove(Ship ship) {
+        fakes.removedRuntime.add(ship);
+      }
+
+      @Override
+      public void removeAll(Collection<Ship> ships) {
+        fakes.removedRuntime.addAll(ships);
+      }
+    };
+  }
+
+  @Test
+  void loadAllCleansUpEarlierSpawnWhenLaterSpawnFails() {
+    Fakes fakes = new Fakes();
+    Ship first =
+        new Ship(
+            UUID.randomUUID(),
+            OWNER,
+            fakes.origin,
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
+    Ship second =
+        new Ship(
+            UUID.randomUUID(),
+            OWNER,
+            fakes.origin,
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
+    java.util.LinkedHashMap<UUID, Ship> persisted = new java.util.LinkedHashMap<>();
+    persisted.put(first.id(), first);
+    persisted.put(second.id(), second);
+    ShipRuntime failingRuntime =
+        new ShipRuntime() {
+          @Override
+          public void spawn(Ship ship) {
+            if (ship.id().equals(second.id())) {
+              throw new IllegalStateException("spawn failed");
+            }
+          }
+
+          @Override
+          public void move(Ship ship, double oldY, double newY) {}
+
+          @Override
+          public void remove(Ship ship) {
+            fakes.removedRuntime.add(ship);
+          }
+
+          @Override
+          public void removeAll(Collection<Ship> ships) {}
+        };
+    ShipServiceImpl service =
+        new ShipServiceImpl(
+            new ShipStoreLike() {
+              @Override
+              public Map<UUID, Ship> loadAll() {
+                return persisted;
+              }
+
+              @Override
+              public void saveAll(Map<UUID, Ship> ships) {}
+            },
+            (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
+            failingRuntime,
+            fakes,
+            new RecordingBuoyancy(),
+            false,
+            WORLD);
+
+    IllegalStateException failure = assertThrows(IllegalStateException.class, service::loadAll);
+    assertTrue(failure.getMessage().contains(second.id().toString()));
+    assertEquals(1, fakes.removedRuntime.size());
+    assertEquals(first.id(), fakes.removedRuntime.get(0).id());
+    assertTrue(service.all().isEmpty());
+  }
+
   @Test
   void assemblesAndPersistsShip() {
     Fakes fakes = new Fakes();
@@ -130,9 +217,8 @@ class ShipServiceImplTest {
         new ShipServiceImpl(
             new MemoryStore(fakes),
             (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
-            new RecordingRenderer(fakes),
+            runtime(fakes),
             fakes,
-            new NoopDeck(),
             new RecordingBuoyancy(),
             true,
             WORLD);
@@ -156,9 +242,8 @@ class ShipServiceImplTest {
         new ShipServiceImpl(
             new MemoryStore(fakes),
             (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
-            new RecordingRenderer(fakes),
+            runtime(fakes),
             fakes,
-            new NoopDeck(),
             new RecordingBuoyancy(),
             true,
             WORLD);
@@ -181,9 +266,8 @@ class ShipServiceImplTest {
         new ShipServiceImpl(
             new MemoryStore(fakes),
             (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
-            new RecordingRenderer(fakes),
+            runtime(fakes),
             fakes,
-            new NoopDeck(),
             new RecordingBuoyancy(),
             true,
             WORLD);
@@ -208,9 +292,8 @@ class ShipServiceImplTest {
         new ShipServiceImpl(
             new MemoryStore(fakes),
             (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
-            new RecordingRenderer(fakes),
+            runtime(fakes),
             fakes,
-            new NoopDeck(),
             new RecordingBuoyancy(),
             true,
             WORLD);
@@ -236,9 +319,8 @@ class ShipServiceImplTest {
         new ShipServiceImpl(
             new MemoryStore(fakes),
             (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
-            new RecordingRenderer(fakes),
+            runtime(fakes),
             fakes,
-            new NoopDeck(),
             new RecordingBuoyancy(),
             true,
             WORLD);
@@ -256,9 +338,8 @@ class ShipServiceImplTest {
         new ShipServiceImpl(
             new MemoryStore(fakes),
             (x, y, z) -> null,
-            new RecordingRenderer(fakes),
+            runtime(fakes),
             fakes,
-            new NoopDeck(),
             new RecordingBuoyancy(),
             true,
             WORLD);
@@ -291,9 +372,24 @@ class ShipServiceImplTest {
         new ShipServiceImpl(
             new MemoryStore(fakes),
             (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
-            throwing,
+            new ShipRuntime() {
+              @Override
+              public void spawn(Ship ship) {
+                throwing.render(ship, ignored -> {});
+              }
+
+              @Override
+              public void move(Ship ship, double oldY, double newY) {}
+
+              @Override
+              public void remove(Ship ship) {
+                fakes.removedRuntime.add(ship);
+              }
+
+              @Override
+              public void removeAll(Collection<Ship> ships) {}
+            },
             fakes,
-            new NoopDeck(),
             new RecordingBuoyancy(),
             true,
             WORLD);
@@ -327,9 +423,24 @@ class ShipServiceImplTest {
         new ShipServiceImpl(
             new MemoryStore(fakes),
             (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
-            holderThenThrow,
+            new ShipRuntime() {
+              @Override
+              public void spawn(Ship ship) {
+                holderThenThrow.render(ship, ignored -> {});
+              }
+
+              @Override
+              public void move(Ship ship, double oldY, double newY) {}
+
+              @Override
+              public void remove(Ship ship) {
+                fakes.removedRuntime.add(ship);
+              }
+
+              @Override
+              public void removeAll(Collection<Ship> ships) {}
+            },
             fakes,
-            new NoopDeck(),
             new RecordingBuoyancy(),
             true,
             WORLD);
@@ -348,9 +459,8 @@ class ShipServiceImplTest {
         new ShipServiceImpl(
             new MemoryStore(fakes),
             (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
-            new RecordingRenderer(fakes),
+            runtime(fakes),
             fakes,
-            new NoopDeck(),
             buoyancy,
             true,
             WORLD);
@@ -369,9 +479,8 @@ class ShipServiceImplTest {
         new ShipServiceImpl(
             new MemoryStore(fakes),
             (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
-            new RecordingRenderer(fakes),
+            runtime(fakes),
             fakes,
-            new NoopDeck(),
             buoyancy,
             true,
             WORLD);
@@ -396,9 +505,8 @@ class ShipServiceImplTest {
         new ShipServiceImpl(
             new MemoryStore(fakes),
             (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
-            new RecordingRenderer(fakes),
+            runtime(fakes),
             fakes,
-            new NoopDeck(),
             buoyancy,
             true,
             WORLD);

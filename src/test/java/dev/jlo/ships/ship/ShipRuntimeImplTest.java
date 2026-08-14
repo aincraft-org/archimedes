@@ -2,6 +2,7 @@ package dev.jlo.ships.ship;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.jlo.ships.collision.CollisionVolumeManager;
 import dev.jlo.ships.model.BlockPos;
@@ -34,6 +35,21 @@ class ShipRuntimeImplTest {
     assertEquals(1, collision.removed);
   }
 
+  @Test
+  void collisionMoveFailureRollsBackRendererAndModelPose() {
+    RecordingRenderer renderer = new RecordingRenderer();
+    RecordingCollision collision = new RecordingCollision();
+    collision.moveFailure = true;
+    Ship ship = ship();
+    ShipRuntime runtime = new ShipRuntimeImpl(renderer, collision);
+    ship.setPose(new dev.jlo.ships.model.ShipPose(7));
+    assertThrows(RuntimeException.class, () -> runtime.move(ship, 4, 7));
+
+    assertEquals(4.0, ship.pose().y());
+    assertEquals("4.0->7.0", renderer.lastReposition);
+    assertTrue(collision.rolledBack);
+  }
+
   private static Ship ship() {
     return new Ship(
         UUID.randomUUID(),
@@ -58,13 +74,19 @@ class ShipRuntimeImplTest {
     @Override
     public void removeRuntime(Ship ship) {}
 
+    String lastReposition;
+
     @Override
-    public void reposition(Ship ship, double oldY, double newY) {}
+    public void reposition(Ship ship, double oldY, double newY) {
+      lastReposition = newY + "->" + oldY;
+    }
   }
 
   private static final class RecordingCollision implements CollisionVolumeManager {
     int removed;
     boolean spawnFailure;
+    boolean moveFailure;
+    boolean rolledBack;
 
     @Override
     public void spawn(Ship ship) {
@@ -74,7 +96,16 @@ class ShipRuntimeImplTest {
     }
 
     @Override
-    public void move(Ship ship) {}
+    public void move(Ship ship) {
+      if (moveFailure) {
+        throw new IllegalStateException("move");
+      }
+    }
+
+    @Override
+    public void rollback(Ship ship, double oldY) {
+      rolledBack = true;
+    }
 
     @Override
     public void remove(UUID shipId) {

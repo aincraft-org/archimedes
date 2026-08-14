@@ -75,9 +75,39 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
       spawn(ship);
       return;
     }
+    Map<CollisionVolume, BlockPos> previous = new HashMap<>();
+    try {
+      for (Map.Entry<BlockPos, CollisionVolume> entry : shipVolumes.entrySet()) {
+        CollisionVolume volume = entry.getValue();
+        Location location = ((BukkitShulkerCollisionVolume) volume).entity.getLocation();
+        previous.put(
+            volume, new BlockPos(location.getBlockX(), location.getBlockY(), location.getBlockZ()));
+        BlockPos cell = ShipTransform.cell(ship, entry.getKey());
+        volume.move(cell.x(), cell.y(), cell.z());
+      }
+    } catch (RuntimeException failure) {
+      for (Map.Entry<CollisionVolume, BlockPos> entry : previous.entrySet()) {
+        BlockPos cell = entry.getValue();
+        try {
+          entry.getKey().move(cell.x(), cell.y(), cell.z());
+        } catch (RuntimeException cleanup) {
+          failure.addSuppressed(cleanup);
+        }
+      }
+      throw failure;
+    }
+  }
+
+  @Override
+  public void rollback(Ship ship, double oldY) {
+    Map<BlockPos, CollisionVolume> shipVolumes = volumes.get(ship.id());
+    if (shipVolumes == null) {
+      return;
+    }
     for (Map.Entry<BlockPos, CollisionVolume> entry : shipVolumes.entrySet()) {
       BlockPos cell = ShipTransform.cell(ship, entry.getKey());
-      entry.getValue().move(cell.x(), cell.y(), cell.z());
+      int oldAnchor = (int) Math.floor(oldY);
+      entry.getValue().move(cell.x(), cell.y() - ship.pose().anchorDy() + oldAnchor, cell.z());
     }
   }
 

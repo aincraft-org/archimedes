@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
 public final class ShipTabCompleter implements org.bukkit.command.TabCompleter {
   /** Known ship subcommands. */
   private static final List<String> SUBCOMMANDS =
-      List.of("assemble", "inspect", "disassemble", "buoyancy", "sink", "collision-test");
+      List.of("assemble", "inspect", "disassemble", "buoyancy", "sink");
 
   @Override
   public List<String> onTabComplete(

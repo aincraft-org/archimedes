@@ -20,37 +20,10 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
   /** Target resolver. */
   private final TargetResolver targetResolver;
 
-  /** Optional debug collision fixture service. */
-  private final dev.jlo.ships.collision.CollisionDebugService collisionDebug;
-
-  /**
-   * Creates the command without a debug fixture.
-   *
-   * @param service ship service
-   * @param config ship configuration
-   * @param targetResolver target resolver
-   */
   public ShipCommand(ShipService service, ShipConfig config, TargetResolver targetResolver) {
-    this(service, config, targetResolver, null);
-  }
-
-  /**
-   * Creates the command with a debug fixture.
-   *
-   * @param service ship service
-   * @param config ship configuration
-   * @param targetResolver target resolver
-   * @param collisionDebug collision fixture service
-   */
-  public ShipCommand(
-      ShipService service,
-      ShipConfig config,
-      TargetResolver targetResolver,
-      dev.jlo.ships.collision.CollisionDebugService collisionDebug) {
     this.service = service;
     this.config = config;
     this.targetResolver = targetResolver;
-    this.collisionDebug = collisionDebug;
   }
 
   @Override
@@ -78,8 +51,6 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
         return permitted(player, "ships.buoyancy") && buoyancy(player);
       case "sink":
         return permitted(player, "ships.sink") && sink(player, args);
-      case "collision-test":
-        return collisionTest(player, args);
       default:
         player.sendMessage(ChatColor.RED + "Unknown subcommand: " + args[0]);
         return true;
@@ -178,48 +149,5 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
       player.sendMessage(ChatColor.RED + "Cannot lower ship: " + service.lastError());
     }
     return true;
-  }
-
-  private boolean collisionTest(Player player, String[] args) {
-    if (!player.isOp() || collisionDebug == null) {
-      player.sendMessage(ChatColor.RED + "Collision test is operator-only and unavailable.");
-      return true;
-    }
-    String action = args.length < 2 ? "spawn" : args[1].toLowerCase(java.util.Locale.ROOT);
-    switch (action) {
-      case "spawn":
-        collisionDebug.spawn(
-            player.getUniqueId(),
-            player.getLocation().getBlockX(),
-            player.getLocation().getBlockY(),
-            player.getLocation().getBlockZ());
-        player.sendMessage(ChatColor.GREEN + "Spawned collision test volume.");
-        return true;
-      case "move":
-        int delta;
-        try {
-          delta = args.length < 3 ? 1 : Integer.parseInt(args[2]);
-        } catch (NumberFormatException exception) {
-          player.sendMessage(ChatColor.RED + "Invalid movement: " + args[2]);
-          return true;
-        }
-        if (!collisionDebug.move(player.getUniqueId(), delta)) {
-          player.sendMessage(ChatColor.RED + "No collision test volume.");
-          return true;
-        }
-        player.sendMessage(ChatColor.GREEN + "Moved collision test volume by " + delta + ".");
-        return true;
-      case "remove":
-        if (!collisionDebug.remove(player.getUniqueId())) {
-          player.sendMessage(ChatColor.RED + "No collision test volume.");
-          return true;
-        }
-        player.sendMessage(ChatColor.GREEN + "Removed collision test volume.");
-        return true;
-      default:
-        player.sendMessage(
-            ChatColor.RED + "Usage: /ship collision-test [spawn|move <blocks>|remove]");
-        return true;
-    }
   }
 }

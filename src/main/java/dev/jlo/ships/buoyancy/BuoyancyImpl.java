@@ -1,26 +1,21 @@
 package dev.jlo.ships.buoyancy;
 
-import dev.jlo.ships.deck.DeckManager;
 import dev.jlo.ships.model.Ship;
 import dev.jlo.ships.model.ShipPose;
-import dev.jlo.ships.ship.ShipRendererLike;
+import dev.jlo.ships.ship.ShipRuntime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 /** Default buoyancy: rises on assembly, integrates bobbing, applies moves all-or-nothing. */
 public final class BuoyancyImpl implements Buoyancy {
-  /** World surface. */
+  /** Runtime for atomic pose, display, and collision movement. */
+  private final ShipRuntime runtime;
+
   private final BuoyancySurface surface;
 
   /** Force integrator. */
   private final BuoyancyEngine engine;
-
-  /** Renderer for repositioning displays. */
-  private final ShipRendererLike renderer;
-
-  /** Deck manager for support re-deployment. */
-  private final DeckManager deck;
 
   /** Maximum rise from build site. */
   private final double maxRise;
@@ -39,22 +34,19 @@ public final class BuoyancyImpl implements Buoyancy {
    *
    * @param surface the world surface
    * @param engine the force integrator
-   * @param renderer the renderer
-   * @param deck the deck manager
+   * @param runtime the ship runtime
    * @param maxRise the maximum rise from build site
    * @param bobAmplitude the maximum bob amplitude
    */
   public BuoyancyImpl(
       BuoyancySurface surface,
       BuoyancyEngine engine,
-      ShipRendererLike renderer,
-      DeckManager deck,
+      ShipRuntime runtime,
       double maxRise,
       double bobAmplitude) {
     this.surface = surface;
     this.engine = engine;
-    this.renderer = renderer;
-    this.deck = deck;
+    this.runtime = runtime;
     this.maxRise = maxRise;
     this.bobAmplitude = bobAmplitude;
   }
@@ -120,22 +112,14 @@ public final class BuoyancyImpl implements Buoyancy {
   }
 
   private boolean moveTo(Ship ship, double oldY, double newY) {
-    int oldAnchor = (int) Math.floor(oldY);
-    int newAnchor = (int) Math.floor(newY);
-    if (oldAnchor != newAnchor) {
-      deck.remove(ship);
+    try {
+      ship.setPose(new ShipPose(newY));
+      runtime.move(ship, oldY, newY);
+      return true;
+    } catch (RuntimeException failure) {
+      ship.setPose(new ShipPose(oldY));
+      return false;
     }
-    ship.setPose(new ShipPose(newY));
-    renderer.reposition(ship, oldY, newY);
-    if (oldAnchor != newAnchor) {
-      if (!deck.deploy(ship)) {
-        ship.setPose(new ShipPose(oldY));
-        renderer.reposition(ship, newY, oldY);
-        deck.deploy(ship);
-        return false;
-      }
-    }
-    return true;
   }
 
   private boolean pathClear(Ship ship, double fromY, double toY) {

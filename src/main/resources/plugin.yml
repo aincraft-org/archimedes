@@ -7,7 +7,7 @@ author: jlo
 commands:
   ship:
     description: Build and manage ships
-    usage: /ship assemble|inspect|disassemble|buoyancy|sink|collision-test
+    usage: /ship assemble|inspect|disassemble|buoyancy|sink
     permission: ships.command
 permissions:
   ships.command:

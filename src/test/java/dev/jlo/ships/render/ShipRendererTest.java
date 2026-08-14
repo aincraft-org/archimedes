@@ -1,7 +1,6 @@
 package dev.jlo.ships.render;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import dev.jlo.ships.model.BlockPos;
 import dev.jlo.ships.model.Ship;
@@ -64,13 +63,10 @@ class ShipRendererTest {
                   case "getPersistentDataContainer":
                     return Proxy.newProxyInstance(
                         getClass().getClassLoader(),
-                        new Class<?>[] {
-                          org.bukkit.persistence.PersistentDataContainer.class
-                        },
+                        new Class<?>[] {org.bukkit.persistence.PersistentDataContainer.class},
                         (container, containerMethod, containerArgs) -> {
                           if ("set".equals(containerMethod.getName())) {
-                            tags.put(
-                                (NamespacedKey) containerArgs[0], (String) containerArgs[2]);
+                            tags.put((NamespacedKey) containerArgs[0], (String) containerArgs[2]);
                             return null;
                           }
                           if ("get".equals(containerMethod.getName())) {
@@ -122,6 +118,7 @@ class ShipRendererTest {
       teleports.add(location);
       return proxy;
     }
+
     @Override
     public BlockData blockData(String serialized) {
       return dataById.get(serialized);
@@ -133,6 +130,7 @@ class ShipRendererTest {
       java.util.Collections.reverse(reversed);
       return reversed;
     }
+
     @Override
     public void teleport(org.bukkit.entity.Entity entity, Location location) {
       teleports.add(location);
@@ -142,11 +140,11 @@ class ShipRendererTest {
     public UUID worldUuid() {
       return WORLD;
     }
+
     @Override
     public Location location(ShipOrigin origin, double dx, double dy, double dz) {
       return new Location(null, origin.x() + dx, origin.y() + dy, origin.z() + dz);
     }
-
 
     @Override
     public void shipRendered(UUID shipId, Collection<BlockDisplay> displays) {
@@ -216,8 +214,7 @@ class ShipRendererTest {
             true);
     new ShipRenderer().render(ship, surface);
     dev.jlo.ships.bukkit.BukkitShipRenderer renderer =
-        new dev.jlo.ships.bukkit.BukkitShipRenderer(
-            surface, new NamespacedKey("ships", "test"));
+        new dev.jlo.ships.bukkit.BukkitShipRenderer(surface, new NamespacedKey("ships", "test"));
     ship.setPose(new ShipPose(4.0));
     renderer.reposition(ship, 2.5, 4.0);
     ship.setPose(new ShipPose(1.25));
@@ -242,8 +239,7 @@ class ShipRendererTest {
             new ShipPose(0.0),
             true);
     dev.jlo.ships.bukkit.BukkitShipRenderer renderer =
-        new dev.jlo.ships.bukkit.BukkitShipRenderer(
-            surface, new NamespacedKey("ships", "test"));
+        new dev.jlo.ships.bukkit.BukkitShipRenderer(surface, new NamespacedKey("ships", "test"));
     renderer.render(ship, ignored -> {});
     ship.setPose(new ShipPose(2.0));
     renderer.reposition(ship, 0.0, 2.0);

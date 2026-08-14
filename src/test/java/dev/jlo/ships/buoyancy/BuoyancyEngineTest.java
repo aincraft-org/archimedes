@@ -1,9 +1,9 @@
 package dev.jlo.ships.buoyancy;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import dev.jlo.ships.deck.DeckManager;
 import dev.jlo.ships.deck.DeckSurface;
 import dev.jlo.ships.model.BlockPos;
 import dev.jlo.ships.model.Ship;
@@ -12,14 +12,30 @@ import dev.jlo.ships.model.ShipOrigin;
 import dev.jlo.ships.model.ShipPose;
 import dev.jlo.ships.ship.ShipHolder;
 import dev.jlo.ships.ship.ShipRendererLike;
+import dev.jlo.ships.ship.ShipRuntime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
-/** Behavior tests for the buoyancy force integrator. */
 class BuoyancyEngineTest {
+  private static ShipRuntime runtime() {
+    return new ShipRuntime() {
+      @Override
+      public void spawn(Ship ship) {}
+
+      @Override
+      public void move(Ship ship, double oldY, double newY) {}
+
+      @Override
+      public void remove(Ship ship) {}
+
+      @Override
+      public void removeAll(java.util.Collection<Ship> ships) {}
+    };
+  }
+
   /** Fake surface with water below the hull. */
   private static final class FakeSurface implements BuoyancySurface {
     final Set<String> water = new HashSet<>();
@@ -47,14 +63,39 @@ class BuoyancyEngineTest {
   }
 
   @Test
-  void submergedShipRises() {
+  void sinkThreeSucceedsToNegativeThree() {
     FakeSurface surface = new FakeSurface();
-    surface.water.add("100,205,300");
-    // fully submerged (block at y=204 below surface 205) -> buoyancy > weight -> rises
     Ship ship = shipAt(new ShipPose(0), new BlockPos(0, 0, 0));
-    BuoyancyEngine engine = new BuoyancyEngine(0.05, 1.0, 0.5, 0.9, 1.0);
-    BuoyancyEngine.Step step = engine.step(ship, 0.0, surface);
-    assertTrue(step.y() > ship.pose().y());
+    BuoyancyImpl buoyancy =
+        new BuoyancyImpl(surface, new BuoyancyEngine(0.05, 1.0, 0.5, 0.9, 1.0), runtime(), 10, 0.5);
+
+    assertTrue(buoyancy.sink(ship, 3));
+    assertEquals(-3.0, ship.pose().y());
+  }
+
+  @Test
+  void threeSingleSinksReachNegativeThree() {
+    FakeSurface surface = new FakeSurface();
+    Ship ship = shipAt(new ShipPose(0), new BlockPos(0, 0, 0));
+    BuoyancyImpl buoyancy =
+        new BuoyancyImpl(surface, new BuoyancyEngine(0.05, 1.0, 0.5, 0.9, 1.0), runtime(), 10, 0.5);
+
+    assertTrue(buoyancy.sink(ship, 1));
+    assertTrue(buoyancy.sink(ship, 1));
+    assertTrue(buoyancy.sink(ship, 1));
+    assertEquals(-3.0, ship.pose().y());
+  }
+
+  @Test
+  void intermediateObstructionRejectsSinkAndKeepsPose() {
+    FakeSurface surface = new FakeSurface();
+    surface.solid.add("100,199,300");
+    Ship ship = shipAt(new ShipPose(0), new BlockPos(0, 0, 0));
+    BuoyancyImpl buoyancy =
+        new BuoyancyImpl(surface, new BuoyancyEngine(0.05, 1.0, 0.5, 0.9, 1.0), runtime(), 10, 0.5);
+
+    assertFalse(buoyancy.sink(ship, 3));
+    assertEquals(0.0, ship.pose().y());
   }
 
   @Test
@@ -118,13 +159,7 @@ class BuoyancyEngineTest {
           public void removeBarrier(int x, int y, int z) {}
         };
     BuoyancyImpl buoyancy =
-        new BuoyancyImpl(
-            surface,
-            new BuoyancyEngine(0.05, 1.0, 0.5, 0.9, 1.0),
-            renderer,
-            new DeckManager(deckSurface),
-            10,
-            0.5);
+        new BuoyancyImpl(surface, new BuoyancyEngine(0.05, 1.0, 0.5, 0.9, 1.0), runtime(), 10, 0.5);
     assertTrue(buoyancy.rise(ship));
     assertEquals(-5.0, ship.pose().y());
   }
@@ -165,13 +200,7 @@ class BuoyancyEngineTest {
           public void removeBarrier(int x, int y, int z) {}
         };
     BuoyancyImpl buoyancy =
-        new BuoyancyImpl(
-            surface,
-            new BuoyancyEngine(0.05, 1.0, 0.5, 0.9, 1.0),
-            renderer,
-            new DeckManager(deckSurface),
-            10,
-            0.5);
+        new BuoyancyImpl(surface, new BuoyancyEngine(0.05, 1.0, 0.5, 0.9, 1.0), runtime(), 10, 0.5);
     assertTrue(buoyancy.sink(ship, 3));
     assertEquals(-3.0, ship.pose().y());
   }

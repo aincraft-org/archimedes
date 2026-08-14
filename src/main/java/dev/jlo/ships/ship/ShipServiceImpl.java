@@ -23,26 +23,6 @@ public final class ShipServiceImpl implements ShipService {
   private final Map<UUID, Ship> ships = new LinkedHashMap<>();
   private String lastError;
 
-  /** Compatibility constructor for legacy tests; deck operations are ignored. */
-  public ShipServiceImpl(
-      ShipStoreLike store,
-      ComponentScanner scanner,
-      ShipRendererLike renderer,
-      WorldMutator mutator,
-      dev.jlo.ships.deck.DeckManager ignoredDeck,
-      dev.jlo.ships.buoyancy.Buoyancy buoyancy,
-      boolean buoyancyEnabled,
-      UUID worldId) {
-    this(
-        store,
-        scanner,
-        new LegacyRuntime(renderer),
-        mutator,
-        buoyancy,
-        buoyancyEnabled,
-        worldId);
-  }
-
   public ShipServiceImpl(
       ShipStoreLike store,
       ComponentScanner scanner,
@@ -149,10 +129,28 @@ public final class ShipServiceImpl implements ShipService {
 
   @Override
   public Map<UUID, Ship> loadAll() {
+    Map<UUID, Ship> loaded = new LinkedHashMap<>(store.loadAll());
+    List<Ship> spawned = new ArrayList<>();
     ships.clear();
-    ships.putAll(store.loadAll());
-    for (Ship ship : ships.values()) {
-      runtime.spawn(ship);
+    Ship current = null;
+    try {
+      for (Ship ship : loaded.values()) {
+        current = ship;
+        runtime.spawn(ship);
+        spawned.add(ship);
+        ships.put(ship.id(), ship);
+      }
+    } catch (RuntimeException failure) {
+      for (Ship ship : spawned) {
+        try {
+          runtime.remove(ship);
+        } catch (RuntimeException cleanup) {
+          failure.addSuppressed(cleanup);
+        }
+      }
+      ships.clear();
+      String shipId = current == null ? "unknown" : current.id().toString();
+      throw new IllegalStateException("Failed to load ship runtime " + shipId, failure);
     }
     return ships;
   }
@@ -208,36 +206,6 @@ public final class ShipServiceImpl implements ShipService {
     }
     persistAll();
     return true;
-  }
-
-  private static final class LegacyRuntime implements ShipRuntime {
-    private final ShipRendererLike renderer;
-
-    private LegacyRuntime(ShipRendererLike renderer) {
-      this.renderer = renderer;
-    }
-
-    @Override
-    public void spawn(Ship ship) {
-      renderer.render(ship, ignored -> {});
-    }
-
-    @Override
-    public void move(Ship ship, double oldY, double newY) {
-      renderer.reposition(ship, oldY, newY);
-    }
-
-    @Override
-    public void remove(Ship ship) {
-      renderer.removeRuntime(ship);
-    }
-
-    @Override
-    public void removeAll(Collection<Ship> ships) {
-      for (Ship ship : ships) {
-        remove(ship);
-      }
-    }
   }
 
   private void persistAll() {

@@ -25,9 +25,10 @@ public final class CollisionHull {
     return ship.blocks().stream()
         .map(ShipBlock::pos)
         .filter(pos -> isExposed(pos, occupied))
-        .sorted(Comparator.comparingInt(BlockPos::x)
-            .thenComparingInt(BlockPos::y)
-            .thenComparingInt(BlockPos::z))
+        .sorted(
+            Comparator.comparingInt(BlockPos::x)
+                .thenComparingInt(BlockPos::y)
+                .thenComparingInt(BlockPos::z))
         .toList();
   }
 

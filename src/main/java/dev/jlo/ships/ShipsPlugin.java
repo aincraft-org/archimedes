@@ -1,4 +1,5 @@
 package dev.jlo.ships;
+
 import dev.jlo.ships.bukkit.BukkitCollisionVolumeManager;
 import dev.jlo.ships.bukkit.BukkitScannerWorld;
 import dev.jlo.ships.bukkit.BukkitShipRenderer;
@@ -59,7 +60,7 @@ public final class ShipsPlugin extends JavaPlugin {
               config.physicsTicks());
       dev.jlo.ships.buoyancy.BuoyancyImpl buoyancy =
           new dev.jlo.ships.buoyancy.BuoyancyImpl(
-              buoyancySurface, engine, renderer, null, config.maxRise(), config.bobAmplitude());
+              buoyancySurface, engine, runtime, config.maxRise(), config.bobAmplitude());
       service =
           new ShipServiceImpl(
               storeAdapter,
@@ -70,7 +71,7 @@ public final class ShipsPlugin extends JavaPlugin {
               config.buoyancyEnabled(),
               world.getUID());
       service.loadAll();
-    } catch (IllegalStateException failure) {
+    } catch (RuntimeException failure) {
       getLogger().severe("Failed to load ships: " + failure.getMessage());
       getServer().getPluginManager().disablePlugin(this);
       return;
@@ -101,8 +102,8 @@ public final class ShipsPlugin extends JavaPlugin {
         new ShipCommand(
             service,
             config,
-            new dev.jlo.ships.command.BukkitTargetResolver(config.targetDistance()),
-            null);
+            new dev.jlo.ships.command.BukkitTargetResolver(config.targetDistance()));
+    command.setExecutor(executor);
     command.setTabCompleter(new ShipTabCompleter());
   }
 

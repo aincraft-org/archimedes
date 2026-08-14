@@ -11,6 +11,9 @@ public interface CollisionVolumeManager {
   /** Moves every volume for a ship to its current transformed cells. */
   void move(Ship ship);
 
+  /** Restores every volume for a ship to its previous integer anchor. */
+  void rollback(Ship ship, double oldY);
+
   /** Removes all collision volumes owned by a ship. */
   void remove(UUID shipId);
 

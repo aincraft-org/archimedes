@@ -20,18 +20,37 @@ public final class ShipRuntimeImpl implements ShipRuntime {
     try {
       renderer.render(ship, ignored -> {});
     } catch (RuntimeException failure) {
-      collisions.remove(ship.id());
+      try {
+        renderer.removeRuntime(ship);
+      } catch (RuntimeException cleanup) {
+        failure.addSuppressed(cleanup);
+      }
+      try {
+        collisions.remove(ship.id());
+      } catch (RuntimeException cleanup) {
+        failure.addSuppressed(cleanup);
+      }
       throw failure;
     }
   }
 
   @Override
   public void move(Ship ship, double oldY, double newY) {
-    renderer.reposition(ship, oldY, newY);
     try {
+      renderer.reposition(ship, oldY, newY);
       collisions.move(ship);
     } catch (RuntimeException failure) {
-      renderer.reposition(ship, newY, oldY);
+      try {
+        collisions.rollback(ship, oldY);
+      } catch (RuntimeException cleanup) {
+        failure.addSuppressed(cleanup);
+      }
+      ship.setPose(new dev.jlo.ships.model.ShipPose(oldY));
+      try {
+        renderer.reposition(ship, newY, oldY);
+      } catch (RuntimeException cleanup) {
+        failure.addSuppressed(cleanup);
+      }
       throw failure;
     }
   }

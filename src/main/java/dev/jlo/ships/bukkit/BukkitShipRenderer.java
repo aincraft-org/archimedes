@@ -26,6 +26,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
 
   /** Tag key carrying the ship identifier. */
   private final NamespacedKey shipKey;
+
   /** Tag key carrying each block's stable relative position. */
   private final NamespacedKey blockKey;
 
@@ -60,14 +61,14 @@ public final class BukkitShipRenderer implements ShipRendererLike {
                 d.setPersistent(false);
                 d.getPersistentDataContainer()
                     .set(shipKey, PersistentDataType.STRING, ship.id().toString());
-                d.getPersistentDataContainer()
-                    .set(blockKey, PersistentDataType.STRING, key(block));
+                d.getPersistentDataContainer().set(blockKey, PersistentDataType.STRING, key(block));
               });
       displays.add(display);
     }
     surface.shipRendered(ship.id(), displays);
     holder.accept(ship);
   }
+
   /**
    * Removes every tagged display for the ship.
    *
@@ -101,6 +102,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
         position.y() - ship.origin().y(),
         position.z() - ship.origin().z());
   }
+
   private Map<BlockDisplay, ShipBlock> pairDisplays(Ship ship) {
     Map<String, ShipBlock> blocksByKey = new java.util.HashMap<>();
     for (ShipBlock block : ship.blocks()) {
