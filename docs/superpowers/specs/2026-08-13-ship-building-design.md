@@ -55,7 +55,7 @@ A `Ship` contains a UUID, owner UUID, world UUID, integer origin, and immutable 
 
 ### Walkable surfaces
 
-`ShipCollision` identifies stored blocks with no ship block directly above them. Paper interaction entities are hit-test targets, not solid floors, so they cannot satisfy the walkability requirement. The stationary MVP therefore places temporary barrier support blocks at the original positions of exposed-top ship blocks after those source blocks are converted into displays. Each support position is derived from the persisted ship model, must have been cleared by assembly, and is removed before restoration, during plugin disable, and when stale runtime state is reconciled.
+`ShipCollision` identifies stored blocks with no ship block directly above them. Paper interaction entities are hit-test targets, not solid floors, so they cannot satisfy the walkability requirement. The stationary MVP therefore places a temporary barrier support block one block above each exposed-top ship block, at source position plus `(0, 1, 0)`. Every support destination must be air and must not overlap another stored ship block; assembly fails before mutation if any destination is obstructed. Support positions are derived from the persisted ship model and removed before source blocks are restored, during plugin disable, and when stale runtime state is reconciled.
 
 Plugin enable performs a runtime capability check before loading ships: every configured support material must be a solid, non-gravity block and the world mutation API must be available. A failed check disables the plugin with a clear error. Visual-only decks are prohibited.
 
