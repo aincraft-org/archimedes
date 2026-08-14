@@ -176,6 +176,35 @@ class ShipServiceImplTest {
     assertEquals(0, fakes.rendered.size());
   }
 
+  @Test
+  void assembleRollsBackWhenRenderFails() {
+    Fakes fakes = new Fakes();
+    fakes.blocks.put("100,200,300", "minecraft:stone");
+    ShipRendererLike throwing =
+        new ShipRendererLike() {
+          @Override
+          public void render(Ship s, ShipHolder holder) {
+            throw new IllegalStateException("no display slots");
+          }
+
+          @Override
+          public void removeRuntime(Ship s) {
+            fakes.removedRuntime.add(s);
+          }
+        };
+    ShipService service =
+        new ShipServiceImpl(
+            new MemoryStore(fakes),
+            (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
+            throwing,
+            fakes,
+            WORLD);
+    Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
+    assertNull(result);
+    assertEquals(0, fakes.persisted.size());
+    assertEquals("minecraft:stone", fakes.blocks.get("100,200,300"));
+  }
+
   private record MemoryStore(Fakes fakes) implements ShipStoreLike {
     @Override
     public Map<UUID, Ship> loadAll() {

@@ -62,7 +62,17 @@ public final class ShipServiceImpl implements ShipService {
       lastError = mutator.lastError();
       return null;
     }
-    renderer.render(ship, this::storeAndRegister);
+    try {
+      renderer.render(ship, this::storeAndRegister);
+    } catch (RuntimeException failure) {
+      // Render failed after mutation: restore exact snapshots, clear any
+      // partial runtime entities, and leave no persisted ship.
+      mutator.restoreBlocks(ship);
+      renderer.removeRuntime(ship);
+      ships.remove(ship.id());
+      lastError = "Assembly failed: " + failure.getMessage();
+      return null;
+    }
     return ships.get(ship.id());
   }
 
