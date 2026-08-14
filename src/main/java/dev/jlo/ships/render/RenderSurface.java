@@ -113,7 +113,16 @@ public interface RenderSurface {
 
       @Override
       public void teleport(Entity entity, Location location) {
-        entity.teleport(location);
+        try {
+          if (!entity.teleport(location)) {
+            throw new dev.jlo.ships.ship.ShipRuntimeException(
+                new IllegalStateException("Display teleport returned false"));
+          }
+        } catch (dev.jlo.ships.ship.ShipRuntimeException failure) {
+          throw failure;
+        } catch (IllegalArgumentException failure) {
+          throw new dev.jlo.ships.ship.ShipRuntimeException(failure);
+        }
       }
 
       @Override

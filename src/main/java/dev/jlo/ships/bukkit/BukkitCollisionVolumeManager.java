@@ -6,6 +6,7 @@ import dev.jlo.ships.collision.CollisionVolumeManager;
 import dev.jlo.ships.model.BlockPos;
 import dev.jlo.ships.model.Ship;
 import dev.jlo.ships.model.ShipTransform;
+import dev.jlo.ships.ship.ShipRuntimeException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -72,11 +73,17 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
         spawned.put(relative, new BukkitShulkerCollisionVolume(ship.id(), shulker));
       }
       volumes.put(ship.id(), spawned);
-    } catch (dev.jlo.ships.ship.ShipRuntimeException failure) {
+    } catch (ShipRuntimeException failure) {
       for (CollisionVolume volume : spawned.values()) {
-        volume.remove();
+        try {
+          volume.remove();
+        } catch (ShipRuntimeException cleanup) {
+          failure.addSuppressed(cleanup);
+        }
       }
       throw failure;
+    } catch (IllegalArgumentException failure) {
+      throw new ShipRuntimeException(failure);
     }
   }
 
@@ -97,17 +104,23 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
         BlockPos cell = ShipTransform.cell(ship, entry.getKey());
         volume.move(cell.x(), cell.y(), cell.z());
       }
-    } catch (dev.jlo.ships.ship.ShipRuntimeException failure) {
-      dev.jlo.ships.ship.ShipRuntimeException wrapped = failure;
-      for (Map.Entry<CollisionVolume, BlockPos> entry : previous.entrySet()) {
-        BlockPos cell = entry.getValue();
-        try {
-          entry.getKey().move(cell.x(), cell.y(), cell.z());
-        } catch (dev.jlo.ships.ship.ShipRuntimeException cleanup) {
-          wrapped.addSuppressed(cleanup);
-        }
+    } catch (ShipRuntimeException failure) {
+      ShipRuntimeException wrapped = failure;
+      rollbackMoved(previous, wrapped);
+    } catch (IllegalArgumentException failure) {
+      throw new ShipRuntimeException(failure);
+    }
+  }
+
+  private void rollbackMoved(
+      Map<CollisionVolume, BlockPos> previous, ShipRuntimeException failure) {
+    for (Map.Entry<CollisionVolume, BlockPos> entry : previous.entrySet()) {
+      BlockPos cell = entry.getValue();
+      try {
+        entry.getKey().move(cell.x(), cell.y(), cell.z());
+      } catch (ShipRuntimeException cleanup) {
+        failure.addSuppressed(cleanup);
       }
-      throw wrapped;
     }
   }
 
@@ -163,12 +176,6 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     /** Backing Bukkit entity. */
     private final Shulker entity;
 
-    /**
-     * Creates a collision volume for an entity.
-     *
-     * @param shipId owning ship identifier
-     * @param entity backing Bukkit entity
-     */
     private BukkitShulkerCollisionVolume(UUID shipId, Shulker entity) {
       this.shipId = shipId;
       this.entity = entity;
@@ -181,15 +188,33 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
 
     @Override
     public void move(int x, int y, int z) {
-      Location location = entity.getLocation();
-      entity.teleport(
-          new Location(
-              location.getWorld(), x + 0.5, y, z + 0.5, location.getYaw(), location.getPitch()));
+      try {
+        Location location = entity.getLocation();
+        if (!entity.teleport(
+            new Location(
+                location.getWorld(),
+                x + 0.5,
+                y,
+                z + 0.5,
+                location.getYaw(),
+                location.getPitch()))) {
+          throw new ShipRuntimeException(
+              new IllegalStateException("Collision entity teleport returned false"));
+        }
+      } catch (ShipRuntimeException failure) {
+        throw failure;
+      } catch (IllegalArgumentException failure) {
+        throw new ShipRuntimeException(failure);
+      }
     }
 
     @Override
     public void remove() {
-      entity.remove();
+      try {
+        entity.remove();
+      } catch (IllegalArgumentException failure) {
+        throw new ShipRuntimeException(failure);
+      }
     }
   }
 }

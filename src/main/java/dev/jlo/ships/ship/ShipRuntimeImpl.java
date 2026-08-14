@@ -25,22 +25,26 @@ public final class ShipRuntimeImpl implements ShipRuntime {
 
   @Override
   public void spawn(Ship ship) {
-    collisions.spawn(ship);
     try {
+      collisions.spawn(ship);
       renderer.render(ship, ignored -> {});
     } catch (ShipRuntimeException failure) {
-      try {
-        renderer.removeRuntime(ship);
-      } catch (ShipRuntimeException cleanup) {
-        failure.addSuppressed(cleanup);
-      }
-      try {
-        collisions.remove(ship.id());
-      } catch (ShipRuntimeException cleanup) {
-        failure.addSuppressed(cleanup);
-      }
-      throw failure;
+      rollbackSpawn(ship, failure);
     }
+  }
+
+  private void rollbackSpawn(Ship ship, ShipRuntimeException failure) {
+    try {
+      renderer.removeRuntime(ship);
+    } catch (ShipRuntimeException cleanup) {
+      failure.addSuppressed(cleanup);
+    }
+    try {
+      collisions.remove(ship.id());
+    } catch (ShipRuntimeException cleanup) {
+      failure.addSuppressed(cleanup);
+    }
+    throw failure;
   }
 
   @Override

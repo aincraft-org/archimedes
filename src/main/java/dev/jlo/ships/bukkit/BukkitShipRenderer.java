@@ -6,6 +6,7 @@ import dev.jlo.ships.model.ShipTransform;
 import dev.jlo.ships.render.RenderSurface;
 import dev.jlo.ships.ship.ShipHolder;
 import dev.jlo.ships.ship.ShipRendererLike;
+import dev.jlo.ships.ship.ShipRuntimeException;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -51,6 +52,16 @@ public final class BukkitShipRenderer implements ShipRendererLike {
   @Override
   public void render(Ship ship, ShipHolder holder) {
     List<BlockDisplay> displays = new ArrayList<>(ship.blockCount());
+    try {
+      renderDisplays(ship, displays);
+      surface.shipRendered(ship.id(), displays);
+      holder.accept(ship);
+    } catch (ShipRuntimeException failure) {
+      cleanupRender(ship, failure);
+    }
+  }
+
+  private void renderDisplays(Ship ship, List<BlockDisplay> displays) {
     for (ShipBlock block : ship.blocks()) {
       BlockData data = surface.blockData(block.blockData());
       BlockDisplay display =
@@ -65,8 +76,15 @@ public final class BukkitShipRenderer implements ShipRendererLike {
               });
       displays.add(display);
     }
-    surface.shipRendered(ship.id(), displays);
-    holder.accept(ship);
+  }
+
+  private void cleanupRender(Ship ship, ShipRuntimeException failure) {
+    try {
+      surface.removeTagged(shipKey, ship.id().toString());
+    } catch (ShipRuntimeException cleanup) {
+      failure.addSuppressed(cleanup);
+    }
+    throw failure;
   }
 
   /**

@@ -101,16 +101,16 @@ public final class ShipServiceImpl implements ShipService {
     try {
       runtime.spawn(ship);
       ships.put(ship.id(), ship);
+      if (buoyancyEnabled && !buoyancy.rise(ship)) {
+        rollback(ship, "Buoyancy path blocked");
+        return null;
+      }
       persistAll();
+      return ships.get(ship.id());
     } catch (ShipRuntimeException failure) {
       rollback(ship, failure.getMessage());
       return null;
     }
-    if (buoyancyEnabled && !buoyancy.rise(ship)) {
-      rollback(ship, "Buoyancy path blocked");
-      return null;
-    }
-    return ships.get(ship.id());
   }
 
   private void rollback(Ship ship, String message) {
