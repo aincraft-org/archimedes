@@ -79,7 +79,7 @@ public final class BuoyancyResolver {
     int highest = NO_WATER;
     for (int y = bottom + 64; y >= bottom - 64; y--) {
       if (surface.isWater(x, y, z)) {
-        if (!sealed) {
+        if (!sealed && highest == NO_WATER) {
           highest = y;
         }
       } else if (!surface.isClear(x, y, z)) {

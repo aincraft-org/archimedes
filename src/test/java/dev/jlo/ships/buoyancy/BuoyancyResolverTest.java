@@ -74,4 +74,14 @@ class BuoyancyResolverTest {
     Ship ship = shipAt(new ShipPose(0), new BlockPos(0, 0, 0));
     assertEquals(Integer.MIN_VALUE, BuoyancyResolver.waterSurfaceY(ship, surface));
   }
+
+  @Test
+  void returnsHighestWaterInColumn() {
+    FakeSurface surface = new FakeSurface();
+    // water at y=203 and y=205; the effective surface is the highest, 205
+    surface.water.add("100,203,300");
+    surface.water.add("100,205,300");
+    Ship ship = shipAt(new ShipPose(0), new BlockPos(0, 0, 0));
+    assertEquals(205, BuoyancyResolver.waterSurfaceY(ship, surface));
+  }
 }
