@@ -55,9 +55,9 @@ A `Ship` contains a UUID, owner UUID, world UUID, integer origin, and immutable 
 
 ### Walkable surfaces
 
-`ShipCollision` identifies stored blocks with no ship block directly above them. It creates an invisible, marker-free interaction/collision entity centered over each exposed top face with one-block width and depth. The first version is stationary and axis-aligned, so collision does not need moving-platform compensation or rotation transforms.
+`ShipCollision` identifies stored blocks with no ship block directly above them. Paper interaction entities are hit-test targets, not solid floors, so they cannot satisfy the walkability requirement. The stationary MVP therefore places temporary barrier support blocks at the original positions of exposed-top ship blocks after those source blocks are converted into displays. Each support position is derived from the persisted ship model, must have been cleared by assembly, and is removed before restoration, during plugin disable, and when stale runtime state is reconciled.
 
-If the Paper API cannot provide a server-side entity with solid player collision at the required dimensions, the implementation must use temporary barrier support blocks only where the original ship occupied air, record them as derived runtime state, and remove them during disassembly and plugin disable. It must not silently ship a visual-only deck.
+Plugin enable performs a runtime capability check before loading ships: every configured support material must be a solid, non-gravity block and the world mutation API must be available. A failed check disables the plugin with a clear error. Visual-only decks are prohibited.
 
 ### Registry and reconciliation
 
