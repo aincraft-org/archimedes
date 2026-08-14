@@ -1,0 +1,6 @@
+name: Ships
+version: '${version}'
+main: dev.jlo.ships.ShipsPlugin
+description: Build stationary block-display ships with walkable decks
+api-version: '26.2'
+author: jlo
