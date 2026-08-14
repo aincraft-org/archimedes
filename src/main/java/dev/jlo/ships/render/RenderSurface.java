@@ -84,6 +84,12 @@ public interface RenderSurface {
    * @return the tagged displays
    */
   Collection<BlockDisplay> tagged(NamespacedKey key, String shipId);
+  /**
+   * Removes every display carrying the supplied plugin tag.
+   *
+   * @param key the plugin-owned tag key
+   */
+  default void removeAllTagged(NamespacedKey key) {}
 
   /**
    * Wraps a Bukkit world.
@@ -144,6 +150,15 @@ public interface RenderSurface {
           }
         }
         return found;
+      }
+
+      @Override
+      public void removeAllTagged(NamespacedKey key) {
+        for (Entity entity : world.getEntitiesByClass(BlockDisplay.class)) {
+          if (entity.getPersistentDataContainer().has(key, PersistentDataType.STRING)) {
+            entity.remove();
+          }
+        }
       }
     };
   }

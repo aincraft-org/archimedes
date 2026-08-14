@@ -123,9 +123,20 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
 
   @Override
   public void removeAll() {
+    for (Shulker shulker : world.getEntitiesByClass(Shulker.class)) {
+      if (shulker
+          .getPersistentDataContainer()
+          .has(ownerKey, PersistentDataType.STRING)) {
+        shulker.remove();
+      }
+    }
     for (UUID shipId : java.util.Set.copyOf(volumes.keySet())) {
       remove(shipId);
     }
+  }
+  /** Removes every plugin-owned collision entity, including stale entities. */
+  public void removeAllTagged() {
+    removeAll();
   }
 
   private static String key(BlockPos position) {

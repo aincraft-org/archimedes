@@ -89,6 +89,10 @@ public final class ShipsPlugin extends JavaPlugin {
   public void onDisable() {
     if (service != null) {
       service.removeAllRuntime();
+      if (service instanceof dev.jlo.ships.ship.ShipServiceImpl implementation
+          && implementation.runtime() instanceof dev.jlo.ships.ship.ShipRuntimeImpl runtime) {
+        runtime.removeAllTagged();
+      }
     }
   }
 

@@ -22,6 +22,10 @@ public final class ShipServiceImpl implements ShipService {
   private final UUID worldId;
   private final Map<UUID, Ship> ships = new LinkedHashMap<>();
   private String lastError;
+  /** Returns the runtime composition for plugin lifecycle cleanup. */
+  public ShipRuntime runtime() {
+    return runtime;
+  }
 
   public ShipServiceImpl(
       ShipStoreLike store,
@@ -133,6 +137,7 @@ public final class ShipServiceImpl implements ShipService {
     List<Ship> spawned = new ArrayList<>();
     ships.clear();
     Ship current = null;
+    runtime.removeAllTagged();
     try {
       for (Ship ship : loaded.values()) {
         current = ship;
@@ -147,6 +152,11 @@ public final class ShipServiceImpl implements ShipService {
         } catch (RuntimeException cleanup) {
           failure.addSuppressed(cleanup);
         }
+      }
+      try {
+        runtime.removeAllTagged();
+      } catch (RuntimeException cleanup) {
+        failure.addSuppressed(cleanup);
       }
       ships.clear();
       String shipId = current == null ? "unknown" : current.id().toString();

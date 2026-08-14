@@ -16,4 +16,6 @@ public interface ShipRuntime {
 
   /** Removes all runtime components for a collection of ships. */
   void removeAll(Collection<Ship> ships);
+  /** Removes stale plugin-owned runtime entities not represented by models. */
+  default void removeAllTagged() {}
 }

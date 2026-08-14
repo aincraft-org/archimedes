@@ -68,4 +68,14 @@ public final class ShipRuntimeImpl implements ShipRuntime {
     }
     collisions.removeAll();
   }
+
+  /** Removes stale plugin-owned runtimes before reconstruction. */
+  public void removeAllTagged() {
+    if (renderer instanceof dev.jlo.ships.bukkit.BukkitShipRenderer bukkitRenderer) {
+      bukkitRenderer.removeAllRuntime();
+    }
+    if (collisions instanceof dev.jlo.ships.bukkit.BukkitCollisionVolumeManager bukkitCollisions) {
+      bukkitCollisions.removeAllTagged();
+    }
+  }
 }
