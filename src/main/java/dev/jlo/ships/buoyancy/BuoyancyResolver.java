@@ -10,7 +10,7 @@ public final class BuoyancyResolver {
   private BuoyancyResolver() {}
 
   /**
-   * Returns the highest water surface y over all ship columns, or {@link #NO_WATER} when no column
+   * Returns the lowest water surface y over all ship columns, or {@link #NO_WATER} when no column
    * has water under the hull.
    *
    * @param ship the ship to inspect
@@ -18,17 +18,17 @@ public final class BuoyancyResolver {
    * @return the effective water surface y
    */
   public static int waterSurfaceY(Ship ship, BuoyancySurface surface) {
-    int max = NO_WATER;
+    int min = Integer.MAX_VALUE;
     for (var block : ship.blocks()) {
       int ax = ship.origin().x() + block.pos().x();
       int az = ship.origin().z() + block.pos().z();
       int bottom = ship.origin().y() + ship.pose().anchorDy() + block.pos().y();
       int column = columnWaterSurface(surface, ax, bottom, az);
-      if (column > max) {
-        max = column;
+      if (column != NO_WATER && column < min) {
+        min = column;
       }
     }
-    return max;
+    return min == Integer.MAX_VALUE ? NO_WATER : min;
   }
 
   /**

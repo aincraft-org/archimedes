@@ -64,8 +64,7 @@ public final class BuoyancyImpl implements Buoyancy {
     if (!ship.buoyancyEnabled()) {
       return true;
     }
-    double target = BuoyancyResolver.equilibriumY(ship, surface);
-    target = Math.max(0, Math.min(maxRise, target));
+    double target = Math.min(maxRise, BuoyancyResolver.equilibriumY(ship, surface));
     double oldY = ship.pose().y();
     if (!pathClear(ship, oldY, target)) {
       return false;
@@ -101,7 +100,7 @@ public final class BuoyancyImpl implements Buoyancy {
     if (!ship.buoyancyEnabled()) {
       return false;
     }
-    double target = Math.max(0, ship.pose().y() - blocks);
+    double target = ship.pose().y() - blocks;
     if (!pathClear(ship, ship.pose().y(), target)) {
       return false;
     }
@@ -115,7 +114,7 @@ public final class BuoyancyImpl implements Buoyancy {
   }
 
   private double clamp(Ship ship, double y, double equilibrium) {
-    double lower = Math.max(0, equilibrium - bobAmplitude);
+    double lower = equilibrium - bobAmplitude;
     double upper = Math.min(maxRise, equilibrium + bobAmplitude);
     return Math.max(lower, Math.min(upper, y));
   }
