@@ -22,3 +22,9 @@ permissions:
   ships.disassemble:
     description: Disassemble ships
     default: true
+  ships.buoyancy:
+    description: Toggle ship buoyancy
+    default: true
+  ships.sink:
+    description: Lower a ship
+    default: true

@@ -67,6 +67,16 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
           return true;
         }
         return disassemble(player);
+      case "buoyancy":
+        if (!requirePermission(player, "ships.buoyancy")) {
+          return true;
+        }
+        return buoyancy(player);
+      case "sink":
+        if (!requirePermission(player, "ships.sink")) {
+          return true;
+        }
+        return sink(player, args);
       default:
         player.sendMessage(ChatColor.RED + "Unknown subcommand: " + sub);
         return true;
@@ -131,6 +141,39 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
       return true;
     }
     player.sendMessage(ChatColor.GREEN + "Disassembled ship.");
+    return true;
+  }
+
+  private boolean buoyancy(Player player) {
+    if (service.toggleBuoyancy(player.getUniqueId(), player.getWorld().getUID())) {
+      player.sendMessage(ChatColor.GREEN + "Buoyancy toggled.");
+      return true;
+    }
+    player.sendMessage(ChatColor.RED + "Cannot toggle buoyancy: " + service.lastError());
+    return true;
+  }
+
+  private boolean sink(Player player, String[] args) {
+    if (args.length < 2) {
+      player.sendMessage(ChatColor.RED + "Usage: /ship sink <blocks>");
+      return true;
+    }
+    int blocks;
+    try {
+      blocks = Integer.parseInt(args[1]);
+    } catch (NumberFormatException e) {
+      player.sendMessage(ChatColor.RED + "Invalid block count: " + args[1]);
+      return true;
+    }
+    if (blocks < 1) {
+      player.sendMessage(ChatColor.RED + "Block count must be positive.");
+      return true;
+    }
+    if (service.sink(player.getUniqueId(), player.getWorld().getUID(), blocks)) {
+      player.sendMessage(ChatColor.GREEN + "Ship lowered by " + blocks + " blocks.");
+      return true;
+    }
+    player.sendMessage(ChatColor.RED + "Cannot lower ship: " + service.lastError());
     return true;
   }
 }

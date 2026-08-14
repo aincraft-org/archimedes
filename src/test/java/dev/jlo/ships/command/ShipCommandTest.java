@@ -101,16 +101,21 @@ class ShipCommandTest {
     @Override
     public void tick() {}
 
+    boolean toggleBuoyancyResult = true;
+    boolean sinkResult = true;
+    int lastSinkBlocks;
+
     @Override
     public boolean toggleBuoyancy(UUID requesterId, UUID worldId) {
       calls.add("toggleBuoyancy");
-      return true;
+      return toggleBuoyancyResult;
     }
 
     @Override
     public boolean sink(UUID requesterId, UUID worldId, int blocks) {
       calls.add("sink");
-      return true;
+      lastSinkBlocks = blocks;
+      return sinkResult;
     }
   }
 
@@ -335,5 +340,35 @@ class ShipCommandTest {
     Player player = player(service, true);
     commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {SUB_DISASSEMBLE});
     assertTrue(service.messages.get(0).contains("Cannot disassemble: You do not own this ship"));
+  }
+
+  @Test
+  void buoyancyTogglesOwnedShip() {
+    RecordingService service = new RecordingService();
+    service.owned = ship();
+    Player player = player(service, true);
+    commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {"buoyancy"});
+    assertTrue(service.calls.contains("toggleBuoyancy"));
+    assertTrue(service.messages.get(0).contains("Buoyancy"));
+  }
+
+  @Test
+  void sinkLowersOwnedShip() {
+    RecordingService service = new RecordingService();
+    service.owned = ship();
+    Player player = player(service, true);
+    commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {"sink", "3"});
+    assertTrue(service.calls.contains("sink"));
+    assertEquals(3, service.lastSinkBlocks);
+  }
+
+  @Test
+  void sinkRejectsNonNumericBlocks() {
+    RecordingService service = new RecordingService();
+    service.owned = ship();
+    Player player = player(service, true);
+    commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {"sink", "abc"});
+    assertTrue(service.messages.get(0).contains("Invalid block count"));
+    assertTrue(service.calls.isEmpty());
   }
 }
