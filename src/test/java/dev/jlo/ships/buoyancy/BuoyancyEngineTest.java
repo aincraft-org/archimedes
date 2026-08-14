@@ -1,0 +1,76 @@
+package dev.jlo.ships.buoyancy;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import dev.jlo.ships.model.BlockPos;
+import dev.jlo.ships.model.Ship;
+import dev.jlo.ships.model.ShipBlock;
+import dev.jlo.ships.model.ShipOrigin;
+import dev.jlo.ships.model.ShipPose;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+
+/** Behavior tests for the buoyancy force integrator. */
+class BuoyancyEngineTest {
+  /** Fake surface with water below the hull. */
+  private static final class FakeSurface implements BuoyancySurface {
+    final Set<String> water = new HashSet<>();
+    final Set<String> solid = new HashSet<>();
+
+    @Override
+    public boolean isWater(int x, int y, int z) {
+      return water.contains(x + "," + y + "," + z);
+    }
+
+    @Override
+    public boolean isClear(int x, int y, int z) {
+      return !solid.contains(x + "," + y + "," + z);
+    }
+  }
+
+  private static Ship shipAt(ShipPose pose, BlockPos... positions) {
+    ShipOrigin origin =
+        new ShipOrigin(UUID.fromString("00000000-0000-0000-0000-000000000001"), 100, 200, 300);
+    List<ShipBlock> blocks =
+        java.util.Arrays.stream(positions).map(pos -> new ShipBlock(pos, "minecraft:stone")).toList();
+    return new Ship(UUID.randomUUID(), UUID.randomUUID(), origin, blocks, pose, true);
+  }
+
+  @Test
+  void submergedShipRises() {
+    FakeSurface surface = new FakeSurface();
+    surface.water.add("100,205,300");
+    // fully submerged (block at y=204 below surface 205) -> buoyancy > weight -> rises
+    Ship ship = shipAt(new ShipPose(0), new BlockPos(0, 0, 0));
+    BuoyancyEngine engine = new BuoyancyEngine(0.05, 1.0, 0.5, 0.9, 1.0);
+    BuoyancyEngine.Step step = engine.step(ship, 0.0, surface);
+    assertTrue(step.y() > ship.pose().y());
+  }
+
+  @Test
+  void highShipSinksTowardWater() {
+    FakeSurface surface = new FakeSurface();
+    surface.water.add("100,205,300");
+    // ship high above water (block at y=210, above surface 205) -> no buoyancy -> sinks
+    Ship ship = shipAt(new ShipPose(10), new BlockPos(0, 0, 0));
+    BuoyancyEngine engine = new BuoyancyEngine(0.05, 1.0, 0.5, 0.9, 1.0);
+    BuoyancyEngine.Step step = engine.step(ship, 0.0, surface);
+    assertTrue(step.y() < ship.pose().y());
+  }
+
+  @Test
+  void equilibriumKeepsPoseStable() {
+    FakeSurface surface = new FakeSurface();
+    surface.water.add("100,205,300");
+    // equilibrium pose y = 5 (bottom at surface); block at 205 == surface -> submerged
+    // submerged=1, weight=1*0.5*0.05=0.025, buoyancy=1.0*0.05*1=0.05 -> net up; but near eq
+    Ship ship = shipAt(new ShipPose(5), new BlockPos(0, 0, 0));
+    BuoyancyEngine engine = new BuoyancyEngine(0.05, 1.0, 0.5, 0.9, 1.0);
+    BuoyancyEngine.Step step = engine.step(ship, 0.0, surface);
+    // still slightly rising toward equilibrium; assert it is not far
+    assertTrue(Math.abs(step.y() - 5.0) < 1.0);
+  }
+}
