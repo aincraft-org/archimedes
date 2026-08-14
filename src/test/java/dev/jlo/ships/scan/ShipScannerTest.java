@@ -2,10 +2,10 @@ package dev.jlo.ships.scan;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
@@ -62,6 +62,14 @@ class ShipScannerTest {
     public boolean airAt(int x, int y, int z) {
       return false;
     }
+  }
+
+  @Test
+  void visitedKeysDistinguishOverlappingPackedCoordinates() {
+    CoordKey origin = new CoordKey(0, 0, 0);
+    CoordKey colliding = new CoordKey(1, 65536, 0);
+    assertNotEquals(origin, colliding);
+    assertEquals(origin, new CoordKey(0, 0, 0));
   }
 
   @Test

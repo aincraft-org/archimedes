@@ -27,11 +27,11 @@ public final class ShipScanner {
    * limit or contains a forbidden material.
    */
   public static ScanResult scan(ScannerWorld world, Seed seed, int maximumBlocks, Set<String> forbidden) {
-    Set<Long> visited = new HashSet<>();
+    Set<CoordKey> visited = new HashSet<>();
     Deque<int[]> queue = new ArrayDeque<>();
     List<BlockPos> captured = new ArrayList<>();
     queue.add(new int[] {seed.x(), seed.y(), seed.z()});
-    visited.add(pack(seed.x(), seed.y(), seed.z()));
+    visited.add(new CoordKey(seed.x(), seed.y(), seed.z()));
     while (!queue.isEmpty()) {
       int[] current = queue.poll();
       int x = current[0];
@@ -54,16 +54,11 @@ public final class ShipScanner {
         if (world.airAt(nx, ny, nz)) {
           continue;
         }
-        long key = pack(nx, ny, nz);
-        if (visited.add(key)) {
+        if (visited.add(new CoordKey(nx, ny, nz))) {
           queue.add(new int[] {nx, ny, nz});
         }
       }
     }
     return new ScanResult(seed.x(), seed.y(), seed.z(), captured);
-  }
-
-  private static long pack(int x, int y, int z) {
-    return ((long) x << 32) ^ (Integer.toUnsignedLong(y) << 16) ^ Integer.toUnsignedLong(z);
   }
 }
