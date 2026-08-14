@@ -79,12 +79,6 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
-configurations {
-    testRuntimeClasspath {
-        exclude(group = "io.papermc.paper", module = "dev-bundle")
-    }
-}
-
 tasks.test {
     useJUnitPlatform()
     maxHeapSize = "1g"

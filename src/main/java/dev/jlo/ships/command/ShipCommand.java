@@ -20,15 +20,20 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
   /** The ship configuration. */
   private final ShipConfig config;
 
+  /** The block targeting resolver. */
+  private final TargetResolver targetResolver;
+
   /**
-   * Creates the ship command bound to a service and configuration.
+   * Creates the ship command bound to a service, configuration, and target resolver.
    *
    * @param service the ship service
    * @param config the ship configuration
+   * @param targetResolver the target resolver
    */
-  public ShipCommand(ShipService service, ShipConfig config) {
+  public ShipCommand(ShipService service, ShipConfig config, TargetResolver targetResolver) {
     this.service = service;
     this.config = config;
+    this.targetResolver = targetResolver;
   }
 
   @Override
@@ -77,19 +82,15 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
   }
 
   private boolean assemble(Player player) {
-    var target = player.getTargetBlockExact(config.targetDistance());
-    if (target == null || target.getType().isAir()) {
+    TargetResolver.Target target = targetResolver.resolve(player);
+    if (target == null) {
       player.sendMessage(
           ChatColor.RED + "No target block within " + config.targetDistance() + " blocks.");
       return true;
     }
     Ship ship =
         service.assembleAt(
-            player.getUniqueId(),
-            target.getX(),
-            target.getY(),
-            target.getZ(),
-            target.getWorld().getUID());
+            player.getUniqueId(), target.x(), target.y(), target.z(), target.worldId());
     if (ship == null) {
       player.sendMessage(ChatColor.RED + "Cannot assemble: " + service.lastError());
       return true;

@@ -72,7 +72,11 @@ public final class ShipsPlugin extends JavaPlugin {
       getLogger().warning("ship command not registered in plugin.yml");
       return;
     }
-    ShipCommand executor = new ShipCommand(service, loadConfig());
+    ShipCommand executor =
+        new ShipCommand(
+            service,
+            loadConfig(),
+            new dev.jlo.ships.command.BukkitTargetResolver(loadConfig().targetDistance()));
     command.setExecutor(executor);
     command.setTabCompleter(new ShipTabCompleter());
   }
