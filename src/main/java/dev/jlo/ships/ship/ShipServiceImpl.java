@@ -126,6 +126,7 @@ public final class ShipServiceImpl implements ShipService {
     deck.remove(ship);
     mutator.restoreBlocks(ship);
     renderer.removeRuntime(ship);
+    buoyancy.clear(ship);
     ships.remove(ship.id());
     persistAll();
     lastError = "Assembly failed: " + message;
@@ -192,6 +193,7 @@ public final class ShipServiceImpl implements ShipService {
     for (Ship ship : ships.values()) {
       renderer.removeRuntime(ship);
       deck.remove(ship);
+      buoyancy.clear(ship);
     }
   }
 
