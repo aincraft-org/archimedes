@@ -1,11 +1,15 @@
 package dev.jlo.ships.bukkit;
 
 import dev.jlo.ships.model.Ship;
+import dev.jlo.ships.model.ShipBlock;
+import dev.jlo.ships.model.ShipTransform;
 import dev.jlo.ships.render.RenderSurface;
 import dev.jlo.ships.ship.ShipHolder;
 import dev.jlo.ships.ship.ShipRendererLike;
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.BlockDisplay;
@@ -13,8 +17,8 @@ import org.bukkit.persistence.PersistentDataType;
 
 /**
  * Bukkit-backed renderer adapter: creates a non-persistent block display per block carrying the
- * ship's identifier, and removes every tagged display on disassembly through the surface's world
- * query.
+ * ship's identifier and stable relative block position, and removes every tagged display on
+ * disassembly through the surface's world query.
  */
 public final class BukkitShipRenderer implements ShipRendererLike {
   /** The rendering surface. */
@@ -22,6 +26,8 @@ public final class BukkitShipRenderer implements ShipRendererLike {
 
   /** Tag key carrying the ship identifier. */
   private final NamespacedKey shipKey;
+  /** Tag key carrying each block's stable relative position. */
+  private final NamespacedKey blockKey;
 
   /**
    * Creates the renderer for a surface and namespace key.
@@ -32,6 +38,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
   public BukkitShipRenderer(RenderSurface surface, NamespacedKey shipKey) {
     this.surface = surface;
     this.shipKey = shipKey;
+    this.blockKey = new NamespacedKey(shipKey.getNamespace(), shipKey.getKey() + "-block");
   }
 
   /**
@@ -43,27 +50,24 @@ public final class BukkitShipRenderer implements ShipRendererLike {
   @Override
   public void render(Ship ship, ShipHolder holder) {
     List<BlockDisplay> displays = new ArrayList<>(ship.blockCount());
-    for (var block : ship.blocks()) {
+    for (ShipBlock block : ship.blocks()) {
       BlockData data = surface.blockData(block.blockData());
       BlockDisplay display =
           surface.spawnBlockDisplay(
-              surface.location(
-                  ship.origin(),
-                  block.pos().x(),
-                  ship.pose().y() + block.pos().y(),
-                  block.pos().z()),
+              location(ship, block),
               d -> {
                 d.setBlock(data);
                 d.setPersistent(false);
                 d.getPersistentDataContainer()
                     .set(shipKey, PersistentDataType.STRING, ship.id().toString());
+                d.getPersistentDataContainer()
+                    .set(blockKey, PersistentDataType.STRING, key(block));
               });
       displays.add(display);
     }
     surface.shipRendered(ship.id(), displays);
     holder.accept(ship);
   }
-
   /**
    * Removes every tagged display for the ship.
    *
@@ -75,7 +79,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
   }
 
   /**
-   * Teleports every tagged display to the new pose, preserving relative offsets.
+   * Teleports every tagged display to model-derived positions.
    *
    * @param ship the ship to reposition
    * @param oldY the previous pose y
@@ -83,12 +87,38 @@ public final class BukkitShipRenderer implements ShipRendererLike {
    */
   @Override
   public void reposition(Ship ship, double oldY, double newY) {
-    for (BlockDisplay display : surface.tagged(shipKey, ship.id().toString())) {
-      org.bukkit.Location loc = display.getLocation();
-      double relX = loc.getX() - (ship.origin().x() + 0.5);
-      double relY = loc.getY() - (ship.origin().y() + oldY + 0.5);
-      double relZ = loc.getZ() - (ship.origin().z() + 0.5);
-      surface.teleport(display, surface.location(ship.origin(), relX, newY + relY, relZ));
+    Map<BlockDisplay, ShipBlock> blocksByDisplay = pairDisplays(ship);
+    for (Map.Entry<BlockDisplay, ShipBlock> entry : blocksByDisplay.entrySet()) {
+      surface.teleport(entry.getKey(), location(ship, entry.getValue()));
     }
+  }
+
+  private org.bukkit.Location location(Ship ship, ShipBlock block) {
+    ShipTransform.VisualPosition position = ShipTransform.visual(ship, block.pos());
+    return surface.location(
+        ship.origin(),
+        position.x() - ship.origin().x(),
+        position.y() - ship.origin().y(),
+        position.z() - ship.origin().z());
+  }
+  private Map<BlockDisplay, ShipBlock> pairDisplays(Ship ship) {
+    Map<String, ShipBlock> blocksByKey = new java.util.HashMap<>();
+    for (ShipBlock block : ship.blocks()) {
+      blocksByKey.put(key(block), block);
+    }
+    Map<BlockDisplay, ShipBlock> paired = new IdentityHashMap<>();
+    for (BlockDisplay display : surface.tagged(shipKey, ship.id().toString())) {
+      String blockKeyValue =
+          display.getPersistentDataContainer().get(blockKey, PersistentDataType.STRING);
+      ShipBlock block = blocksByKey.get(blockKeyValue);
+      if (block != null) {
+        paired.put(display, block);
+      }
+    }
+    return paired;
+  }
+
+  private static String key(ShipBlock block) {
+    return block.pos().x() + "," + block.pos().y() + "," + block.pos().z();
   }
 }

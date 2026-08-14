@@ -116,8 +116,7 @@ public interface RenderSurface {
 
       @Override
       public Location location(ShipOrigin origin, double dx, double dy, double dz) {
-        return new Location(
-            world, origin.x() + dx + 0.5, origin.y() + dy + 0.5, origin.z() + dz + 0.5);
+        return new Location(world, origin.x() + dx, origin.y() + dy, origin.z() + dz);
       }
 
       @Override

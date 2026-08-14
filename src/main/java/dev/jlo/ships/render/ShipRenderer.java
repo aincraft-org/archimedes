@@ -2,6 +2,7 @@ package dev.jlo.ships.render;
 
 import dev.jlo.ships.model.Ship;
 import dev.jlo.ships.model.ShipBlock;
+import dev.jlo.ships.model.ShipTransform;
 import java.util.ArrayList;
 import java.util.List;
 import org.bukkit.Location;
@@ -22,9 +23,13 @@ public final class ShipRenderer {
   public void render(Ship ship, RenderSurface surface) {
     List<BlockDisplay> displays = new ArrayList<>(ship.blockCount());
     for (ShipBlock block : ship.blocks()) {
+      ShipTransform.VisualPosition position = ShipTransform.visual(ship, block.pos());
       Location location =
           surface.location(
-              ship.origin(), block.pos().x(), ship.pose().y() + block.pos().y(), block.pos().z());
+              ship.origin(),
+              position.x() - ship.origin().x(),
+              position.y() - ship.origin().y(),
+              position.z() - ship.origin().z());
       BlockData data = surface.blockData(block.blockData());
       BlockDisplay display = surface.spawnBlockDisplay(location, d -> d.setBlock(data));
       display.setPersistent(false);

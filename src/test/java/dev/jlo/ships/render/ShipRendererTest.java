@@ -34,6 +34,7 @@ class ShipRendererTest {
     BlockData block;
     boolean persistent = true;
     Location location;
+    final Map<NamespacedKey, String> tags = new HashMap<>();
 
     BlockDisplay proxy() {
       return (BlockDisplay)
@@ -60,30 +61,47 @@ class ShipRendererTest {
                   case "teleport":
                     location = (Location) args[0];
                     return true;
+                  case "getPersistentDataContainer":
+                    return Proxy.newProxyInstance(
+                        getClass().getClassLoader(),
+                        new Class<?>[] {
+                          org.bukkit.persistence.PersistentDataContainer.class
+                        },
+                        (container, containerMethod, containerArgs) -> {
+                          if ("set".equals(containerMethod.getName())) {
+                            tags.put(
+                                (NamespacedKey) containerArgs[0], (String) containerArgs[2]);
+                            return null;
+                          }
+                          if ("get".equals(containerMethod.getName())) {
+                            return tags.get(containerArgs[0]);
+                          }
+                          return defaultFor(containerMethod.getReturnType());
+                        });
                   default:
                     return defaultFor(method.getReturnType());
                 }
               });
     }
+  }
 
-    private static Object defaultFor(Class<?> type) {
-      if (type == boolean.class) {
-        return false;
-      }
-      if (type == int.class) {
-        return 0;
-      }
-      if (type == long.class) {
-        return 0L;
-      }
-      if (type == double.class) {
-        return 0.0;
-      }
-      if (type == float.class) {
-        return 0.0f;
-      }
-      return null;
+  private static Object defaultFor(Class<?> type) {
+    if (type == boolean.class) {
+      return false;
     }
+    if (type == int.class) {
+      return 0;
+    }
+    if (type == long.class) {
+      return 0L;
+    }
+    if (type == double.class) {
+      return 0.0;
+    }
+    if (type == float.class) {
+      return 0.0f;
+    }
+    return null;
   }
 
   private static final class SpySurface implements RenderSurface {
@@ -104,12 +122,17 @@ class ShipRendererTest {
       teleports.add(location);
       return proxy;
     }
-
     @Override
     public BlockData blockData(String serialized) {
       return dataById.get(serialized);
     }
 
+    @Override
+    public Collection<BlockDisplay> tagged(NamespacedKey key, String shipId) {
+      List<BlockDisplay> reversed = new ArrayList<>(spawned);
+      java.util.Collections.reverse(reversed);
+      return reversed;
+    }
     @Override
     public void teleport(org.bukkit.entity.Entity entity, Location location) {
       teleports.add(location);
@@ -119,17 +142,11 @@ class ShipRendererTest {
     public UUID worldUuid() {
       return WORLD;
     }
-
     @Override
     public Location location(ShipOrigin origin, double dx, double dy, double dz) {
-      return new Location(
-          null, origin.x() + dx + 0.5, origin.y() + dy + 0.5, origin.z() + dz + 0.5);
+      return new Location(null, origin.x() + dx, origin.y() + dy, origin.z() + dz);
     }
 
-    @Override
-    public Collection<BlockDisplay> tagged(NamespacedKey key, String shipId) {
-      return List.copyOf(spawned);
-    }
 
     @Override
     public void shipRendered(UUID shipId, Collection<BlockDisplay> displays) {
@@ -143,15 +160,14 @@ class ShipRendererTest {
   }
 
   @Test
-  void rendersSpawnedDisplayAtAdjustedLocation() {
+  void rendersSpawnedDisplayAtIntegerAlignedCorner() {
     SpySurface surface = new SpySurface();
     Ship ship = shipWithBlock(10, 20, 30, STONE);
     new ShipRenderer().render(ship, surface);
     BlockDisplay display = surface.spawned.get(0);
-    assertFalse(display.isPersistent());
-    assertEquals(100 + 10 + 0.5, display.getLocation().getX(), 0.001);
-    assertEquals(200 + 20 + 0.5, display.getLocation().getY(), 0.001);
-    assertEquals(300 + 30 + 0.5, display.getLocation().getZ(), 0.001);
+    assertEquals(110.0, display.getLocation().getX(), 0.001);
+    assertEquals(220.0, display.getLocation().getY(), 0.001);
+    assertEquals(330.0, display.getLocation().getZ(), 0.001);
   }
 
   @Test
@@ -184,26 +200,54 @@ class ShipRendererTest {
             true);
     new ShipRenderer().render(ship, surface);
     BlockDisplay display = surface.spawned.get(0);
-    // origin.y(200) + pose(2.5) + rel(0) + 0.5 = 203.0
-    assertEquals(203.0, display.getLocation().getY(), 0.001);
+    assertEquals(202.5, display.getLocation().getY(), 0.001);
   }
 
   @Test
-  void repositionTeleportsDisplayToNewPose() {
+  void repeatedRepositionUsesModelCoordinatesWithoutDrift() {
     SpySurface surface = new SpySurface();
     Ship ship =
         new Ship(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(WORLD, 100, 200, 300),
-            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)),
+            List.of(new ShipBlock(new BlockPos(2, -1, 3), STONE)),
             new ShipPose(2.5),
             true);
     new ShipRenderer().render(ship, surface);
-    new dev.jlo.ships.bukkit.BukkitShipRenderer(surface, new NamespacedKey("ships", "test"))
-        .reposition(ship, 2.5, 4.0);
-    // teleported to origin.y(200) + newPose(4.0) + rel(0) + 0.5 = 204.5
-    assertEquals(204.5, surface.teleports.get(surface.teleports.size() - 1).getY(), 0.001);
+    dev.jlo.ships.bukkit.BukkitShipRenderer renderer =
+        new dev.jlo.ships.bukkit.BukkitShipRenderer(
+            surface, new NamespacedKey("ships", "test"));
+    ship.setPose(new ShipPose(4.0));
+    renderer.reposition(ship, 2.5, 4.0);
+    ship.setPose(new ShipPose(1.25));
+    renderer.reposition(ship, 4.0, 1.25);
+    Location location = surface.teleports.get(surface.teleports.size() - 1);
+    assertEquals(102.0, location.getX(), 0.001);
+    assertEquals(201.5, location.getY(), 0.001);
+    assertEquals(303.0, location.getZ(), 0.001);
+  }
+
+  @Test
+  void reversedTaggedIterationPreservesBlockIdentity() {
+    SpySurface surface = new SpySurface();
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(WORLD, 100, 200, 300),
+            List.of(
+                new ShipBlock(new BlockPos(1, 0, 0), STONE),
+                new ShipBlock(new BlockPos(9, 0, 0), STONE)),
+            new ShipPose(0.0),
+            true);
+    dev.jlo.ships.bukkit.BukkitShipRenderer renderer =
+        new dev.jlo.ships.bukkit.BukkitShipRenderer(
+            surface, new NamespacedKey("ships", "test"));
+    renderer.render(ship, ignored -> {});
+    ship.setPose(new ShipPose(2.0));
+    renderer.reposition(ship, 0.0, 2.0);
+    assertEquals(109.0, surface.teleports.get(2).getX(), 0.001);
   }
 
   private static Ship shipWithBlock(int dx, int dy, int dz, String data) {
