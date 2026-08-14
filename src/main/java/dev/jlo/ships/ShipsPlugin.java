@@ -49,7 +49,11 @@ public final class ShipsPlugin extends JavaPlugin {
           new dev.jlo.ships.bukkit.BukkitBuoyancySurface(world);
       dev.jlo.ships.buoyancy.BuoyancyEngine engine =
           new dev.jlo.ships.buoyancy.BuoyancyEngine(
-              config.gravity(), config.waterDensity(), config.blockDensity(), config.damping(), 1.0);
+              config.gravity(),
+              config.waterDensity(),
+              config.blockDensity(),
+              config.damping(),
+              config.physicsTicks());
       dev.jlo.ships.buoyancy.BuoyancyImpl buoyancy =
           new dev.jlo.ships.buoyancy.BuoyancyImpl(
               buoyancySurface, engine, renderer, deck, config.maxRise(), config.bobAmplitude());
