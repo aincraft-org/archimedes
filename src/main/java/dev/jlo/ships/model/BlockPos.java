@@ -38,6 +38,22 @@ public final class BlockPos {
     return y;
   }
 
+  @Override
+  public boolean equals(Object other) {
+    if (this == other) {
+      return true;
+    }
+    if (!(other instanceof BlockPos position)) {
+      return false;
+    }
+    return x == position.x && y == position.y && z == position.z;
+  }
+
+  @Override
+  public int hashCode() {
+    return java.util.Objects.hash(x, y, z);
+  }
+
   /**
    * @return the relative z coordinate
    */

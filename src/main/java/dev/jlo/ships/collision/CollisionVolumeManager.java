@@ -1,22 +1,19 @@
 package dev.jlo.ships.collision;
 
+import dev.jlo.ships.model.Ship;
 import java.util.UUID;
-import org.bukkit.Location;
 
-/** Factory and owner-scoped cleanup for temporary ship collision volumes. */
+/** Owner of temporary collision volumes for persisted ships. */
 public interface CollisionVolumeManager {
-  /** Spawns a collision volume at a world location. */
-  /**
-   * @param shipId owning ship identifier
-   * @param location spawn location
-   * @return the spawned collision volume
-   */
-  CollisionVolume spawn(UUID shipId, Location location);
+  /** Spawns or reconciles every exposed volume for a ship. */
+  void spawn(Ship ship);
 
-  /**
-   * Removes all collision volumes owned by a ship.
-   *
-   * @param shipId owning ship identifier
-   */
+  /** Moves every volume for a ship to its current transformed cells. */
+  void move(Ship ship);
+
+  /** Removes all collision volumes owned by a ship. */
   void remove(UUID shipId);
+
+  /** Removes all tracked collision volumes. */
+  void removeAll();
 }

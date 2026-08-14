@@ -28,33 +28,20 @@ public final class CollisionDebugServiceImpl implements CollisionDebugService {
     this.world = world;
   }
 
-  @Override
   public CollisionVolume spawn(UUID playerId, int x, int y, int z) {
     remove(playerId);
-    CollisionVolume volume = manager.spawn(playerId, new Location(world, x + 0.5, y, z + 0.5));
-    fixtures.put(playerId, new Fixture(volume, x, y, z));
-    return volume;
+    throw new UnsupportedOperationException("Debug collision fixtures are no longer supported");
   }
 
   @Override
   public boolean move(UUID playerId, int dy) {
-    Fixture fixture = fixtures.get(playerId);
-    if (fixture == null) {
-      return false;
-    }
-    fixture.y += dy;
-    fixture.volume.move(fixture.x, fixture.y, fixture.z);
-    return true;
+    return false;
   }
 
   @Override
   public boolean remove(UUID playerId) {
-    Fixture fixture = fixtures.remove(playerId);
-    if (fixture == null) {
-      return false;
-    }
-    manager.remove(playerId);
-    return true;
+    fixtures.remove(playerId);
+    return false;
   }
 
   @Override
