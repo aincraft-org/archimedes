@@ -15,6 +15,9 @@ import org.junit.jupiter.api.Test;
 
 /** Behavior tests for waterline resolution and submerged volume. */
 class BuoyancyResolverTest {
+  /** Common water cell used in most tests. */
+  private static final String WATER_CELL = "100,205,300";
+
   /** Fake surface backed by a set of water and solid cells. */
   private static final class FakeSurface implements BuoyancySurface {
     final Set<String> water = new HashSet<>();
@@ -35,7 +38,9 @@ class BuoyancyResolverTest {
     ShipOrigin origin =
         new ShipOrigin(UUID.fromString("00000000-0000-0000-0000-000000000001"), 100, 200, 300);
     List<ShipBlock> blocks =
-        java.util.Arrays.stream(positions).map(pos -> new ShipBlock(pos, "minecraft:stone")).toList();
+        java.util.Arrays.stream(positions)
+            .map(pos -> new ShipBlock(pos, "minecraft:stone"))
+            .toList();
     return new Ship(UUID.randomUUID(), UUID.randomUUID(), origin, blocks, pose, true);
   }
 
@@ -43,7 +48,7 @@ class BuoyancyResolverTest {
   void findsWaterSurfaceBelowHull() {
     FakeSurface surface = new FakeSurface();
     // water at y=205 under the hull (origin y=200, block at rel y=0, pose 0)
-    surface.water.add("100,205,300");
+    surface.water.add(WATER_CELL);
     Ship ship = shipAt(new ShipPose(0), new BlockPos(0, 0, 0));
     assertEquals(205, BuoyancyResolver.waterSurfaceY(ship, surface));
   }
@@ -51,7 +56,7 @@ class BuoyancyResolverTest {
   @Test
   void equilibriumYPlacesBottomAtWaterSurface() {
     FakeSurface surface = new FakeSurface();
-    surface.water.add("100,205,300");
+    surface.water.add(WATER_CELL);
     Ship ship = shipAt(new ShipPose(0), new BlockPos(0, 0, 0));
     // bottom = origin.y + pose.y + minRelY = 200 + pose.y + 0
     // want bottom = 205 -> pose.y = 5
@@ -61,7 +66,7 @@ class BuoyancyResolverTest {
   @Test
   void countsSubmergedBlocksBelowSurface() {
     FakeSurface surface = new FakeSurface();
-    surface.water.add("100,205,300");
+    surface.water.add(WATER_CELL);
     // two-block column; pose 3 -> blocks at y 203, 204; surface 205 -> both submerged
     Ship ship = shipAt(new ShipPose(3), new BlockPos(0, 0, 0), new BlockPos(0, 1, 0));
     assertEquals(2, BuoyancyResolver.submergedVolume(ship, surface));
@@ -70,7 +75,7 @@ class BuoyancyResolverTest {
   @Test
   void returnsNoWaterWhenSolidBelowHull() {
     FakeSurface surface = new FakeSurface();
-    surface.solid.add("100,205,300");
+    surface.solid.add(WATER_CELL);
     Ship ship = shipAt(new ShipPose(0), new BlockPos(0, 0, 0));
     assertEquals(Integer.MIN_VALUE, BuoyancyResolver.waterSurfaceY(ship, surface));
   }
@@ -83,5 +88,18 @@ class BuoyancyResolverTest {
     surface.water.add("100,205,300");
     Ship ship = shipAt(new ShipPose(0), new BlockPos(0, 0, 0));
     assertEquals(205, BuoyancyResolver.waterSurfaceY(ship, surface));
+  }
+
+  @Test
+  void countsSubmergedPerColumnNotGlobally() {
+    FakeSurface surface = new FakeSurface();
+    // column X=100 has surface at y=205 (water at 205, block at rel y=0 -> abs 200, submerged)
+    surface.water.add("100,205,300");
+    // column X=101 has only water at y=203 (surface 203); a block at rel y=4 -> abs 204 is
+    // above that column's surface even though it is below the other column's surface.
+    surface.water.add("101,203,300");
+    Ship ship = shipAt(new ShipPose(0), new BlockPos(0, 0, 0), new BlockPos(1, 4, 0));
+    // column 100: block abs 200 <= 205 -> submerged. column 101: block abs 204 > 203 -> not.
+    assertEquals(1, BuoyancyResolver.submergedVolume(ship, surface));
   }
 }

@@ -10,8 +10,8 @@ public final class BuoyancyResolver {
   private BuoyancyResolver() {}
 
   /**
-   * Returns the highest water surface y over all ship columns, or {@link #NO_WATER} when no
-   * column has water under the hull.
+   * Returns the highest water surface y over all ship columns, or {@link #NO_WATER} when no column
+   * has water under the hull.
    *
    * @param ship the ship to inspect
    * @param surface the world surface
@@ -39,14 +39,13 @@ public final class BuoyancyResolver {
    * @return the submerged block count
    */
   public static int submergedVolume(Ship ship, BuoyancySurface surface) {
-    int surfaceY = waterSurfaceY(ship, surface);
-    if (surfaceY == NO_WATER) {
-      return 0;
-    }
     int count = 0;
     for (var block : ship.blocks()) {
+      int ax = ship.origin().x() + block.pos().x();
+      int az = ship.origin().z() + block.pos().z();
       int blockY = ship.origin().y() + ship.pose().anchorDy() + block.pos().y();
-      if (blockY <= surfaceY) {
+      int columnSurface = columnWaterSurface(surface, ax, blockY, az);
+      if (columnSurface != NO_WATER && blockY <= columnSurface) {
         count++;
       }
     }
