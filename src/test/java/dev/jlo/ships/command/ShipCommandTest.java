@@ -97,6 +97,21 @@ class ShipCommandTest {
     public Collection<Ship> all() {
       return List.of();
     }
+
+    @Override
+    public void tick() {}
+
+    @Override
+    public boolean toggleBuoyancy(UUID requesterId, UUID worldId) {
+      calls.add("toggleBuoyancy");
+      return true;
+    }
+
+    @Override
+    public boolean sink(UUID requesterId, UUID worldId, int blocks) {
+      calls.add("sink");
+      return true;
+    }
   }
 
   /** Builds a ship with one block for service returns. */

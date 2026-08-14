@@ -65,6 +65,7 @@ public final class BuoyancyImpl implements Buoyancy {
       return true;
     }
     double target = BuoyancyResolver.equilibriumY(ship, surface);
+    target = Math.max(0, Math.min(maxRise, target));
     double oldY = ship.pose().y();
     if (!pathClear(ship, oldY, target)) {
       return false;
@@ -75,9 +76,9 @@ public final class BuoyancyImpl implements Buoyancy {
   }
 
   @Override
-  public void tick(Ship ship) {
+  public boolean tick(Ship ship) {
     if (!ship.buoyancyEnabled()) {
-      return;
+      return false;
     }
     double velocity = velocities.getOrDefault(ship.id(), 0.0);
     BuoyancyEngine.Step step = engine.step(ship, velocity, surface);
@@ -85,14 +86,14 @@ public final class BuoyancyImpl implements Buoyancy {
     double clamped = clamp(ship, step.y(), equilibrium);
     if (Math.abs(clamped - ship.pose().y()) < 0.001) {
       velocities.put(ship.id(), 0.0);
-      return;
+      return false;
     }
     if (!pathClear(ship, ship.pose().y(), clamped)) {
       velocities.put(ship.id(), 0.0);
-      return;
+      return false;
     }
     velocities.put(ship.id(), step.velocity());
-    moveTo(ship, ship.pose().y(), clamped);
+    return moveTo(ship, ship.pose().y(), clamped);
   }
 
   @Override

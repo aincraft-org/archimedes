@@ -87,6 +87,35 @@ class ShipServiceImplTest {
     }
   }
 
+  /** Buoyancy fake recording calls. */
+  private static final class RecordingBuoyancy implements dev.jlo.ships.buoyancy.Buoyancy {
+    final List<String> calls = new ArrayList<>();
+    boolean riseFails;
+
+    @Override
+    public boolean rise(Ship ship) {
+      calls.add("rise");
+      return !riseFails;
+    }
+
+    @Override
+    public boolean tick(Ship ship) {
+      calls.add("tick");
+      return false;
+    }
+
+    @Override
+    public boolean sink(Ship ship, int blocks) {
+      calls.add("sink");
+      return true;
+    }
+
+    @Override
+    public void clear(Ship ship) {
+      calls.add("clear");
+    }
+  }
+
   @Test
   void assemblesAndPersistsShip() {
     Fakes fakes = new Fakes();
@@ -104,6 +133,7 @@ class ShipServiceImplTest {
             new RecordingRenderer(fakes),
             fakes,
             new NoopDeck(),
+            new RecordingBuoyancy(),
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNotNull(result);
@@ -128,6 +158,7 @@ class ShipServiceImplTest {
             new RecordingRenderer(fakes),
             fakes,
             new NoopDeck(),
+            new RecordingBuoyancy(),
             WORLD);
     service.loadAll();
     Ship found = service.findOwnedInWorld(OWNER, WORLD);
@@ -151,6 +182,7 @@ class ShipServiceImplTest {
             new RecordingRenderer(fakes),
             fakes,
             new NoopDeck(),
+            new RecordingBuoyancy(),
             WORLD);
     service.loadAll();
     boolean ok = service.disassemble(ship.id(), OWNER, false);
@@ -176,6 +208,7 @@ class ShipServiceImplTest {
             new RecordingRenderer(fakes),
             fakes,
             new NoopDeck(),
+            new RecordingBuoyancy(),
             WORLD);
     service.loadAll();
     boolean ok = service.disassemble(ship.id(), UUID.randomUUID(), false);
@@ -202,6 +235,7 @@ class ShipServiceImplTest {
             new RecordingRenderer(fakes),
             fakes,
             new NoopDeck(),
+            new RecordingBuoyancy(),
             WORLD);
     service.loadAll();
     boolean ok = service.disassemble(ship.id(), OWNER, false);
@@ -220,6 +254,7 @@ class ShipServiceImplTest {
             new RecordingRenderer(fakes),
             fakes,
             new NoopDeck(),
+            new RecordingBuoyancy(),
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNull(result);
@@ -253,6 +288,7 @@ class ShipServiceImplTest {
             throwing,
             fakes,
             new NoopDeck(),
+            new RecordingBuoyancy(),
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNull(result);
@@ -287,12 +323,77 @@ class ShipServiceImplTest {
             holderThenThrow,
             fakes,
             new NoopDeck(),
+            new RecordingBuoyancy(),
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNull(result);
     // The store must not retain the half-saved ship after rollback.
     assertEquals(0, fakes.persisted.size());
     assertEquals(STONE, fakes.blocks.get(ORIGIN_KEY));
+  }
+
+  @Test
+  void assemblyRisesShipAfterRender() {
+    Fakes fakes = new Fakes();
+    RecordingBuoyancy buoyancy = new RecordingBuoyancy();
+    ShipService service =
+        new ShipServiceImpl(
+            new MemoryStore(fakes),
+            (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
+            new RecordingRenderer(fakes),
+            fakes,
+            new NoopDeck(),
+            buoyancy,
+            WORLD);
+    Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
+    assertNotNull(result);
+    assertEquals(List.of("rise"), buoyancy.calls);
+  }
+
+  @Test
+  void assemblyRollsBackWhenBuoyancyFails() {
+    Fakes fakes = new Fakes();
+    fakes.blocks.put(ORIGIN_KEY, STONE);
+    RecordingBuoyancy buoyancy = new RecordingBuoyancy();
+    buoyancy.riseFails = true;
+    ShipService service =
+        new ShipServiceImpl(
+            new MemoryStore(fakes),
+            (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
+            new RecordingRenderer(fakes),
+            fakes,
+            new NoopDeck(),
+            buoyancy,
+            WORLD);
+    Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
+    assertNull(result);
+    assertEquals(0, fakes.persisted.size());
+    assertEquals(STONE, fakes.blocks.get(ORIGIN_KEY));
+  }
+
+  @Test
+  void disassembleClearsBuoyancyState() {
+    Fakes fakes = new Fakes();
+    RecordingBuoyancy buoyancy = new RecordingBuoyancy();
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            OWNER,
+            fakes.origin,
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
+    fakes.persisted.put(ship.id(), ship);
+    ShipService service =
+        new ShipServiceImpl(
+            new MemoryStore(fakes),
+            (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
+            new RecordingRenderer(fakes),
+            fakes,
+            new NoopDeck(),
+            buoyancy,
+            WORLD);
+    service.loadAll();
+    service.disassemble(ship.id(), OWNER, false);
+    assertTrue(buoyancy.calls.contains("clear"));
   }
 
   private record MemoryStore(Fakes fakes) implements ShipStoreLike {

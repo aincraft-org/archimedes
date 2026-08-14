@@ -41,13 +41,26 @@ public final class ShipsPlugin extends JavaPlugin {
     StoreAdapter storeAdapter = new StoreAdapter(store);
     org.bukkit.World world = binding.world();
     try {
+      dev.jlo.ships.render.RenderSurface surface = RenderSurface.of(world);
+      BukkitShipRenderer renderer = new BukkitShipRenderer(surface, shipKey());
+      dev.jlo.ships.deck.DeckManager deck =
+          new dev.jlo.ships.deck.DeckManager(new dev.jlo.ships.bukkit.BukkitDeckSurface(world));
+      dev.jlo.ships.buoyancy.BuoyancySurface buoyancySurface =
+          new dev.jlo.ships.bukkit.BukkitBuoyancySurface(world);
+      dev.jlo.ships.buoyancy.BuoyancyEngine engine =
+          new dev.jlo.ships.buoyancy.BuoyancyEngine(
+              config.gravity(), config.waterDensity(), config.blockDensity(), config.damping(), 1.0);
+      dev.jlo.ships.buoyancy.BuoyancyImpl buoyancy =
+          new dev.jlo.ships.buoyancy.BuoyancyImpl(
+              buoyancySurface, engine, renderer, deck, config.maxRise(), config.bobAmplitude());
       service =
           new ShipServiceImpl(
               storeAdapter,
               new BukkitScannerWorld(world, config.maximumBlocks(), forbidden),
-              new BukkitShipRenderer(RenderSurface.of(world), shipKey()),
+              renderer,
               new BukkitWorldMutator(world),
-              new dev.jlo.ships.deck.DeckManager(new dev.jlo.ships.bukkit.BukkitDeckSurface(world)),
+              deck,
+              buoyancy,
               world.getUID());
       service.loadAll();
     } catch (IllegalStateException failure) {
@@ -56,6 +69,11 @@ public final class ShipsPlugin extends JavaPlugin {
       return;
     }
     registerCommand();
+    if (config.buoyancyEnabled()) {
+      getServer()
+          .getScheduler()
+          .runTaskTimer(this, service::tick, config.physicsTicks(), config.physicsTicks());
+    }
     getLogger().info("Ships enabled");
   }
 

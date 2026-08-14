@@ -34,6 +34,9 @@ public final class ShipServiceImpl implements ShipService {
   /** Deck support manager. */
   private final DeckManager deck;
 
+  /** Buoyancy engine. */
+  private final dev.jlo.ships.buoyancy.Buoyancy buoyancy;
+
   /** World this service is bound to. */
   private final UUID worldId;
 
@@ -51,6 +54,7 @@ public final class ShipServiceImpl implements ShipService {
    * @param renderer the runtime renderer
    * @param mutator the world mutator
    * @param deck the deck support manager
+   * @param buoyancy the buoyancy engine
    * @param worldId the bound world identifier
    */
   public ShipServiceImpl(
@@ -59,12 +63,14 @@ public final class ShipServiceImpl implements ShipService {
       ShipRendererLike renderer,
       WorldMutator mutator,
       DeckManager deck,
+      dev.jlo.ships.buoyancy.Buoyancy buoyancy,
       UUID worldId) {
     this.store = store;
     this.scanner = scanner;
     this.renderer = renderer;
     this.mutator = mutator;
     this.deck = deck;
+    this.buoyancy = buoyancy;
     this.worldId = worldId;
   }
 
@@ -107,6 +113,10 @@ public final class ShipServiceImpl implements ShipService {
       return null;
     } catch (IllegalArgumentException failure) {
       rollback(ship, failure.getMessage());
+      return null;
+    }
+    if (!buoyancy.rise(ship)) {
+      rollback(ship, "Buoyancy path blocked");
       return null;
     }
     return ships.get(ship.id());
@@ -154,6 +164,7 @@ public final class ShipServiceImpl implements ShipService {
     }
     deck.remove(ship);
     renderer.removeRuntime(ship);
+    buoyancy.clear(ship);
     ships.remove(shipId);
     persistAll();
     return true;
@@ -187,6 +198,44 @@ public final class ShipServiceImpl implements ShipService {
   @Override
   public Collection<Ship> all() {
     return List.copyOf(ships.values());
+  }
+
+  @Override
+  public void tick() {
+    boolean moved = false;
+    for (Ship ship : ships.values()) {
+      moved |= buoyancy.tick(ship);
+    }
+    if (moved) {
+      persistAll();
+    }
+  }
+
+  @Override
+  public boolean toggleBuoyancy(UUID requesterId, UUID worldId) {
+    Ship ship = findOwnedInWorld(requesterId, worldId);
+    if (ship == null) {
+      lastError = "No ship in this world";
+      return false;
+    }
+    ship.setBuoyancyEnabled(!ship.buoyancyEnabled());
+    persistAll();
+    return true;
+  }
+
+  @Override
+  public boolean sink(UUID requesterId, UUID worldId, int blocks) {
+    Ship ship = findOwnedInWorld(requesterId, worldId);
+    if (ship == null) {
+      lastError = "No ship in this world";
+      return false;
+    }
+    if (!buoyancy.sink(ship, blocks)) {
+      lastError = "Cannot lower ship: path blocked";
+      return false;
+    }
+    persistAll();
+    return true;
   }
 
   private void storeAndRegister(Ship ship) {

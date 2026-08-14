@@ -63,4 +63,28 @@ public interface ShipService {
    * @return every registered ship
    */
   Collection<Ship> all();
+
+  /**
+   * Integrates one buoyancy tick for every registered ship.
+   */
+  void tick();
+
+  /**
+   * Toggles buoyancy for the requester's owned ship in the world.
+   *
+   * @param requesterId the requesting player
+   * @param worldId the world identifier
+   * @return true on success
+   */
+  boolean toggleBuoyancy(UUID requesterId, UUID worldId);
+
+  /**
+   * Lowers the requester's owned ship in the world.
+   *
+   * @param requesterId the requesting player
+   * @param worldId the world identifier
+   * @param blocks the number of blocks to lower
+   * @return true on success
+   */
+  boolean sink(UUID requesterId, UUID worldId, int blocks);
 }

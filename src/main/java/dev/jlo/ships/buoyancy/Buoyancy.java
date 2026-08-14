@@ -16,8 +16,9 @@ public interface Buoyancy {
    * Integrates one physics tick for the ship.
    *
    * @param ship the ship
+   * @return true when the ship moved this tick
    */
-  void tick(Ship ship);
+  boolean tick(Ship ship);
 
   /**
    * Manually lowers the ship.
