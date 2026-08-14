@@ -55,7 +55,6 @@ public final class ShipsPlugin extends JavaPlugin {
       getServer().getPluginManager().disablePlugin(this);
       return;
     }
-    registerPermissions();
     registerCommand();
     getLogger().info("Ships enabled");
   }
@@ -80,26 +79,6 @@ public final class ShipsPlugin extends JavaPlugin {
 
   private ShipConfig loadConfig() {
     return ShipConfigLoader.load(getConfig());
-  }
-
-  private void registerPermissions() {
-    var manager = getServer().getPluginManager();
-    manager.addPermission(
-        new org.bukkit.permissions.Permission(
-            "ships.command",
-            "Base ship command access",
-            org.bukkit.permissions.PermissionDefault.TRUE));
-    manager.addPermission(
-        new org.bukkit.permissions.Permission(
-            "ships.assemble", "Assemble ships", org.bukkit.permissions.PermissionDefault.TRUE));
-    manager.addPermission(
-        new org.bukkit.permissions.Permission(
-            "ships.inspect", "Inspect ships", org.bukkit.permissions.PermissionDefault.TRUE));
-    manager.addPermission(
-        new org.bukkit.permissions.Permission(
-            "ships.disassemble",
-            "Disassemble ships",
-            org.bukkit.permissions.PermissionDefault.TRUE));
   }
 
   private NamespacedKey shipKey() {
