@@ -77,15 +77,16 @@ public interface DeckSurface {
     public static Set<long[]> resolve(Ship ship) {
       Set<long[]> supports = new LinkedHashSet<>();
       Set<String> occupied = new HashSet<>();
+      int baseY = ship.origin().y() + ship.pose().anchorDy();
       for (var block : ship.blocks()) {
         int ax = ship.origin().x() + block.pos().x();
-        int ay = ship.origin().y() + block.pos().y();
+        int ay = baseY + block.pos().y();
         int az = ship.origin().z() + block.pos().z();
         occupied.add(ax + "," + ay + "," + az);
       }
       for (var block : ship.blocks()) {
         int ax = ship.origin().x() + block.pos().x();
-        int ay = ship.origin().y() + block.pos().y();
+        int ay = baseY + block.pos().y();
         int az = ship.origin().z() + block.pos().z();
         String above = ax + "," + (ay + 1) + "," + az;
         if (!occupied.contains(above)) {

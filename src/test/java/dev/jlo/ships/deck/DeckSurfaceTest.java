@@ -7,6 +7,7 @@ import dev.jlo.ships.model.BlockPos;
 import dev.jlo.ships.model.Ship;
 import dev.jlo.ships.model.ShipBlock;
 import dev.jlo.ships.model.ShipOrigin;
+import dev.jlo.ships.model.ShipPose;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -61,6 +62,16 @@ class DeckSurfaceTest {
     assertEquals(2, supports.size());
     assertTrue(supports.stream().anyMatch(p -> p[0] == 100 && p[1] == 201 && p[2] == 300));
     assertTrue(supports.stream().anyMatch(p -> p[0] == 100 && p[1] == 203 && p[2] == 300));
+  }
+
+  @Test
+  void supportsFollowPoseAnchor() {
+    Ship ship = DeckSurfaceTestHelper.shipWithPose(new ShipPose(2.5), new BlockPos(0, 0, 0));
+    Set<long[]> supports = DeckSurface.supportPositions(ship);
+    assertEquals(1, supports.size());
+    long[] position = supports.iterator().next();
+    // origin y=200 + anchor 2 + block 0 + 1 = 203
+    assertEquals(203, position[1]);
   }
 
   private static Ship shipWith(BlockPos... positions) {
