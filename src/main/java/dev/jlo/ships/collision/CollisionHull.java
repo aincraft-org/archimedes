@@ -10,13 +10,19 @@ import java.util.Set;
 
 /** Deterministic exposed-block selection for a ship collision hull. */
 public final class CollisionHull {
+  /** Six cardinal offsets used to identify exposed blocks. */
   private static final int[][] DIRECTIONS = {
     {1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}
   };
 
   private CollisionHull() {}
 
-  /** Returns every captured block with at least one unoccupied six-direction neighbor. */
+  /**
+   * Returns every captured block with at least one unoccupied six-direction neighbor.
+   *
+   * @param ship ship whose exposed blocks are selected
+   * @return sorted exposed block positions
+   */
   public static List<BlockPos> exposedBlocks(Ship ship) {
     Set<BlockPos> occupied = new HashSet<>();
     for (ShipBlock block : ship.blocks()) {

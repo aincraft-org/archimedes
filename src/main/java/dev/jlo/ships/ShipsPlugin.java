@@ -71,7 +71,7 @@ public final class ShipsPlugin extends JavaPlugin {
               config.buoyancyEnabled(),
               world.getUID());
       service.loadAll();
-    } catch (RuntimeException failure) {
+    } catch (IllegalStateException failure) {
       getLogger().severe("Failed to load ships: " + failure.getMessage());
       getServer().getPluginManager().disablePlugin(this);
       return;
@@ -89,10 +89,7 @@ public final class ShipsPlugin extends JavaPlugin {
   public void onDisable() {
     if (service != null) {
       service.removeAllRuntime();
-      if (service instanceof dev.jlo.ships.ship.ShipServiceImpl implementation
-          && implementation.runtime() instanceof dev.jlo.ships.ship.ShipRuntimeImpl runtime) {
-        runtime.removeAllTagged();
-      }
+      ((ShipServiceImpl) service).runtime().removeAllTagged();
     }
   }
 

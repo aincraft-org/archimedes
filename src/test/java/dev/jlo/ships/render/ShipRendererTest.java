@@ -243,7 +243,9 @@ class ShipRendererTest {
     renderer.render(ship, ignored -> {});
     ship.setPose(new ShipPose(2.0));
     renderer.reposition(ship, 0.0, 2.0);
-    assertEquals(109.0, surface.teleports.get(2).getX(), 0.001);
+    java.util.Set<Double> repositionedX =
+        java.util.Set.of(surface.teleports.get(2).getX(), surface.teleports.get(3).getX());
+    assertEquals(java.util.Set.of(101.0, 109.0), repositionedX);
   }
 
   private static Ship shipWithBlock(int dx, int dy, int dz, String data) {

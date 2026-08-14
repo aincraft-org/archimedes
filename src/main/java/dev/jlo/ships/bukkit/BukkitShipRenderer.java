@@ -78,6 +78,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
   public void removeRuntime(Ship ship) {
     surface.removeTagged(shipKey, ship.id().toString());
   }
+
   /** Removes all plugin-owned displays, including stale entities. */
   public void removeAllRuntime() {
     surface.removeAllTagged(shipKey);

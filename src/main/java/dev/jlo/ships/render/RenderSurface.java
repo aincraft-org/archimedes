@@ -84,6 +84,7 @@ public interface RenderSurface {
    * @return the tagged displays
    */
   Collection<BlockDisplay> tagged(NamespacedKey key, String shipId);
+
   /**
    * Removes every display carrying the supplied plugin tag.
    *
