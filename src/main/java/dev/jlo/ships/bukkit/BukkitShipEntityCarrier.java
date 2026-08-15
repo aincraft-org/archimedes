@@ -1,11 +1,7 @@
 package dev.jlo.ships.bukkit;
 
-import dev.jlo.ships.collision.CollisionHull;
-import dev.jlo.ships.model.BlockPos;
 import dev.jlo.ships.model.Ship;
 import dev.jlo.ships.ship.ShipEntityCarrier;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import org.bukkit.Bukkit;
@@ -22,8 +18,8 @@ import org.bukkit.persistence.PersistentDataType;
  * <p>Carry is best-effort: invalid, dead, or world-mismatched entities are skipped, and an entity
  * whose teleport returns false is ignored.
  *
- * <p>Top surfaces are stored in a 2D spatial grid keyed by integer block x/z, so each candidate
- * entity only checks the grid cells under its footprint instead of scanning every top block.
+ * <p>Riders are maintained by a {@link BukkitShipRiderTracker}, so a vertical move only teleports
+ * the already-known on-board entities instead of scanning nearby entities on every move.
  */
 public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
   /** World the ship exists in. */
@@ -35,18 +31,26 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
   /** Persistent key identifying render-owner BlockDisplays. */
   private final NamespacedKey renderShipKey;
 
+  /** Tracker that maintains the set of entities on each ship. */
+  private final BukkitShipRiderTracker tracker;
+
   /**
    * Creates the Bukkit carrier.
    *
    * @param world the world containing the ship
    * @param collisionOwnerKey the persistent key identifying collision volumes
    * @param renderShipKey the persistent key identifying rendered displays
+   * @param tracker the rider tracker that owns the set of on-board entities
    */
   public BukkitShipEntityCarrier(
-      World world, NamespacedKey collisionOwnerKey, NamespacedKey renderShipKey) {
+      World world,
+      NamespacedKey collisionOwnerKey,
+      NamespacedKey renderShipKey,
+      BukkitShipRiderTracker tracker) {
     this.world = world;
     this.collisionOwnerKey = collisionOwnerKey;
     this.renderShipKey = renderShipKey;
+    this.tracker = tracker;
   }
 
   @Override
@@ -55,30 +59,29 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
     if (delta == 0.0) {
       return;
     }
-    List<BlockPos> topExposed = CollisionHull.topExposedBlocks(ship);
-    if (topExposed.isEmpty()) {
+
+    tracker.track(ship);
+    String shipId = ship.id().toString();
+    Set<UUID> riders = tracker.riders(ship);
+    if (riders.isEmpty()) {
       return;
     }
 
-    TopSurfaceIndex index = TopSurfaceIndex.build(topExposed, ship, oldY);
-    String shipId = ship.id().toString();
-    Set<UUID> carried = new HashSet<>();
-    for (Entity entity : world.getNearbyEntities(index.bounds())) {
-      if (entity.getVehicle() != null) {
+    for (UUID entityId : riders) {
+      Entity entity = Bukkit.getEntity(entityId);
+      if (entity == null || !entity.isValid() || entity.isDead()) {
         continue;
       }
-      if (!entity.isValid() || entity.isDead() || !world.equals(entity.getWorld())) {
+      if (!world.equals(entity.getWorld())) {
+        continue;
+      }
+      if (entity.getVehicle() != null) {
         continue;
       }
       if (isShipOwned(entity, shipId)) {
         continue;
       }
-      if (!index.overlaps(entity.getBoundingBox())) {
-        continue;
-      }
-      if (carried.add(entity.getUniqueId())) {
-        carryEntity(entity, delta);
-      }
+      carryEntity(entity, delta);
     }
   }
 

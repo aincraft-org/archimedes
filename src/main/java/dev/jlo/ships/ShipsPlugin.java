@@ -4,6 +4,7 @@ import dev.jlo.ships.bukkit.BukkitCollisionVolumeManager;
 import dev.jlo.ships.bukkit.BukkitScannerWorld;
 import dev.jlo.ships.bukkit.BukkitShipEntityCarrier;
 import dev.jlo.ships.bukkit.BukkitShipRenderer;
+import dev.jlo.ships.bukkit.BukkitShipRiderTracker;
 import dev.jlo.ships.bukkit.BukkitWorldMutator;
 import dev.jlo.ships.command.ShipCommand;
 import dev.jlo.ships.command.ShipTabCompleter;
@@ -16,9 +17,11 @@ import dev.jlo.ships.ship.ShipRuntimeImpl;
 import dev.jlo.ships.ship.ShipService;
 import dev.jlo.ships.ship.ShipServiceImpl;
 import dev.jlo.ships.store.ShipStore;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Supplier;
 import org.bukkit.NamespacedKey;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -47,12 +50,15 @@ public final class ShipsPlugin extends JavaPlugin {
     try {
       NamespacedKey shipKey = shipKey();
       NamespacedKey collisionOwnerKey = new NamespacedKey(this, "collision-owner");
+      Supplier<Collection<Ship>> allShips = () -> service.all();
+      BukkitShipRiderTracker tracker =
+          new BukkitShipRiderTracker(world, allShips, collisionOwnerKey, shipKey);
       RenderSurface surface = RenderSurface.of(world);
       BukkitShipRenderer renderer = new BukkitShipRenderer(surface, shipKey);
       BukkitCollisionVolumeManager collisions =
           new BukkitCollisionVolumeManager(world, collisionOwnerKey);
       BukkitShipEntityCarrier carrier =
-          new BukkitShipEntityCarrier(world, collisionOwnerKey, shipKey);
+          new BukkitShipEntityCarrier(world, collisionOwnerKey, shipKey, tracker);
       ShipRuntime runtime = new ShipRuntimeImpl(renderer, collisions, carrier);
       dev.jlo.ships.buoyancy.BuoyancySurface buoyancySurface =
           new dev.jlo.ships.bukkit.BukkitBuoyancySurface(world);
@@ -76,6 +82,7 @@ public final class ShipsPlugin extends JavaPlugin {
               config.buoyancyEnabled(),
               world.getUID());
       service.loadAll();
+      getServer().getPluginManager().registerEvents(tracker, this);
     } catch (IllegalStateException failure) {
       getLogger().severe("Failed to load ships: " + failure.getMessage());
       getServer().getPluginManager().disablePlugin(this);
