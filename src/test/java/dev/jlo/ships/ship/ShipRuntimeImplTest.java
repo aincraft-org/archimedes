@@ -69,6 +69,24 @@ class ShipRuntimeImplTest {
     assertEquals(7.0, carrier.carriedNewY);
   }
 
+  @Test
+  void carrierIsCalledForEachBobMove() {
+    RecordingRenderer renderer = new RecordingRenderer();
+    RecordingCollision collision = new RecordingCollision();
+    RecordingCarrier carrier = new RecordingCarrier();
+    Ship ship = ship();
+    ShipRuntime runtime = new ShipRuntimeImpl(renderer, collision, carrier);
+    ship.setPose(new dev.jlo.ships.model.ShipPose(0.0));
+
+    runtime.move(ship, 0.0, 0.1);
+    runtime.move(ship, 0.1, -0.05);
+    runtime.move(ship, -0.05, 0.0);
+
+    assertEquals(3, carrier.carryCount);
+    assertEquals(-0.05, carrier.carriedOldY, 0.0001);
+    assertEquals(0.0, carrier.carriedNewY, 0.0001);
+  }
+
   private static Ship ship() {
     return new Ship(
         UUID.randomUUID(),
@@ -138,11 +156,13 @@ class ShipRuntimeImplTest {
   }
 
   private static final class RecordingCarrier implements ShipEntityCarrier {
+    int carryCount;
     double carriedOldY;
     double carriedNewY;
 
     @Override
     public void carry(Ship ship, double oldY, double newY) {
+      carryCount++;
       carriedOldY = oldY;
       carriedNewY = newY;
     }
