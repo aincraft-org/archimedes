@@ -60,7 +60,7 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
       return;
     }
 
-    tracker.track(ship);
+    tracker.track(ship, oldY);
     String shipId = ship.id().toString();
     Set<UUID> riders = tracker.riders(ship);
     if (riders.isEmpty()) {

@@ -82,13 +82,17 @@ public final class BukkitShipRiderTracker implements Listener {
    * it. This is called once per ship the first time it is carried.
    *
    * @param ship the ship to track
+   * @param seedPoseY the pose y to use when locating existing riders, typically the ship's old y
    */
-  public void track(Ship ship) {
+  public void track(Ship ship, double seedPoseY) {
     UUID shipId = ship.id();
-    if (!indices.containsKey(shipId)) {
-      indices.put(shipId, TopSurfaceIndex.build(CollisionHull.topExposedBlocks(ship), ship));
+    boolean added =
+        indices.putIfAbsent(
+                shipId, TopSurfaceIndex.build(CollisionHull.topExposedBlocks(ship), ship))
+            == null;
+    if (added) {
+      seedRiders(ship, seedPoseY);
     }
-    seedRiders(ship);
   }
 
   /**
@@ -128,12 +132,11 @@ public final class BukkitShipRiderTracker implements Listener {
     indices.remove(shipId);
   }
 
-  private void seedRiders(Ship ship) {
+  private void seedRiders(Ship ship, double poseY) {
     TopSurfaceIndex index = indices.get(ship.id());
     if (index == null) {
       return;
     }
-    double poseY = ship.pose().y();
     for (Entity entity : world.getNearbyEntities(index.bounds(poseY))) {
       if (!canRide(entity)) {
         continue;
