@@ -35,6 +35,27 @@ public final class ShipTransform {
   }
 
   /**
+   * Projects a relative block to the fractional collision entity anchor.
+   *
+   * @param ship ship model
+   * @param relative relative block position
+   * @return centered collision anchor
+   */
+  public static CollisionAnchor collisionAnchor(Ship ship, BlockPos relative) {
+    VisualPosition visual = visual(ship, relative);
+    return new CollisionAnchor(visual.x() + 0.5, visual.y(), visual.z() + 0.5);
+  }
+
+  /**
+   * Fractional world anchor for a collision entity.
+   *
+   * @param x centered world x coordinate
+   * @param y world minimum y coordinate
+   * @param z centered world z coordinate
+   */
+  public record CollisionAnchor(double x, double y, double z) {}
+
+  /**
    * Exact visual position in world coordinates.
    *
    * @param x world x coordinate

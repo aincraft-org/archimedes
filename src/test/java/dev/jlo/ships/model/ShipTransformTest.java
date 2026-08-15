@@ -26,6 +26,18 @@ class ShipTransformTest {
   }
 
   @Test
+  void projectsFractionalCollisionAnchorFromVisualPosition() {
+    Ship ship = ship(new ShipOrigin(WORLD, 100, 200, 300), 0.25);
+
+    ShipTransform.CollisionAnchor anchor =
+        ShipTransform.collisionAnchor(ship, new BlockPos(2, -1, 3));
+
+    assertEquals(102.5, anchor.x());
+    assertEquals(199.25, anchor.y());
+    assertEquals(303.5, anchor.z());
+  }
+
+  @Test
   void floorsNegativePoseForAuthoritativeCell() {
     Ship ship = ship(new ShipOrigin(WORLD, 100, 200, 300), -0.25);
     BlockPos cell = ShipTransform.cell(ship, new BlockPos(2, -1, 3));

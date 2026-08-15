@@ -48,10 +48,10 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     Map<BlockPos, CollisionVolume> spawned = new HashMap<>();
     try {
       for (BlockPos relative : CollisionHull.exposedBlocks(ship)) {
-        BlockPos cell = ShipTransform.cell(ship, relative);
+        ShipTransform.CollisionAnchor anchor = ShipTransform.collisionAnchor(ship, relative);
         Shulker shulker =
             world.spawn(
-                new Location(world, cell.x() + 0.5, cell.y(), cell.z() + 0.5),
+                new Location(world, anchor.x(), anchor.y(), anchor.z()),
                 Shulker.class,
                 entity -> {
                   entity.setAI(false);
@@ -101,15 +101,16 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
       spawn(ship);
       return;
     }
-    Map<CollisionVolume, BlockPos> previous = new HashMap<>();
+    Map<CollisionVolume, ShipTransform.CollisionAnchor> previous = new HashMap<>();
     try {
       for (Map.Entry<BlockPos, CollisionVolume> entry : shipVolumes.entrySet()) {
         CollisionVolume volume = entry.getValue();
         Location location = ((BukkitShulkerCollisionVolume) volume).entity.getLocation();
         previous.put(
-            volume, new BlockPos(location.getBlockX(), location.getBlockY(), location.getBlockZ()));
-        BlockPos cell = ShipTransform.cell(ship, entry.getKey());
-        volume.move(cell.x(), cell.y(), cell.z());
+            volume,
+            new ShipTransform.CollisionAnchor(location.getX(), location.getY(), location.getZ()));
+        ShipTransform.CollisionAnchor anchor = ShipTransform.collisionAnchor(ship, entry.getKey());
+        volume.move(anchor.x(), anchor.y(), anchor.z());
       }
     } catch (ShipRuntimeException failure) {
       rollbackMoved(previous, failure);
@@ -122,11 +123,11 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
   }
 
   private void rollbackMoved(
-      Map<CollisionVolume, BlockPos> previous, ShipRuntimeException failure) {
-    for (Map.Entry<CollisionVolume, BlockPos> entry : previous.entrySet()) {
-      BlockPos cell = entry.getValue();
+      Map<CollisionVolume, ShipTransform.CollisionAnchor> previous, ShipRuntimeException failure) {
+    for (Map.Entry<CollisionVolume, ShipTransform.CollisionAnchor> entry : previous.entrySet()) {
+      ShipTransform.CollisionAnchor anchor = entry.getValue();
       try {
-        entry.getKey().move(cell.x(), cell.y(), cell.z());
+        entry.getKey().move(anchor.x(), anchor.y(), anchor.z());
       } catch (ShipRuntimeException cleanup) {
         failure.addSuppressed(cleanup);
       }
@@ -140,9 +141,9 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
       return;
     }
     for (Map.Entry<BlockPos, CollisionVolume> entry : shipVolumes.entrySet()) {
-      BlockPos cell = ShipTransform.cell(ship, entry.getKey());
-      int oldAnchor = (int) Math.floor(oldY);
-      entry.getValue().move(cell.x(), cell.y() - ship.pose().anchorDy() + oldAnchor, cell.z());
+      ShipTransform.CollisionAnchor current = ShipTransform.collisionAnchor(ship, entry.getKey());
+      double delta = oldY - ship.pose().y();
+      entry.getValue().move(current.x(), current.y() + delta, current.z());
     }
   }
 
@@ -195,18 +196,11 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
       return shipId;
     }
 
-    @Override
-    public void move(int x, int y, int z) {
+    public void move(double x, double y, double z) {
       try {
         Location location = entity.getLocation();
         if (!entity.teleport(
-            new Location(
-                location.getWorld(),
-                x + 0.5,
-                y,
-                z + 0.5,
-                location.getYaw(),
-                location.getPitch()))) {
+            new Location(location.getWorld(), x, y, z, location.getYaw(), location.getPitch()))) {
           throw new ShipRuntimeException(
               new IllegalStateException("Collision entity teleport returned false"));
         }

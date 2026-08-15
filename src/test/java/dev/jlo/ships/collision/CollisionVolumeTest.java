@@ -9,13 +9,12 @@ import org.junit.jupiter.api.Test;
 /** Contract tests for temporary ship collision volumes. */
 class CollisionVolumeTest {
   @Test
-  void volumeTracksOwnerAndIntegerAnchor() {
+  void volumeTracksOwnerAndFractionalAnchor() {
     UUID shipId = UUID.randomUUID();
     RecordingVolume volume = new RecordingVolume(shipId);
-
     assertEquals(shipId, volume.shipId());
-    volume.move(4, 5, 6);
-    assertEquals("4,5,6", volume.anchor());
+    volume.move(4.5, 5.25, 6.75);
+    assertEquals("4.5,5.25,6.75", volume.anchor());
     volume.remove();
     assertTrue(volume.removed);
   }
@@ -35,7 +34,7 @@ class CollisionVolumeTest {
     }
 
     @Override
-    public void move(int x, int y, int z) {
+    public void move(double x, double y, double z) {
       anchor = x + "," + y + "," + z;
     }
 

@@ -10,13 +10,13 @@ public interface CollisionVolume {
   UUID shipId();
 
   /**
-   * Moves the volume to an integer world anchor.
+   * Moves the volume to a fractional world anchor.
    *
    * @param x world x coordinate
    * @param y world y coordinate
    * @param z world z coordinate
    */
-  void move(int x, int y, int z);
+  void move(double x, double y, double z);
 
   /** Removes the volume from the world. */
   void remove();
