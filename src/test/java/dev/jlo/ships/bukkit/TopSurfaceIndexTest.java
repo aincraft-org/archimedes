@@ -1,0 +1,102 @@
+package dev.jlo.ships.bukkit;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import dev.jlo.ships.model.BlockPos;
+import dev.jlo.ships.model.Ship;
+import dev.jlo.ships.model.ShipBlock;
+import dev.jlo.ships.model.ShipOrigin;
+import java.util.List;
+import java.util.UUID;
+import org.bukkit.util.BoundingBox;
+import org.junit.jupiter.api.Test;
+
+/** Tests the top-surface grid used for ship entity carry. */
+class TopSurfaceIndexTest {
+  private static final UUID WORLD = UUID.randomUUID();
+  private static final UUID OWNER = UUID.randomUUID();
+  private static final String STONE = "minecraft:stone";
+
+  @Test
+  void overlapForEntityStandingOnTopBlock() {
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            OWNER,
+            new ShipOrigin(WORLD, 100, 200, 300),
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
+
+    TopSurfaceIndex index = TopSurfaceIndex.build(List.of(new BlockPos(0, 0, 0)), ship, 0.0);
+
+    // Feet of a player standing on the top surface at y=201, body 1.8 blocks tall.
+    BoundingBox player = new BoundingBox(100.25, 201.0, 300.25, 100.75, 202.8, 300.75);
+    assertTrue(index.overlaps(player));
+  }
+
+  @Test
+  void noOverlapWhenEntityIsTooHigh() {
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            OWNER,
+            new ShipOrigin(WORLD, 100, 200, 300),
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
+
+    TopSurfaceIndex index = TopSurfaceIndex.build(List.of(new BlockPos(0, 0, 0)), ship, 0.0);
+
+    // Entity floating well above the 2-block upper margin.
+    BoundingBox floating = new BoundingBox(100.25, 204.0, 300.25, 100.75, 205.0, 300.75);
+    assertFalse(index.overlaps(floating));
+  }
+
+  @Test
+  void noOverlapWhenEntityIsBesideTheBlock() {
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            OWNER,
+            new ShipOrigin(WORLD, 100, 200, 300),
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
+
+    TopSurfaceIndex index = TopSurfaceIndex.build(List.of(new BlockPos(0, 0, 0)), ship, 0.0);
+
+    // Entity one block to the east of the top surface.
+    BoundingBox beside = new BoundingBox(101.1, 201.0, 300.25, 101.5, 202.8, 300.75);
+    assertFalse(index.overlaps(beside));
+  }
+
+  @Test
+  void overlapForEntityStraddlingTwoTopBlocks() {
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            OWNER,
+            new ShipOrigin(WORLD, 100, 200, 300),
+            List.of(
+                new ShipBlock(new BlockPos(0, 0, 0), STONE),
+                new ShipBlock(new BlockPos(1, 0, 0), STONE)));
+
+    TopSurfaceIndex index =
+        TopSurfaceIndex.build(List.of(new BlockPos(0, 0, 0), new BlockPos(1, 0, 0)), ship, 0.0);
+
+    // Player standing on the boundary between the two top blocks.
+    BoundingBox player = new BoundingBox(100.75, 201.0, 300.25, 101.25, 202.8, 300.75);
+    assertTrue(index.overlaps(player));
+  }
+
+  @Test
+  void overlapForNegativeWorldOrigin() {
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            OWNER,
+            new ShipOrigin(WORLD, -100, 200, -100),
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
+
+    TopSurfaceIndex index = TopSurfaceIndex.build(List.of(new BlockPos(0, 0, 0)), ship, 0.0);
+
+    BoundingBox player = new BoundingBox(-99.75, 201.0, -99.75, -99.25, 202.8, -99.25);
+    assertTrue(index.overlaps(player));
+  }
+}

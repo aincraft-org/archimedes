@@ -3,9 +3,7 @@ package dev.jlo.ships.bukkit;
 import dev.jlo.ships.collision.CollisionHull;
 import dev.jlo.ships.model.BlockPos;
 import dev.jlo.ships.model.Ship;
-import dev.jlo.ships.model.ShipTransform;
 import dev.jlo.ships.ship.ShipEntityCarrier;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -16,7 +14,6 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.util.BoundingBox;
 
 /**
  * Bukkit implementation of the ship entity carrier. Carries non-ship entities standing on the
@@ -24,6 +21,9 @@ import org.bukkit.util.BoundingBox;
  *
  * <p>Carry is best-effort: invalid, dead, or world-mismatched entities are skipped, and an entity
  * whose teleport returns false is ignored.
+ *
+ * <p>Top surfaces are stored in a 2D spatial grid keyed by integer block x/z, so each candidate
+ * entity only checks the grid cells under its footprint instead of scanning every top block.
  */
 public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
   /** World the ship exists in. */
@@ -34,15 +34,6 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
 
   /** Persistent key identifying render-owner BlockDisplays. */
   private final NamespacedKey renderShipKey;
-
-  /**
-   * Vertical margin below the top surface used to catch entities that have just dipped into the
-   * block during an upward move.
-   */
-  private static final double LOWER_MARGIN = 0.5;
-
-  /** Vertical space above the top surface used to catch jumping entities. */
-  private static final double UPPER_MARGIN = 2.0;
 
   /**
    * Creates the Bukkit carrier.
@@ -69,36 +60,10 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
       return;
     }
 
+    TopSurfaceIndex index = TopSurfaceIndex.build(topExposed, ship, oldY);
     String shipId = ship.id().toString();
-    List<TopSurface> surfaces = new ArrayList<>(topExposed.size());
-    double minX = Double.POSITIVE_INFINITY;
-    double minY = Double.POSITIVE_INFINITY;
-    double minZ = Double.POSITIVE_INFINITY;
-    double maxX = Double.NEGATIVE_INFINITY;
-    double maxY = Double.NEGATIVE_INFINITY;
-    double maxZ = Double.NEGATIVE_INFINITY;
-
-    for (BlockPos relative : topExposed) {
-      ShipTransform.VisualPosition visual = ShipTransform.visual(ship, relative, oldY);
-      double topY = visual.y() + 1.0;
-      double sx = visual.x();
-      double sz = visual.z();
-      double ex = visual.x() + 1.0;
-      double ez = visual.z() + 1.0;
-
-      surfaces.add(new TopSurface(sx, ex, sz, ez, topY - LOWER_MARGIN, topY + UPPER_MARGIN));
-
-      minX = Math.min(minX, sx);
-      minY = Math.min(minY, topY - LOWER_MARGIN);
-      minZ = Math.min(minZ, sz);
-      maxX = Math.max(maxX, ex);
-      maxY = Math.max(maxY, topY + UPPER_MARGIN);
-      maxZ = Math.max(maxZ, ez);
-    }
-
     Set<UUID> carried = new HashSet<>();
-    for (Entity entity :
-        world.getNearbyEntities(new BoundingBox(minX, minY, minZ, maxX, maxY, maxZ))) {
+    for (Entity entity : world.getNearbyEntities(index.bounds())) {
       if (entity.getVehicle() != null) {
         continue;
       }
@@ -108,7 +73,7 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
       if (isShipOwned(entity, shipId)) {
         continue;
       }
-      if (!overlapsTop(entity.getBoundingBox(), surfaces)) {
+      if (!index.overlaps(entity.getBoundingBox())) {
         continue;
       }
       if (carried.add(entity.getUniqueId())) {
@@ -128,15 +93,6 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
     return shipId.equals(render);
   }
 
-  private static boolean overlapsTop(BoundingBox box, List<TopSurface> surfaces) {
-    for (TopSurface surface : surfaces) {
-      if (box.overlaps(surface.box)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   private static void carryEntity(Entity entity, double delta) {
     Location current = entity.getLocation();
     Location dest =
@@ -153,16 +109,6 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
       }
     } catch (IllegalArgumentException | IllegalStateException failure) {
       Bukkit.getLogger().finest("Ship carry teleport failed for " + entity.getUniqueId());
-    }
-  }
-
-  /** Describes a vertical column above a top-exposed block used to select riders. */
-  private static final class TopSurface {
-    /** Column bounds above a top-exposed block. */
-    final BoundingBox box;
-
-    TopSurface(double minX, double maxX, double minZ, double maxZ, double minY, double maxY) {
-      this.box = new BoundingBox(minX, minY, minZ, maxX, maxY, maxZ);
     }
   }
 }
