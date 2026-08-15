@@ -55,6 +55,12 @@ class CollisionHullTest {
         CollisionHull.exposedBlocks(ship));
   }
 
+  @Test
+  void topExposedOnlyIncludesBlocksWithMissingUpperNeighbor() {
+    Ship ship = ship(List.of(new BlockPos(0, 0, 0), new BlockPos(0, 1, 0)));
+    assertEquals(List.of(new BlockPos(0, 1, 0)), CollisionHull.topExposedBlocks(ship));
+  }
+
   private static Ship ship(List<BlockPos> positions) {
     return new Ship(
         UUID.randomUUID(),

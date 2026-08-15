@@ -12,6 +12,9 @@ public final class ShipRuntimeImpl implements ShipRuntime {
   /** Collision adapter used by the runtime. */
   private final CollisionVolumeManager collisions;
 
+  /** Optional carrier for non-ship entities standing on the ship. */
+  private final ShipEntityCarrier carrier;
+
   /**
    * Creates a transactional runtime from renderer and collision adapters.
    *
@@ -19,8 +22,21 @@ public final class ShipRuntimeImpl implements ShipRuntime {
    * @param collisions collision adapter
    */
   public ShipRuntimeImpl(ShipRendererLike renderer, CollisionVolumeManager collisions) {
+    this(renderer, collisions, NoopShipEntityCarrier.INSTANCE);
+  }
+
+  /**
+   * Creates a transactional runtime with an entity carrier.
+   *
+   * @param renderer renderer adapter
+   * @param collisions collision adapter
+   * @param carrier carrier for non-ship entities
+   */
+  public ShipRuntimeImpl(
+      ShipRendererLike renderer, CollisionVolumeManager collisions, ShipEntityCarrier carrier) {
     this.renderer = renderer;
     this.collisions = collisions;
+    this.carrier = carrier;
   }
 
   @Override
@@ -52,6 +68,7 @@ public final class ShipRuntimeImpl implements ShipRuntime {
     try {
       renderer.reposition(ship, oldY, newY);
       collisions.move(ship);
+      carrier.carry(ship, oldY, newY);
     } catch (ShipRuntimeException failure) {
       try {
         collisions.rollback(ship, oldY);

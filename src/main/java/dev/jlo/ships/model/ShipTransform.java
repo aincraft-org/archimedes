@@ -12,11 +12,21 @@ public final class ShipTransform {
    * @return exact visual position
    */
   public static VisualPosition visual(Ship ship, BlockPos relative) {
+    return visual(ship, relative, ship.pose().y());
+  }
+
+  /**
+   * Projects a relative block to its exact visual block corner using a supplied pose y.
+   *
+   * @param ship ship model
+   * @param relative relative block position
+   * @param y pose y offset
+   * @return exact visual position
+   */
+  public static VisualPosition visual(Ship ship, BlockPos relative, double y) {
     ShipOrigin origin = ship.origin();
     return new VisualPosition(
-        origin.x() + relative.x(),
-        origin.y() + ship.pose().y() + relative.y(),
-        origin.z() + relative.z());
+        origin.x() + relative.x(), origin.y() + y + relative.y(), origin.z() + relative.z());
   }
 
   /**

@@ -40,14 +40,33 @@ class ShipRuntimeImplTest {
     RecordingRenderer renderer = new RecordingRenderer();
     RecordingCollision collision = new RecordingCollision();
     collision.moveFailure = true;
+    RecordingCarrier carrier = new RecordingCarrier();
     Ship ship = ship();
-    ShipRuntime runtime = new ShipRuntimeImpl(renderer, collision);
+    ShipRuntime runtime = new ShipRuntimeImpl(renderer, collision, carrier);
     ship.setPose(new dev.jlo.ships.model.ShipPose(7));
     assertThrows(RuntimeException.class, () -> runtime.move(ship, 4, 7));
 
     assertEquals(4.0, ship.pose().y());
-    assertEquals("4.0->7.0", renderer.lastReposition);
+    assertEquals("7.0->4.0", renderer.lastReposition);
     assertTrue(collision.rolledBack);
+    assertEquals(0.0, carrier.carriedOldY);
+    assertEquals(0.0, carrier.carriedNewY);
+  }
+
+  @Test
+  void carrierIsCalledAfterSuccessfulMove() {
+    RecordingRenderer renderer = new RecordingRenderer();
+    RecordingCollision collision = new RecordingCollision();
+    RecordingCarrier carrier = new RecordingCarrier();
+    Ship ship = ship();
+    ShipRuntime runtime = new ShipRuntimeImpl(renderer, collision, carrier);
+    ship.setPose(new dev.jlo.ships.model.ShipPose(7));
+    runtime.move(ship, 4, 7);
+
+    assertEquals("4.0->7.0", renderer.lastReposition);
+    assertTrue(collision.moved);
+    assertEquals(4.0, carrier.carriedOldY);
+    assertEquals(7.0, carrier.carriedNewY);
   }
 
   private static Ship ship() {
@@ -78,12 +97,13 @@ class ShipRuntimeImplTest {
 
     @Override
     public void reposition(Ship ship, double oldY, double newY) {
-      lastReposition = newY + "->" + oldY;
+      lastReposition = oldY + "->" + newY;
     }
   }
 
   private static final class RecordingCollision implements CollisionVolumeManager {
     int removed;
+    boolean moved;
     boolean spawnFailure;
     boolean moveFailure;
     boolean rolledBack;
@@ -97,6 +117,7 @@ class ShipRuntimeImplTest {
 
     @Override
     public void move(Ship ship) {
+      moved = true;
       if (moveFailure) {
         throw new ShipRuntimeException(new IllegalStateException("move"));
       }
@@ -114,5 +135,16 @@ class ShipRuntimeImplTest {
 
     @Override
     public void removeAll() {}
+  }
+
+  private static final class RecordingCarrier implements ShipEntityCarrier {
+    double carriedOldY;
+    double carriedNewY;
+
+    @Override
+    public void carry(Ship ship, double oldY, double newY) {
+      carriedOldY = oldY;
+      carriedNewY = newY;
+    }
   }
 }

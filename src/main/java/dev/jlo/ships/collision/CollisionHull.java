@@ -38,6 +38,27 @@ public final class CollisionHull {
         .toList();
   }
 
+  /**
+   * Returns every captured block whose +Y neighbor is unoccupied.
+   *
+   * @param ship ship whose top-bearing blocks are selected
+   * @return sorted top-exposed block positions
+   */
+  public static List<BlockPos> topExposedBlocks(Ship ship) {
+    Set<BlockPos> occupied = new HashSet<>();
+    for (ShipBlock block : ship.blocks()) {
+      occupied.add(block.pos());
+    }
+    return ship.blocks().stream()
+        .map(ShipBlock::pos)
+        .filter(pos -> !occupied.contains(new BlockPos(pos.x(), pos.y() + 1, pos.z())))
+        .sorted(
+            Comparator.comparingInt(BlockPos::x)
+                .thenComparingInt(BlockPos::y)
+                .thenComparingInt(BlockPos::z))
+        .toList();
+  }
+
   private static boolean isExposed(BlockPos pos, Set<BlockPos> occupied) {
     for (int[] direction : DIRECTIONS) {
       if (!occupied.contains(

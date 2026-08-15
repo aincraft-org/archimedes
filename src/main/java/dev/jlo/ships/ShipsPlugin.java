@@ -2,6 +2,7 @@ package dev.jlo.ships;
 
 import dev.jlo.ships.bukkit.BukkitCollisionVolumeManager;
 import dev.jlo.ships.bukkit.BukkitScannerWorld;
+import dev.jlo.ships.bukkit.BukkitShipEntityCarrier;
 import dev.jlo.ships.bukkit.BukkitShipRenderer;
 import dev.jlo.ships.bukkit.BukkitWorldMutator;
 import dev.jlo.ships.command.ShipCommand;
@@ -44,11 +45,15 @@ public final class ShipsPlugin extends JavaPlugin {
     StoreAdapter storeAdapter = new StoreAdapter(store);
     org.bukkit.World world = binding.world();
     try {
+      NamespacedKey shipKey = shipKey();
+      NamespacedKey collisionOwnerKey = new NamespacedKey(this, "collision-owner");
       RenderSurface surface = RenderSurface.of(world);
-      BukkitShipRenderer renderer = new BukkitShipRenderer(surface, shipKey());
+      BukkitShipRenderer renderer = new BukkitShipRenderer(surface, shipKey);
       BukkitCollisionVolumeManager collisions =
-          new BukkitCollisionVolumeManager(world, new NamespacedKey(this, "collision-owner"));
-      ShipRuntime runtime = new ShipRuntimeImpl(renderer, collisions);
+          new BukkitCollisionVolumeManager(world, collisionOwnerKey);
+      BukkitShipEntityCarrier carrier =
+          new BukkitShipEntityCarrier(world, collisionOwnerKey, shipKey);
+      ShipRuntime runtime = new ShipRuntimeImpl(renderer, collisions, carrier);
       dev.jlo.ships.buoyancy.BuoyancySurface buoyancySurface =
           new dev.jlo.ships.bukkit.BukkitBuoyancySurface(world);
       dev.jlo.ships.buoyancy.BuoyancyEngine engine =
