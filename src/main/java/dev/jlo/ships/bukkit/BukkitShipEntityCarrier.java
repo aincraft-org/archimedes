@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
@@ -111,7 +112,7 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
         continue;
       }
       if (carried.add(entity.getUniqueId())) {
-        teleportBy(entity, delta);
+        carryEntity(entity, delta);
       }
     }
   }
@@ -136,7 +137,7 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
     return false;
   }
 
-  private static void teleportBy(Entity entity, double delta) {
+  private static void carryEntity(Entity entity, double delta) {
     Location current = entity.getLocation();
     Location dest =
         new Location(
@@ -146,7 +147,13 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
             current.getZ(),
             current.getYaw(),
             current.getPitch());
-    entity.teleport(dest);
+    try {
+      if (!entity.teleport(dest)) {
+        Bukkit.getLogger().finest("Ship carry teleport rejected for " + entity.getUniqueId());
+      }
+    } catch (IllegalArgumentException | IllegalStateException failure) {
+      Bukkit.getLogger().finest("Ship carry teleport failed for " + entity.getUniqueId());
+    }
   }
 
   /** Describes a vertical column above a top-exposed block used to select riders. */
