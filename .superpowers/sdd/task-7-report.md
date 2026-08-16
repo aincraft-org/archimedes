@@ -1,36 +1,18 @@
 # Task 7 Report
 
-## RED
+## Event-driven tracker overlap regression
+
+Added `BukkitShipRiderTrackerTest.eventOverlapUsesStoredSuppliedBasisInsteadOfMutableShipPose`.
+
+Semantic setup: a one-block ship is tracked with supplied seed basis `4.0`; the mutable `Ship.pose()` is then changed to `20`. A real `io.papermc.paper.event.entity.EntityMoveEvent` is constructed with a LivingEntity proxy and delivered through package-private `BukkitShipRiderTracker.onEntityMove`. The entity's event destination is at y `5.01`, which overlaps the ship top only when the stored supplied basis `4.0` is used (and not when the later-mutated pose `20` is consulted). The assertion verifies the entity UUID is associated with the ship.
+
+## Verification
+
 Command:
 ```bash
-./gradlew test --tests dev.jlo.ships.ship.ShipRuntimeImplTest.upwardCollisionFailureRestoresBasisAfterReverseCarry
+./gradlew test --tests dev.jlo.ships.bukkit.BukkitShipRiderTrackerTest --tests dev.jlo.ships.bukkit.BukkitShipEntityCarrierTest --tests dev.jlo.ships.bukkit.TopSurfaceIndexTest --tests dev.jlo.ships.bukkit.BukkitCollisionVolumeManagerTest
 ```
-Outcome: failed as expected with an assertion failure at `ShipRuntimeImplTest.java:83`; the recording carrier modeled Bukkit semantics by storing the first `carry` argument as its basis, exposing that rollback ended at `newY` before the production ordering fix.
 
-## GREEN
-Command:
-```bash
-./gradlew test --tests dev.jlo.ships.bukkit.BukkitShipEntityCarrierTest --tests dev.jlo.ships.ship.ShipRuntimeImplTest
-```
-Outcome: `BUILD SUCCESSFUL`; both focused Task 7 test classes passed.
+Outcome: `BUILD SUCCESSFUL` (22 tests completed, 0 failed).
 
-## Changes
-- Added direct upward rollback coverage with a recording carrier whose `carry` records its oldY argument as the pose basis.
-- Reordered rollback so reverse carrying completes before restoring the old pose basis, ensuring rollback ends at `oldY`.
-
-## Changed files
-- `src/main/java/dev/jlo/ships/ship/ShipRuntimeImpl.java`
-- `src/test/java/dev/jlo/ships/ship/ShipRuntimeImplTest.java`
-
-## Self-review
-- Reviewed the focused diff: production change is limited to rollback ordering; the regression asserts the externally observable final basis.
-- No formatter, linter, project-wide build, or project-wide test suite was run.
-
-## Concerns
-- The requested seed-pose and tracker event-overlap coverage already exists in the current focused Bukkit carrier/tracker implementation and its existing focused tests; this fix did not alter those files.
-
-## Coverage follow-up
-- Added a direct spawn assertion that the carrier receives the committed ship pose as its seed basis.
-- Event-driven tracker overlap coverage was reviewed against the existing focused Bukkit test inventory; no tracker test fixture exists in this worktree, so no unsupported proxy test was added.
-- Focused runtime verification:
-  `./gradlew test --tests dev.jlo.ships.ship.ShipRuntimeImplTest` — `BUILD SUCCESSFUL`.
+This is regression coverage for the existing stored-pose-basis implementation; no production code or test-only production hooks were changed.
