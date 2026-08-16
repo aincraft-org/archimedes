@@ -13,7 +13,7 @@ Maintained living specs for the Ships Paper plugin (`dev.jlo.ships`, Paper 26.2,
 
 ## Cross-cutting facts (all domains)
 
-- Pattern: domain interfaces in `dev.jlo.ships.{model,ship,render,collision,buoyancy,scan,store,config}`; Bukkit adapters in `dev.jlo.ships.bukkit`. Domain code never imports Bukkit.
+- Pattern: domain interfaces in `dev.jlo.ships.{model,ship,render,collision,buoyancy,scan,store,config}`; Bukkit adapters live in `dev.jlo.ships.bukkit`. Domain code generally avoids Bukkit, but `ShipRuntimeImpl.removeAllTagged()` has a concrete Bukkit-adapter type check to expose stale-entity cleanup; this is a known boundary exception/debt, not a purity guarantee.
 - Canonical transform is the canonical projection for rendering and hulls: visual = `origin + y + relative`; authoritative cell = `origin + floor(y) + relative`; collision anchor = visual `+ (0.5,0,0.5)`. World-boundary code may derive integer cells from `origin + floor(pose)` but must not duplicate visual/anchor arithmetic.
 - Entities are non-persistent; `ships.json` is the single persistence authority; restart reconstructs deterministically.
 - Mutations are transactional: validate → mutate → persist on the happy path; rollback is scoped to `ShipRuntimeException` (spawn/move) with suppressed cleanup failures; `remove`/`removeAll`/collision removal propagate directly. Unchecked adapter/entity failures may bypass cleanup.

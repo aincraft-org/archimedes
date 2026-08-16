@@ -38,14 +38,14 @@ Success looks like: a `Ship` is a pure, unit-testable description of a build (or
 - Saves are atomic: write temp file, then replace; an interrupted save never leaves a truncated primary file.
 - Scanner is read-only: the scan itself never mutates the world; the assembly service validates the whole component before any mutation.
 - Forbidden materials are lowercased at load; blank entries dropped; invalid UUIDs in `disabled-worlds` fail load (plugin disables rather than misbehaving).
-- Unsafe supplied config values never silently fall back — validation rejects them and plugin enable fails with a clear log. Missing keys fall back to code defaults (see guidance).
+- Unsafe supplied config values never silently fall back — validation rejects them and plugin enable fails with a clear log. Missing list and optional scalar keys fall back to code defaults; `maximum-blocks` and `target-distance` instead use loader default `0` and fail validation when absent.
 
 ## Implementation guidance
 
 - Model classes live in `dev.jlo.ships.model`; records for value types (`BlockPos`), final classes with accessors elsewhere. `ShipOrigin` intentionally has no `equals` (identity semantics).
 - JSON via Gson in `ShipStore`; version field not present — compatibility is handled by optional fields only.
-- `StoreAdapter` (in `ShipsPlugin`) wraps store I/O checked exceptions into service-contract exceptions; the store itself throws `IllegalStateException`.
-- Config loading pattern: `ShipConfigLoader` supplies code defaults for missing keys and validates every supplied value (bounds/finite/range; forbidden materials lowercased, blanks dropped; UUIDs parsed). `config.yml` mirrors the same defaults for discoverability. Unsafe supplied values fail enable; missing keys do not.
+- `StoreAdapter` (in `ShipsPlugin`) wraps store I/O checked exceptions into service-contract exceptions; `ShipStore.loadAll()` and `saveAll()` declare `IOException` for filesystem failures, while malformed JSON parsing errors such as Gson's `JsonSyntaxException` propagate unchecked from `loadAll()`.
+- Config loading pattern: `ShipConfigLoader` validates every supplied value. Missing `maximum-blocks` and `target-distance` are read with a numeric default of `0`, then fail the positive-value checks; missing list keys produce empty forbidden-material and disabled-world sets; other missing keys use the code defaults: buoyancy enabled, physics ticks `1`, bob amplitude `0.5`, max rise `16.0`, gravity `0.05`, water density `1.0`, block density `0.5`, and damping `0.9`. Unsafe supplied values fail enable; missing keys do not generally fall back for the two required positive integers.
 - Tests mirror packages: `model/`, `scan/`, `store/`, `config/` JUnit suites must stay green under `./gradlew check` (Spotless + Checkstyle + PMD + SpotBugs, Java 25, Paper 26.2).
 
 ## Current
