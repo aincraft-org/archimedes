@@ -3,6 +3,7 @@ package dev.jlo.ships.bukkit;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import io.papermc.paper.entity.TeleportFlag;
 import java.lang.reflect.Method;
@@ -10,6 +11,7 @@ import java.lang.reflect.Proxy;
 import java.util.concurrent.atomic.AtomicReference;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.junit.jupiter.api.Test;
 
@@ -61,5 +63,43 @@ class BukkitShipEntityCarrierTest {
           TeleportFlag.Relative.VELOCITY_Z
         },
         flags.get());
+  }
+
+  @Test
+  void carryUsesVelocityInsteadOfTeleportForPlayers() throws Exception {
+    Location current = new Location(null, 12.5, 64.0, -3.25, 90.0f, 10.0f);
+    org.bukkit.util.Vector currentVelocity = new org.bukkit.util.Vector(0.2, 0.42, -0.1);
+    AtomicReference<Location> destination = new AtomicReference<>();
+    AtomicReference<org.bukkit.util.Vector> velocity = new AtomicReference<>();
+    Player player =
+        (Player)
+            Proxy.newProxyInstance(
+                Player.class.getClassLoader(),
+                new Class<?>[] {Player.class},
+                (proxy, method, args) -> {
+                  if (method.getName().equals("getLocation") && method.getParameterCount() == 0) {
+                    return current;
+                  }
+                  if (method.getName().equals("getVelocity")) {
+                    return currentVelocity.clone();
+                  }
+                  if (method.getName().equals("setVelocity")) {
+                    velocity.set(((org.bukkit.util.Vector) args[0]).clone());
+                    return null;
+                  }
+                  if (method.getName().equals("teleport")) {
+                    destination.set((Location) args[0]);
+                    return true;
+                  }
+                  throw new AssertionError("Unexpected player method: " + method);
+                });
+
+    Method carryEntity =
+        BukkitShipEntityCarrier.class.getDeclaredMethod("carryEntity", Entity.class, double.class);
+    carryEntity.setAccessible(true);
+    carryEntity.invoke(null, player, 0.125);
+
+    assertNull(destination.get());
+    assertEquals(new org.bukkit.util.Vector(0.2, 0.545, -0.1), velocity.get());
   }
 }

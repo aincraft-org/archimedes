@@ -10,6 +10,7 @@ import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.persistence.PersistentDataType;
 
@@ -99,6 +100,10 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
   }
 
   private static void carryEntity(Entity entity, double delta) {
+    if (entity instanceof Player) {
+      entity.setVelocity(entity.getVelocity().add(new org.bukkit.util.Vector(0, delta, 0)));
+      return;
+    }
     Location current = entity.getLocation();
     Location dest =
         new Location(
