@@ -13,3 +13,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "ships"
+
+include("api", "common", "paper")
