@@ -963,6 +963,7 @@ class ShipServiceImplTest {
     service.disassemble(ship.id(), OWNER, false);
     assertTrue(buoyancy.calls.contains(CLEAR_CALL));
   }
+
   @Test
   void tickPersistsExactlyOnceOnlyWhenAnyShipMoves() {
     Fakes fakes = new Fakes();
@@ -992,7 +993,14 @@ class ShipServiceImplTest {
     CountingStore store = new CountingStore(fakes);
     ShipServiceImpl service =
         new ShipServiceImpl(
-            store, (x, y, z) -> List.of(), runtime(fakes), fakes, new RecordingBuoyancy(), false, true, WORLD);
+            store,
+            (x, y, z) -> List.of(),
+            runtime(fakes),
+            fakes,
+            new RecordingBuoyancy(),
+            false,
+            true,
+            WORLD);
     service.loadAll();
     store.saves = 0;
     assertTrue(service.toggleBuoyancy(OWNER, WORLD));

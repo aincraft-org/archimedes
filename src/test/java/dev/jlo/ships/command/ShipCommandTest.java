@@ -276,28 +276,32 @@ class ShipCommandTest {
   @Test
   void rejectsInspectWithoutPermission() {
     RecordingService service = new RecordingService();
-    commandNoTarget(service).onCommand(player(service, false), CMD, SHIP, new String[] {SUB_INSPECT});
+    commandNoTarget(service)
+        .onCommand(player(service, false), CMD, SHIP, new String[] {SUB_INSPECT});
     assertEquals(0, service.calls.size());
   }
 
   @Test
   void rejectsDisassembleWithoutPermission() {
     RecordingService service = new RecordingService();
-    commandNoTarget(service).onCommand(player(service, false), CMD, SHIP, new String[] {SUB_DISASSEMBLE});
+    commandNoTarget(service)
+        .onCommand(player(service, false), CMD, SHIP, new String[] {SUB_DISASSEMBLE});
     assertEquals(0, service.calls.size());
   }
 
   @Test
   void rejectsBuoyancyWithoutPermission() {
     RecordingService service = new RecordingService();
-    commandNoTarget(service).onCommand(player(service, false), CMD, SHIP, new String[] {SUB_BUOYANCY});
+    commandNoTarget(service)
+        .onCommand(player(service, false), CMD, SHIP, new String[] {SUB_BUOYANCY});
     assertEquals(0, service.calls.size());
   }
 
   @Test
   void rejectsSinkWithoutPermission() {
     RecordingService service = new RecordingService();
-    commandNoTarget(service).onCommand(player(service, false), CMD, SHIP, new String[] {SUB_SINK, "1"});
+    commandNoTarget(service)
+        .onCommand(player(service, false), CMD, SHIP, new String[] {SUB_SINK, "1"});
     assertEquals(0, service.calls.size());
   }
 
@@ -385,9 +389,11 @@ class ShipCommandTest {
     commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {SUB_SINK, "3"});
     assertTrue(service.calls.contains(SUB_SINK));
     assertEquals(3, service.lastSinkBlocks);
-    assertTrue(service.messages.stream().anyMatch(message -> message.contains("Ship lowered by 3 blocks.")));
+    assertTrue(
+        service.messages.stream()
+            .anyMatch(message -> message.contains("Ship lowered by 3 blocks.")));
   }
- 
+
   @Test
   void sinkRejectsZeroAndNegativeBlocks() {
     RecordingService service = new RecordingService();
@@ -403,9 +409,11 @@ class ShipCommandTest {
   void sinkIgnoresExtraArguments() {
     RecordingService service = new RecordingService();
     service.owned = ship();
-    commandNoTarget(service).onCommand(player(service, true), CMD, SHIP, new String[] {SUB_SINK, "3", "extra"});
+    commandNoTarget(service)
+        .onCommand(player(service, true), CMD, SHIP, new String[] {SUB_SINK, "3", "extra"});
     assertEquals(3, service.lastSinkBlocks);
   }
+
   @Test
   void sinkRejectsNonNumericBlocks() {
     RecordingService service = new RecordingService();
