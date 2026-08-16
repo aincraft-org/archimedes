@@ -221,36 +221,41 @@ public final class ShipServiceImpl implements ShipService {
 
   @Override
   public Map<UUID, Ship> loadAll() {
-    Map<UUID, Ship> loaded = new LinkedHashMap<>(store.loadAll());
     List<Ship> spawned = new ArrayList<>();
-    ships.clear();
     Ship current = null;
-    runtime.removeAllTagged();
+    String phase = "store-load";
+    RuntimeException primary;
     try {
+      Map<UUID, Ship> loaded = new LinkedHashMap<>(store.loadAll());
+      ships.clear();
+      phase = "initial-tag-sweep";
+      runtime.removeAllTagged();
+      phase = "spawn";
       for (Ship ship : loaded.values()) {
         current = ship;
         runtime.spawn(ship);
         spawned.add(ship);
         ships.put(ship.id(), ship);
       }
+      return ships;
     } catch (ShipRuntimeException failure) {
-      for (Ship ship : spawned) {
-        try {
-          runtime.remove(ship);
-        } catch (ShipRuntimeException cleanup) {
-          failure.addSuppressed(cleanup);
-        }
-      }
-      try {
-        runtime.removeAllTagged();
-      } catch (ShipRuntimeException cleanup) {
-        failure.addSuppressed(cleanup);
-      }
-      ships.clear();
-      String shipId = current == null ? "unknown" : current.id().toString();
-      throw new IllegalStateException("Failed to load ship runtime " + shipId, failure);
+      primary = failure;
     }
-    return ships;
+    for (Ship ship : spawned) {
+      try {
+        runtime.remove(ship);
+      } catch (ShipRuntimeException cleanup) {
+        primary.addSuppressed(cleanup);
+      }
+    }
+    try {
+      runtime.removeAllTagged();
+    } catch (ShipRuntimeException cleanup) {
+      primary.addSuppressed(cleanup);
+    }
+    ships.clear();
+    String shipId = current == null ? "unknown" : current.id().toString();
+    throw new IllegalStateException("Failed during " + phase + " for ship " + shipId, primary);
   }
 
   @Override
