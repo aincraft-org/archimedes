@@ -1,6 +1,8 @@
 package dev.jlo.ships.render;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import dev.jlo.ships.ship.ShipRuntimeException;
 
 import dev.jlo.ships.model.BlockPos;
 import dev.jlo.ships.model.Ship;
@@ -14,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.bukkit.World;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.data.BlockData;
@@ -158,6 +161,65 @@ class ShipRendererTest {
     @Override
     public void removeTagged(NamespacedKey key, String shipId) {
       // Test surface: no live entities to remove.
+    }
+  }
+
+  @Test
+  void rendererRemovalContinuesToSecondDisplayAndSuppressesItsFailure() {
+    RuntimeException first = new IllegalStateException("first display");
+    RuntimeException second = new IllegalArgumentException("second display");
+    List<Integer> attempts = new ArrayList<>();
+    BlockDisplay firstDisplay = removalDisplay(first, attempts);
+    BlockDisplay secondDisplay = removalDisplay(second, attempts);
+    WorldProxy world = new WorldProxy(List.of(firstDisplay, secondDisplay));
+    RenderSurface surface = RenderSurface.of(world.proxy());
+    ShipRuntimeException thrown =
+        assertThrows(
+            ShipRuntimeException.class,
+            () -> surface.removeTagged(new NamespacedKey("ships", "ship"), "ship-id"));
+    assertEquals(2, attempts.size());
+    assertEquals(1, thrown.getSuppressed().length);
+  }
+
+  private static BlockDisplay removalDisplay(RuntimeException failure, List<Integer> attempts) {
+    return (BlockDisplay)
+        Proxy.newProxyInstance(
+            BlockDisplay.class.getClassLoader(),
+            new Class<?>[] {BlockDisplay.class},
+            (proxy, method, args) -> {
+              if (method.getName().equals("getPersistentDataContainer")) {
+                return Proxy.newProxyInstance(
+                    ShipRendererTest.class.getClassLoader(),
+                    new Class<?>[] {org.bukkit.persistence.PersistentDataContainer.class},
+                    (container, containerMethod, containerArgs) -> {
+                      if ("get".equals(containerMethod.getName())) return "ship-id";
+                      return defaultFor(containerMethod.getReturnType());
+                    });
+              }
+              if (method.getName().equals("remove")) {
+                attempts.add(1);
+                throw failure;
+              }
+              return defaultFor(method.getReturnType());
+            });
+  }
+
+  private static final class WorldProxy {
+    private final List<BlockDisplay> displays;
+
+    private WorldProxy(List<BlockDisplay> displays) {
+      this.displays = displays;
+    }
+
+    private World proxy() {
+      return (World)
+          Proxy.newProxyInstance(
+              World.class.getClassLoader(),
+              new Class<?>[] {World.class},
+              (proxy, method, args) -> {
+                if (method.getName().equals("getEntitiesByClass")) return displays;
+                return defaultFor(method.getReturnType());
+              });
     }
   }
 
