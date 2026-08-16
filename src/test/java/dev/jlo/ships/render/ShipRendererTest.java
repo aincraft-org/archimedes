@@ -106,10 +106,14 @@ class ShipRendererTest {
     final List<Location> teleports = new ArrayList<>();
     final Map<String, BlockData> dataById = new HashMap<>();
     final List<UUID> renderedShips = new ArrayList<>();
+    RuntimeException renderFailure;
 
     @Override
     public BlockDisplay spawnBlockDisplay(
         Location location, java.util.function.Consumer<BlockDisplay> config) {
+      if (renderFailure != null) {
+        throw renderFailure;
+      }
       FakeDisplay fake = new FakeDisplay();
       fake.location = location;
       BlockDisplay proxy = fake.proxy();
@@ -155,6 +159,23 @@ class ShipRendererTest {
     public void removeTagged(NamespacedKey key, String shipId) {
       // Test surface: no live entities to remove.
     }
+  }
+
+  @Test
+  void renderNormalizesRuntimeFailureWithShipIdAndCause() {
+    Ship ship = shipWithBlock(0, 0, 0, STONE);
+    RuntimeException cause = new IllegalStateException("render boom");
+    SpySurface surface = new SpySurface();
+    surface.renderFailure = cause;
+    dev.jlo.ships.ship.ShipRuntimeException failure =
+        org.junit.jupiter.api.Assertions.assertThrows(
+            dev.jlo.ships.ship.ShipRuntimeException.class,
+            () ->
+                new dev.jlo.ships.bukkit.BukkitShipRenderer(
+                        surface, new NamespacedKey("ships", "test"))
+                    .render(ship, ignored -> {}));
+    assertEquals("Bukkit render failed for ship " + ship.id(), failure.getMessage());
+    org.junit.jupiter.api.Assertions.assertSame(cause, failure.getCause());
   }
 
   @Test

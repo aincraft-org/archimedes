@@ -35,12 +35,9 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 - `ShipRuntimeImpl` field order is renderer, collisions, carrier; **spawn order is collisions first, then renderer**. Operation order on move depends on direction:
   - upward: reposition displays → carry riders → move collisions
   - downward/equal: reposition displays → move collisions → carry riders
-- Runtime failure handling is scoped to `ShipRuntimeException`: spawn rolls back (renderer cleanup, collision removal, suppressed cleanup failures) and rethrows; move rolls back (collisions, pose, reversed carrier on rising path, renderer). Unchecked adapter/entity failures are not caught and may bypass cleanup; `remove`/`removeAll`/collision removal propagate directly without suppression.
-- The target under Next is to normalize adapter/runtime failures to `ShipRuntimeException` and guarantee that spawn, move, and reconciliation either complete or restore their pre-operation model/runtime/world state. Best-effort rider transport is explicitly excluded from ship rollback. Tasks 4–6 promote this target into the invariant and Current only after their regression tests pass.
-- Collision volumes are invisible, invulnerable, silent, no-AI, gravity-off, collidable Shulkers with `peek=0.0f`, `persistent=false`, PDC `collision-owner` + `collision-owner-block`, scoreboard tag `ships-collision-<uuid>`. Displays are non-persistent entities tagged with `ship-id` + `ship-id-block` PDC keys; identity is model-derived, never reverse-engineered from entity locations.
-- Spawn is all-or-nothing per ship for failures normalized as `ShipRuntimeException`; unchecked adapter/entity failures are not caught and may leave partial entities.
-- Restart: `ShipServiceImpl.loadAll` calls `runtime.removeAllTagged()` then deterministically respawns from models, cleaning partial entities on normalized `ShipRuntimeException` failure and throwing `IllegalStateException` (naming the failing ship); `ShipsPlugin` catches it, disables the plugin, and runs unguarded disable cleanup (`removeAllRuntime` + `removeAllTagged`). The initial sweep sits outside the try — an unchecked sweep failure escapes without cleanup.
-- Riders: carry is best-effort — a failed teleport never rolls back the ship move.
+- Renderer and collision adapter `RuntimeException` failures are normalized to `ShipRuntimeException` messages naming the operation and ship ID; existing `ShipRuntimeException` instances are preserved without double wrapping, while `Error` remains uncaught.
+- Collision spawn publishes per-ship volumes only after all entities are created. Partial spawn removes every locally created entity and suppresses cleanup failures on the primary failure.
+- Spawn and move rollback behavior uses the normalized exception boundary; rider transport remains best-effort and does not become a ship-transaction failure.
 - No barrier/deck blocks are placed by production code (deck package is legacy; see debt below).
 
 ## Implementation guidance

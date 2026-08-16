@@ -49,15 +49,18 @@ public final class BukkitShipRenderer implements ShipRendererLike {
    * @param ship the ship to render
    * @param holder the finalization receiver
    */
-  @Override
   public void render(Ship ship, ShipHolder holder) {
     List<BlockDisplay> displays = new ArrayList<>(ship.blockCount());
     try {
       renderDisplays(ship, displays);
       surface.shipRendered(ship.id(), displays);
       holder.accept(ship);
-    } catch (ShipRuntimeException failure) {
-      cleanupRender(ship, failure);
+    } catch (RuntimeException failure) {
+      ShipRuntimeException normalized =
+          failure instanceof ShipRuntimeException
+              ? (ShipRuntimeException) failure
+              : new ShipRuntimeException("Bukkit render failed for ship " + ship.id(), failure);
+      cleanupRender(ship, normalized);
     }
   }
 

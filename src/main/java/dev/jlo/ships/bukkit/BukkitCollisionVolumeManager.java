@@ -73,13 +73,14 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
         spawned.put(relative, new BukkitShulkerCollisionVolume(ship.id(), shulker));
       }
       volumes.put(ship.id(), spawned);
-    } catch (ShipRuntimeException failure) {
-      cleanupSpawned(spawned, failure);
-      throw failure;
-    } catch (IllegalArgumentException failure) {
-      ShipRuntimeException wrapped = new ShipRuntimeException(failure);
-      cleanupSpawned(spawned, wrapped);
-      throw wrapped;
+    } catch (RuntimeException failure) {
+      ShipRuntimeException normalized =
+          failure instanceof ShipRuntimeException
+              ? (ShipRuntimeException) failure
+              : new ShipRuntimeException(
+                  "Bukkit collision spawn failed for ship " + ship.id(), failure);
+      cleanupSpawned(spawned, normalized);
+      throw normalized;
     }
   }
 
@@ -88,8 +89,11 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     for (CollisionVolume volume : spawned.values()) {
       try {
         volume.remove();
-      } catch (ShipRuntimeException cleanup) {
-        failure.addSuppressed(cleanup);
+      } catch (RuntimeException cleanup) {
+        failure.addSuppressed(
+            cleanup instanceof ShipRuntimeException
+                ? cleanup
+                : new ShipRuntimeException("Bukkit collision cleanup failed", cleanup));
       }
     }
   }
