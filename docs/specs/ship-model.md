@@ -69,7 +69,7 @@ Success looks like: a `Ship` is a pure, unit-testable description of a build (or
 ## Future
 
 - [ ] Cross-world ship support: world UUIDs are already persisted (`ShipStore`, `WorldMutator` keyed by world); current runtime binds assembly to the primary Bukkit world (`ShipsPlugin.WorldBinding` → `Bukkit.getWorlds().get(0)`). Command resolution may identify another world, but assembly is rejected there. Once Task 3 lands, `disabled-worlds` must also reject the bound world.
-- [ ] Aggregate per-material mass and rider load for buoyancy equilibrium (see `buoyancy`); runtime normalization remains a separate Next target (see `ship-runtime`).
+- [ ] Implement approved aggregate per-material mass and tracked-player runtime load for buoyancy equilibrium; densities remain configuration-only and `ships.json` gains no mass fields (see `docs/superpowers/specs/2026-08-16-buoyancy-mass-model-design.md`)
 - [ ] Versioned persistence schema with migration path
 
 ## Decisions log
@@ -77,6 +77,7 @@ Success looks like: a `Ship` is a pure, unit-testable description of a build (or
 | Date | Decision | Why |
 |------|----------|-----|
 | 2026-08-16 | Living specs live in `docs/specs/`; dated docs in `docs/superpowers/` remain historical record | User directive; one maintained catalog per domain |
+| 2026-08-16 | Material densities are configuration-only; rider mass and equilibrium diagnostics are runtime-only | Avoid schema migration and stale persisted load; recompute from blocks, config, and tracked players |
 | 2026-08-14 | Pose persisted as optional field, not schema version bump | Backward compat without migration machinery |
 | 2026-08-14 | `anchorDy = floor(y)` is authoritative for collision/restoration | Integer cells must match world semantics; fractional y is visual only |
 
