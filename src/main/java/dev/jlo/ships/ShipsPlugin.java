@@ -31,6 +31,7 @@ public final class ShipsPlugin extends JavaPlugin {
   /** Active ship service. */
   private ShipService service;
 
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   @Override
   public void onEnable() {
     saveDefaultConfig();
@@ -83,10 +84,11 @@ public final class ShipsPlugin extends JavaPlugin {
               config.worldEnabled(world.getUID()),
               world.getUID());
       service.loadAll();
-      getServer().getPluginManager().registerEvents(tracker, this);
-    } catch (IllegalStateException failure) {
-      getLogger().severe("Failed to load ships: " + failure.getMessage());
-      getServer().getPluginManager().disablePlugin(this);
+    } catch (RuntimeException failure) {
+      CleanupCoordinator.handleLoadFailure(
+          failure,
+          message -> getLogger().severe(message),
+          () -> getServer().getPluginManager().disablePlugin(this));
       return;
     }
     registerCommand(config);
@@ -132,6 +134,12 @@ public final class ShipsPlugin extends JavaPlugin {
       } catch (RuntimeException failure) {
         log.accept("Failed to remove tagged ship runtime: " + failure.getMessage());
       }
+    }
+
+    static void handleLoadFailure(
+        RuntimeException failure, java.util.function.Consumer<String> logger, Runnable disable) {
+      logger.accept("Failed to load ships: " + failure.getMessage());
+      disable.run();
     }
   }
 

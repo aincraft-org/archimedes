@@ -53,7 +53,7 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 - [x] Transactional spawn and direction-ordered move rollback
 - [x] Persistent rider tracking and best-effort vertical carry
 - [x] Adapter/runtime normalization and continued multi-entity cleanup
-- [x] Restart reconciliation: store load, initial tagged-entity sweep, and deterministic spawn are one `RuntimeException` boundary. On failure, every spawned ship is removed, a final tagged-entity sweep is attempted, the model registry is cleared even when individual cleanup actions fail, and one `IllegalStateException` identifies the failing phase and ship (`unknown` if none is active). Store-load failures follow the same cleanup boundary.
+- [x] Restart reconciliation: store load, initial tagged-entity sweep, and deterministic spawn are one `RuntimeException` boundary. On failure, every spawned ship is removed, a final tagged-entity sweep is attempted, the model registry is cleared even when individual cleanup actions fail, and cleanup failures are normalized to `ShipRuntimeException` and suppressed on the primary cause. One `IllegalStateException` identifies the failing phase and ship (`unknown` if none is active). `Error` remains uncaught. Store-load failures follow the same cleanup boundary.
 - [x] Plugin disable independently attempts registered-runtime removal and tagged-entity removal, logs each failure, and never saves persistence during disable.
 
 ## Next
