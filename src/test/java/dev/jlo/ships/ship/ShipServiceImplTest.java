@@ -143,6 +143,111 @@ class ShipServiceImplTest {
     };
   }
 
+  private static Ship ship(Fakes fakes) {
+    return new Ship(
+        UUID.randomUUID(),
+        OWNER,
+        fakes.origin,
+        List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
+  }
+
+  @Test
+  void loadAllInitialSweepFailureClearsRegistryAndAttemptsFinalSweep() {
+    Fakes fakes = new Fakes();
+    Ship persisted = ship(fakes);
+    List<String> sweeps = new ArrayList<>();
+    ShipRuntime runtime =
+        new ShipRuntime() {
+          @Override
+          public void spawn(Ship ship) {}
+
+          @Override
+          public void move(Ship ship, double oldY, double newY) {}
+
+          @Override
+          public void remove(Ship ship) {}
+
+          @Override
+          public void removeAll(Collection<Ship> ships) {}
+
+          @Override
+          public void removeAllTagged() {
+            sweeps.add("sweep");
+            if (sweeps.size() == 1) {
+              throw new ShipRuntimeException(new IllegalStateException("initial"));
+            }
+          }
+        };
+    ShipServiceImpl service =
+        new ShipServiceImpl(
+            new ShipStoreLike() {
+              @Override
+              public Map<UUID, Ship> loadAll() {
+                return Map.of(persisted.id(), persisted);
+              }
+
+              @Override
+              public void saveAll(Map<UUID, Ship> ships) {}
+            },
+            (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
+            runtime,
+            fakes,
+            new RecordingBuoyancy(),
+            false,
+            WORLD);
+
+    IllegalStateException failure = assertThrows(IllegalStateException.class, service::loadAll);
+
+    assertTrue(failure.getMessage().contains("initial-tag-sweep"));
+    assertEquals(List.of("sweep", "sweep"), sweeps);
+    assertTrue(service.all().isEmpty());
+  }
+
+  @Test
+  void loadAllStoreFailureStillAttemptsTaggedCleanup() {
+    Fakes fakes = new Fakes();
+    List<String> sweeps = new ArrayList<>();
+    ShipRuntime runtime =
+        new ShipRuntime() {
+          @Override
+          public void spawn(Ship ship) {}
+
+          @Override
+          public void move(Ship ship, double oldY, double newY) {}
+
+          @Override
+          public void remove(Ship ship) {}
+
+          @Override
+          public void removeAll(Collection<Ship> ships) {}
+        };
+    ShipServiceImpl service =
+        new ShipServiceImpl(
+            new ShipStoreLike() {
+              @Override
+              public Map<UUID, Ship> loadAll() {
+                throw new ShipRuntimeException(new IllegalStateException("store"));
+              }
+
+              @Override
+              public void saveAll(Map<UUID, Ship> ships) {}
+            },
+            (x, y, z) -> List.of(),
+            runtime,
+            fakes,
+            new RecordingBuoyancy(),
+            false,
+            WORLD);
+
+    assertTrue(
+        assertThrows(IllegalStateException.class, service::loadAll)
+            .getMessage()
+            .contains("store-load"));
+
+    assertTrue(sweeps.isEmpty());
+    assertTrue(service.all().isEmpty());
+  }
+
   @Test
   void loadAllCleansUpEarlierSpawnWhenLaterSpawnFails() {
     Fakes fakes = new Fakes();
