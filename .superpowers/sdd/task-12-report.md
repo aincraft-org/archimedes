@@ -1,21 +1,7 @@
-# Task 12 Report
 
-## Scope
+## Follow-up integrity repair
 
-Removed the dead deck production and test implementation and corrected current runtime wording. The historical barrier-backed deck decision remains preserved in the historical design/result records.
+Restored the complete `ShipServiceImplTest` from parent commit `c0fbcdf`, then removed only the approved `NoopDeck` helper. This preserved the original null-scanner and render-rollback test coverage.
 
-## Changes
-
-- Deleted `DeckManager`, `DeckSurface`, and `BukkitDeckSurface` production sources.
-- Deleted `DeckManagerTest`, `DeckSurfaceTest`, and `DeckSurfaceTestHelper`.
-- Removed `NoopDeck` from `ShipServiceImplTest`.
-- Updated `ShipService.removeAllRuntime` Javadoc to describe runtime entities only.
-- Updated plugin metadata to describe persistent display-and-collision ships without promising walkable decks.
-- Removed the dead-deck known-debt entry and marked runtime cleanup complete.
-- Updated the runtime spec to record the Shulker-hull collision path and preserve the historical decision context.
-
-## Verification
-
-- `./gradlew check --console=plain`: `BUILD SUCCESSFUL` (162 tests completed).
-- Source scan for `DeckManager|DeckSurface|BukkitDeckSurface|NoopDeck` under `src`: no matches.
-- Current specs scan for stale `walkable decks`, `entities and barriers`, and the dead-package cleanup wording: no stale matches; historical design records remain unchanged.
+- Focused test: `./gradlew test --tests dev.jlo.ships.ship.ShipServiceImplTest --console=plain` — `BUILD SUCCESSFUL`.
+- Full gate rerun: `./gradlew check --console=plain` — `BUILD SUCCESSFUL`.
