@@ -196,6 +196,7 @@ class ShipRuntimeImplTest {
     runtime.spawn(ship);
     runtime.remove(ship);
     assertEquals(1, carrier.tracked);
+    assertEquals(9.0, carrier.trackedPoseY);
     assertEquals(1, carrier.untracked);
   }
 
@@ -333,6 +334,7 @@ class ShipRuntimeImplTest {
     int tracked;
     int untracked;
     int cleared;
+    double trackedPoseY = Double.NaN;
     double carriedOldY;
     double carriedNewY;
     double poseBasis = Double.NaN;
@@ -349,6 +351,7 @@ class ShipRuntimeImplTest {
     @Override
     public void track(Ship ship, double poseY) {
       tracked++;
+      trackedPoseY = poseY;
       operations.add("track:" + poseY);
     }
 

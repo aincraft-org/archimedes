@@ -28,3 +28,9 @@ Outcome: `BUILD SUCCESSFUL`; both focused Task 7 test classes passed.
 
 ## Concerns
 - The requested seed-pose and tracker event-overlap coverage already exists in the current focused Bukkit carrier/tracker implementation and its existing focused tests; this fix did not alter those files.
+
+## Coverage follow-up
+- Added a direct spawn assertion that the carrier receives the committed ship pose as its seed basis.
+- Event-driven tracker overlap coverage was reviewed against the existing focused Bukkit test inventory; no tracker test fixture exists in this worktree, so no unsupported proxy test was added.
+- Focused runtime verification:
+  `./gradlew test --tests dev.jlo.ships.ship.ShipRuntimeImplTest` — `BUILD SUCCESSFUL`.
