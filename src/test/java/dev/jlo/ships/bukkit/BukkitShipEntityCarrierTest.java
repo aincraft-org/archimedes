@@ -46,9 +46,10 @@ class BukkitShipEntityCarrierTest {
                 });
 
     Method carryEntity =
-        BukkitShipEntityCarrier.class.getDeclaredMethod("carryEntity", Entity.class, double.class);
+        BukkitShipEntityCarrier.class.getDeclaredMethod(
+            "carryEntity", Entity.class, double.class, String.class);
     carryEntity.setAccessible(true);
-    carryEntity.invoke(null, entity, 0.125);
+    carryEntity.invoke(null, entity, 0.125, "ship-id");
 
     Location moved = destination.get();
     assertNotNull(moved);
@@ -96,10 +97,11 @@ class BukkitShipEntityCarrierTest {
                   return null;
                 });
     Method carryEntity =
-        BukkitShipEntityCarrier.class.getDeclaredMethod("carryEntity", Entity.class, double.class);
+        BukkitShipEntityCarrier.class.getDeclaredMethod(
+            "carryEntity", Entity.class, double.class, String.class);
     carryEntity.setAccessible(true);
     try {
-      carryEntity.invoke(null, entity, 0.125);
+      carryEntity.invoke(null, entity, 0.125, "ship-id");
     } catch (java.lang.reflect.InvocationTargetException thrown) {
       Throwable cause = thrown.getCause();
       if (!(cause instanceof NullPointerException)) {
@@ -138,9 +140,10 @@ class BukkitShipEntityCarrierTest {
                 });
 
     Method carryEntity =
-        BukkitShipEntityCarrier.class.getDeclaredMethod("carryEntity", Entity.class, double.class);
+        BukkitShipEntityCarrier.class.getDeclaredMethod(
+            "carryEntity", Entity.class, double.class, String.class);
     carryEntity.setAccessible(true);
-    carryEntity.invoke(null, player, 0.125);
+    carryEntity.invoke(null, player, 0.125, "ship-id");
 
     assertNull(destination.get());
     assertEquals(new org.bukkit.util.Vector(0.2, 0.545, -0.1), velocity.get());

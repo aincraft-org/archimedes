@@ -204,7 +204,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
   @Override
   public void removeAll() {
     ShipRuntimeException failure = null;
-    for (Shulker shulker : world.getEntitiesByClass(Shulker.class)) {
+    for (Shulker shulker : java.util.List.copyOf(world.getEntitiesByClass(Shulker.class))) {
       if (shulker.getPersistentDataContainer().has(ownerKey, PersistentDataType.STRING)) {
         UUID shipId = parseShipId(shulker);
         try {
