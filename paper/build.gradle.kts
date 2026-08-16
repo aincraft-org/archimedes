@@ -27,6 +27,7 @@ tasks.jar {
 tasks {
     runServer {
         minecraftVersion(paperVersion.get())
+        runDirectory.set(rootProject.layout.projectDirectory.dir("run"))
     }
 }
 
