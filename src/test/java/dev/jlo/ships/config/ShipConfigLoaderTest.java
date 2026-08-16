@@ -23,6 +23,7 @@ class ShipConfigLoaderTest {
     assertEquals(8, loaded.targetDistance());
     assertTrue(loaded.forbiddenMaterials().contains("minecraft:water"));
   }
+
   @Test
   void normalizesForbiddenMaterialsAndDropsBlankEntries() {
     YamlConfiguration config = new YamlConfiguration();

@@ -9,8 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.jlo.ships.model.BlockPos;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
@@ -113,8 +113,7 @@ class ShipScannerTest {
     ScanResult result = ShipScanner.scan(world, new Seed(0, 0, 0), Integer.MAX_VALUE, Set.of());
 
     assertThrows(
-        UnsupportedOperationException.class,
-        () -> result.captured().add(new BlockPos(1, 1, 1)));
+        UnsupportedOperationException.class, () -> result.captured().add(new BlockPos(1, 1, 1)));
 
     assertEquals(1, result.captured().size());
   }
@@ -129,8 +128,7 @@ class ShipScannerTest {
 
     assertEquals(List.of(new BlockPos(1, 2, 3)), result.captured());
     assertThrows(
-        UnsupportedOperationException.class,
-        () -> result.captured().add(new BlockPos(7, 8, 9)));
+        UnsupportedOperationException.class, () -> result.captured().add(new BlockPos(7, 8, 9)));
   }
 
   @Test
