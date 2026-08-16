@@ -114,12 +114,26 @@ class BuoyancyResolverTest {
     assertEquals(203, BuoyancyResolver.waterSurfaceY(ship, surface));
   }
   @Test
-  void fractionalNegativeAnchorDyShiftsSamplingWindow() {
+  void fractionalNegativeAnchorDyUsesShiftedSamplingWindow() {
     FakeSurface surface = new FakeSurface();
-    surface.water.add("100,204,300");
+    // anchorDy=floor(-0.5)=-1: bottom=199, so the scan includes y=135.
+    surface.water.add("100,135,300");
     Ship ship = shipAt(new ShipPose(-0.5), new BlockPos(0, 0, 0));
 
-    assertEquals(204, BuoyancyResolver.waterSurfaceY(ship, surface));
+    assertEquals(135, BuoyancyResolver.waterSurfaceY(ship, surface));
+  }
+
+  @Test
+  void shiftedSamplingWindowUsesEachBlocksDistinctOffset() {
+    FakeSurface surface = new FakeSurface();
+    // With anchorDy=-1, the two bottoms are 199 and 200, whose lower scan
+    // boundaries are y=135 and y=136 respectively.
+    surface.water.add("100,135,300");
+    surface.water.add("101,136,300");
+    Ship ship =
+        shipAt(new ShipPose(-0.5), new BlockPos(0, 0, 0), new BlockPos(1, 1, 0));
+
+    assertEquals(135, BuoyancyResolver.waterSurfaceY(ship, surface));
   }
 
   @Test
