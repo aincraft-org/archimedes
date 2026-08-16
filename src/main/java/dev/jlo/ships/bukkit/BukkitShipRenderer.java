@@ -103,8 +103,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
       if (failure instanceof ShipRuntimeException) {
         throw (ShipRuntimeException) failure;
       }
-      throw new ShipRuntimeException(
-          "Renderer removal failed for ship " + ship.id(), failure);
+      throw new ShipRuntimeException("Renderer removal failed for ship " + ship.id(), failure);
     }
   }
 
@@ -137,11 +136,9 @@ public final class BukkitShipRenderer implements ShipRendererLike {
     } catch (ShipRuntimeException failure) {
       throw failure;
     } catch (RuntimeException failure) {
-      throw new ShipRuntimeException(
-          "Renderer reposition failed for ship " + ship.id(), failure);
+      throw new ShipRuntimeException("Renderer reposition failed for ship " + ship.id(), failure);
     }
   }
-
 
   private org.bukkit.Location location(Ship ship, ShipBlock block) {
     ShipTransform.VisualPosition position = ShipTransform.visual(ship, block.pos());

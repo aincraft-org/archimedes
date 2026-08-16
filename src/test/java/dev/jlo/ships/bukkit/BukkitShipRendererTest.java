@@ -8,8 +8,8 @@ import dev.jlo.ships.model.BlockPos;
 import dev.jlo.ships.model.Ship;
 import dev.jlo.ships.model.ShipBlock;
 import dev.jlo.ships.model.ShipOrigin;
-import dev.jlo.ships.ship.ShipRuntimeException;
 import dev.jlo.ships.render.RenderSurface;
+import dev.jlo.ships.ship.ShipRuntimeException;
 import java.lang.reflect.Proxy;
 import java.util.Collection;
 import java.util.List;
@@ -34,9 +34,12 @@ class BukkitShipRendererTest {
             ShipRuntimeException.class,
             () -> {
               Ship ship = ship();
-              new BukkitShipRenderer(surface, new NamespacedKey("ships", "test")).render(ship, ignored -> {
-                throw primary;
-              });
+              new BukkitShipRenderer(surface, new NamespacedKey("ships", "test"))
+                  .render(
+                      ship,
+                      ignored -> {
+                        throw primary;
+                      });
             });
 
     assertSame(primary, thrown);
@@ -47,7 +50,8 @@ class BukkitShipRendererTest {
   void repositionWrapsRuntimeTeleportFailureWithShipContext() {
     RuntimeException teleport = new IllegalStateException("teleport");
     RenderSurface surface = surfaceThatFails(new RuntimeException("unused"), teleport);
-    BukkitShipRenderer renderer = new BukkitShipRenderer(surface, new NamespacedKey("ships", "test"));
+    BukkitShipRenderer renderer =
+        new BukkitShipRenderer(surface, new NamespacedKey("ships", "test"));
     Ship ship = ship();
     renderer.render(ship, ignored -> {});
 
@@ -61,7 +65,8 @@ class BukkitShipRendererTest {
   void removeRuntimeNormalizesFailureWithShipContext() {
     RuntimeException failure = new IllegalStateException("remove");
     BukkitShipRenderer renderer =
-        new BukkitShipRenderer(surfaceThatFails(new RuntimeException("unused"), failure),
+        new BukkitShipRenderer(
+            surfaceThatFails(new RuntimeException("unused"), failure),
             new NamespacedKey("ships", "test"));
     Ship ship = ship();
 
@@ -76,7 +81,8 @@ class BukkitShipRendererTest {
   void repositionNormalizesPairingRuntimeFailureWithShipContext() {
     RuntimeException pairing = new IllegalStateException("pairing");
     RenderSurface surface = new PairingFailureSurface(pairing);
-    BukkitShipRenderer renderer = new BukkitShipRenderer(surface, new NamespacedKey("ships", "test"));
+    BukkitShipRenderer renderer =
+        new BukkitShipRenderer(surface, new NamespacedKey("ships", "test"));
 
     ShipRuntimeException thrown =
         assertThrows(ShipRuntimeException.class, () -> renderer.reposition(ship(), 0, 1));
@@ -88,42 +94,70 @@ class BukkitShipRendererTest {
   private static RenderSurface surfaceThatFails(RuntimeException... failures) {
     return new RenderSurface() {
       private boolean first = true;
-      private final BlockDisplay display = (BlockDisplay) Proxy.newProxyInstance(
-          BlockDisplay.class.getClassLoader(), new Class<?>[] {BlockDisplay.class},
-          (proxy, method, args) -> {
-            if (method.getName().equals("getPersistentDataContainer")) {
-              return Proxy.newProxyInstance(
-                  getClass().getClassLoader(),
-                  new Class<?>[] {org.bukkit.persistence.PersistentDataContainer.class},
-                  (container, containerMethod, containerArgs) -> {
-                    if ("set".equals(containerMethod.getName())) return null;
-                    if ("get".equals(containerMethod.getName())) return "0,0,0";
-                    return defaultValue(containerMethod.getReturnType());
+      private final BlockDisplay display =
+          (BlockDisplay)
+              Proxy.newProxyInstance(
+                  BlockDisplay.class.getClassLoader(),
+                  new Class<?>[] {BlockDisplay.class},
+                  (proxy, method, args) -> {
+                    if (method.getName().equals("getPersistentDataContainer")) {
+                      return Proxy.newProxyInstance(
+                          getClass().getClassLoader(),
+                          new Class<?>[] {org.bukkit.persistence.PersistentDataContainer.class},
+                          (container, containerMethod, containerArgs) -> {
+                            if ("set".equals(containerMethod.getName())) return null;
+                            if ("get".equals(containerMethod.getName())) return "0,0,0";
+                            return defaultValue(containerMethod.getReturnType());
+                          });
+                    }
+                    if (method.getName().equals("getLocation")) return new Location(null, 0, 0, 0);
+                    return defaultValue(method.getReturnType());
                   });
-            }
-            if (method.getName().equals("getLocation")) return new Location(null, 0, 0, 0);
-            return defaultValue(method.getReturnType());
-          });
 
-      @Override public BlockDisplay spawnBlockDisplay(Location location, java.util.function.Consumer<BlockDisplay> config) {
+      @Override
+      public BlockDisplay spawnBlockDisplay(
+          Location location, java.util.function.Consumer<BlockDisplay> config) {
         config.accept(display);
         return display;
       }
-      @Override public BlockData blockData(String serialized) { return null; }
-      @Override public void teleport(org.bukkit.entity.Entity entity, Location location) {
+
+      @Override
+      public BlockData blockData(String serialized) {
+        return null;
+      }
+
+      @Override
+      public void teleport(org.bukkit.entity.Entity entity, Location location) {
         if (failures.length > 1) {
           throw failures[1];
         }
       }
-      @Override public UUID worldUuid() { return WORLD; }
-      @Override public Location location(ShipOrigin origin, double dx, double dy, double dz) { return new Location(null, dx, dy, dz); }
-      @Override public void shipRendered(UUID shipId, Collection<BlockDisplay> displays) {}
-      @Override public void removeTagged(NamespacedKey key, String shipId) {
+
+      @Override
+      public UUID worldUuid() {
+        return WORLD;
+      }
+
+      @Override
+      public Location location(ShipOrigin origin, double dx, double dy, double dz) {
+        return new Location(null, dx, dy, dz);
+      }
+
+      @Override
+      public void shipRendered(UUID shipId, Collection<BlockDisplay> displays) {}
+
+      @Override
+      public void removeTagged(NamespacedKey key, String shipId) {
         if (failures.length > 1) throw failures[1];
       }
-      @Override public Collection<BlockDisplay> tagged(NamespacedKey key, String shipId) { return List.of(display); }
+
+      @Override
+      public Collection<BlockDisplay> tagged(NamespacedKey key, String shipId) {
+        return List.of(display);
+      }
     };
   }
+
   private static final class PairingFailureSurface implements RenderSurface {
     private final RuntimeException failure;
 
@@ -137,18 +171,34 @@ class BukkitShipRendererTest {
     }
 
     @Override
-    public BlockDisplay spawnBlockDisplay(Location location, java.util.function.Consumer<BlockDisplay> config) {
+    public BlockDisplay spawnBlockDisplay(
+        Location location, java.util.function.Consumer<BlockDisplay> config) {
       return null;
     }
 
-    @Override public BlockData blockData(String serialized) { return null; }
-    @Override public void teleport(org.bukkit.entity.Entity entity, Location location) {}
-    @Override public UUID worldUuid() { return WORLD; }
-    @Override public Location location(ShipOrigin origin, double dx, double dy, double dz) {
+    @Override
+    public BlockData blockData(String serialized) {
+      return null;
+    }
+
+    @Override
+    public void teleport(org.bukkit.entity.Entity entity, Location location) {}
+
+    @Override
+    public UUID worldUuid() {
+      return WORLD;
+    }
+
+    @Override
+    public Location location(ShipOrigin origin, double dx, double dy, double dz) {
       return new Location(null, dx, dy, dz);
     }
-    @Override public void shipRendered(UUID shipId, Collection<BlockDisplay> displays) {}
-    @Override public void removeTagged(NamespacedKey key, String shipId) {}
+
+    @Override
+    public void shipRendered(UUID shipId, Collection<BlockDisplay> displays) {}
+
+    @Override
+    public void removeTagged(NamespacedKey key, String shipId) {}
   }
 
   private static Object defaultValue(Class<?> type) {
@@ -161,7 +211,10 @@ class BukkitShipRendererTest {
   }
 
   private static Ship ship() {
-    return new Ship(UUID.randomUUID(), UUID.randomUUID(), new ShipOrigin(WORLD, 0, 0, 0),
+    return new Ship(
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        new ShipOrigin(WORLD, 0, 0, 0),
         List.of(new ShipBlock(new BlockPos(0, 0, 0), "minecraft:stone")));
   }
 }

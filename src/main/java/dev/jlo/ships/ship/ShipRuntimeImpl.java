@@ -109,7 +109,6 @@ public final class ShipRuntimeImpl implements ShipRuntime {
     }
   }
 
-
   @Override
   public void remove(Ship ship) {
     renderer.removeRuntime(ship);

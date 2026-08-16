@@ -77,7 +77,8 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
       ShipRuntimeException normalized =
           failure instanceof ShipRuntimeException
               ? (ShipRuntimeException) failure
-              : new ShipRuntimeException("Bukkit collision spawn failed for ship " + ship.id(), failure);
+              : new ShipRuntimeException(
+                  "Bukkit collision spawn failed for ship " + ship.id(), failure);
       cleanupSpawned(spawned, normalized);
       throw normalized;
     }
@@ -118,8 +119,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     } catch (RuntimeException failure) {
       ShipRuntimeException wrapped =
           new ShipRuntimeException(
-              new IllegalStateException(
-                  "Collision move failed for ship " + ship.id(), failure));
+              new IllegalStateException("Collision move failed for ship " + ship.id(), failure));
       rollbackMoved(previous, wrapped);
       throw wrapped;
     }
@@ -168,8 +168,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
         ShipRuntimeException normalized =
             cleanup instanceof ShipRuntimeException
                 ? (ShipRuntimeException) cleanup
-                : new ShipRuntimeException(
-                    operation + " failed for ship " + shipId, cleanup);
+                : new ShipRuntimeException(operation + " failed for ship " + shipId, cleanup);
         if (failure == null) {
           failure = normalized;
         } else {
@@ -211,8 +210,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
             UUID shipId = parseShipId(shulker);
             removeOneTagged(
                 shulker,
-                "collision tagged removal failed"
-                    + (shipId == null ? "" : " for ship " + shipId));
+                "collision tagged removal failed" + (shipId == null ? "" : " for ship " + shipId));
           }
         } catch (RuntimeException cleanup) {
           failure = aggregateRemoval(failure, cleanup);
@@ -251,20 +249,9 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     return failure;
   }
 
-  private static ShipRuntimeException normalizeRemoval(
-      UUID shipId, String operation, ShipRuntimeException failure) {
-    if (failure.getCause() instanceof IllegalArgumentException cause
-        && (cause.getMessage() == null || !cause.getMessage().contains("ship " + shipId))) {
-      return new ShipRuntimeException(
-          new IllegalArgumentException(
-              "Failed to " + operation + " collision volume for ship " + shipId, cause));
-    }
-    return failure;
-  }
 
   private UUID parseShipId(Shulker shulker) {
-    String value =
-        shulker.getPersistentDataContainer().get(ownerKey, PersistentDataType.STRING);
+    String value = shulker.getPersistentDataContainer().get(ownerKey, PersistentDataType.STRING);
     try {
       return value == null ? null : UUID.fromString(value);
     } catch (IllegalArgumentException ignored) {
@@ -310,8 +297,9 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
       } catch (ShipRuntimeException failure) {
         throw failure;
       } catch (RuntimeException failure) {
-throw new ShipRuntimeException(
-            new IllegalStateException("Collision move teleport failed for ship " + shipId, failure));
+        throw new ShipRuntimeException(
+            new IllegalStateException(
+                "Collision move teleport failed for ship " + shipId, failure));
       }
     }
 

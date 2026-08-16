@@ -1,7 +1,7 @@
 package dev.jlo.ships.render;
 
-import dev.jlo.ships.ship.ShipRuntimeException;
 import dev.jlo.ships.model.ShipOrigin;
+import dev.jlo.ships.ship.ShipRuntimeException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -155,8 +155,7 @@ public interface RenderSurface {
         try {
           for (Entity entity : world.getEntitiesByClass(BlockDisplay.class)) {
             try {
-              String tag =
-                  entity.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+              String tag = entity.getPersistentDataContainer().get(key, PersistentDataType.STRING);
               if (shipId.equals(tag)) {
                 entity.remove();
               }
@@ -220,7 +219,8 @@ public interface RenderSurface {
         if (failure instanceof ShipRuntimeException) {
           return (ShipRuntimeException) failure;
         }
-        String context = shipId == null ? operation + " failed" : operation + " failed for ship " + shipId;
+        String context =
+            shipId == null ? operation + " failed" : operation + " failed for ship " + shipId;
         return new ShipRuntimeException(new IllegalStateException(context, failure));
       }
     };

@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 class ShipServiceImplTest {
   /** Common capturable material. */
   private static final String STONE = "minecraft:stone";
+
   /** Tagged runtime sweep marker. */
   private static final String SWEEP = "sweep";
 

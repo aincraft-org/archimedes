@@ -1,7 +1,6 @@
 package dev.jlo.ships.ship;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -201,6 +200,7 @@ class ShipRuntimeImplTest {
       operations.add("renderer:" + oldY + "->" + newY);
     }
   }
+
   private static final class RecordingCollision implements CollisionVolumeManager {
     int removed;
     boolean removeFailure;
@@ -238,6 +238,7 @@ class ShipRuntimeImplTest {
       rolledBack = true;
       operations.add(COLLISION_ROLLBACK);
     }
+
     @Override
     public void remove(UUID shipId) {
       removed++;
@@ -245,6 +246,7 @@ class ShipRuntimeImplTest {
         throw new ShipRuntimeException(new IllegalStateException("collision cleanup"));
       }
     }
+
     @Override
     public void removeAll() {}
   }

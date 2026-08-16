@@ -122,7 +122,7 @@ public final class ShipServiceImpl implements ShipService {
       }
       persistAll();
       return ships.get(ship.id());
-    } catch (ShipRuntimeException failure) {
+    } catch (RuntimeException failure) {
       rollback(ship, failure, runtimeStarted, buoyancyStarted);
       return null;
     }

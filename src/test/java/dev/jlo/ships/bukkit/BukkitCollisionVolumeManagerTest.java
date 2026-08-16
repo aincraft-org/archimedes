@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import dev.jlo.ships.model.BlockPos;
 import dev.jlo.ships.model.Ship;
 import dev.jlo.ships.model.ShipBlock;
@@ -16,7 +17,6 @@ import java.util.UUID;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Shulker;
 import org.junit.jupiter.api.Test;
 
@@ -24,7 +24,8 @@ class BukkitCollisionVolumeManagerTest {
   @Test
   void removeAllContinuesAfterTaggedMetadataFailure() {
     RuntimeException metadata = new IllegalStateException("metadata");
-    java.util.concurrent.atomic.AtomicInteger removals = new java.util.concurrent.atomic.AtomicInteger();
+    java.util.concurrent.atomic.AtomicInteger removals =
+        new java.util.concurrent.atomic.AtomicInteger();
     Shulker first =
         proxy(
             Shulker.class,
@@ -65,6 +66,7 @@ class BukkitCollisionVolumeManagerTest {
     assertSame(metadata, thrown.getCause());
     assertEquals(1, removals.get());
   }
+
   @Test
   void spawnNormalizesGenericRuntimeAndCleansEveryLocal() {
     UUID shipId = UUID.randomUUID();
@@ -75,8 +77,7 @@ class BukkitCollisionVolumeManagerTest {
         new BukkitCollisionVolumeManager(world, new NamespacedKey("ships", "collision"));
 
     ShipRuntimeException thrown =
-        assertThrows(
-            ShipRuntimeException.class, () -> manager.spawn(shipWithTwoBlocks(shipId)));
+        assertThrows(ShipRuntimeException.class, () -> manager.spawn(shipWithTwoBlocks(shipId)));
     assertSame(failure, thrown.getCause());
     assertTrue(thrown.getMessage().contains(shipId.toString()));
     assertTrue(thrown.getSuppressed().length > 0);
@@ -109,7 +110,8 @@ class BukkitCollisionVolumeManagerTest {
     Ship ship = ship(shipId);
     manager.spawn(ship);
 
-    ShipRuntimeException thrown = assertThrows(ShipRuntimeException.class, () -> manager.move(ship));
+    ShipRuntimeException thrown =
+        assertThrows(ShipRuntimeException.class, () -> manager.move(ship));
     assertSame(teleport, thrown.getCause().getCause());
     assertTrue(thrown.getCause().getMessage().contains(shipId.toString()));
   }
@@ -131,6 +133,7 @@ class BukkitCollisionVolumeManagerTest {
     assertEquals(2, attempts.size());
     assertEquals(1, thrown.getSuppressed().length);
   }
+
   private static Ship ship(UUID shipId) {
     return new Ship(
         shipId,
@@ -271,8 +274,10 @@ class BukkitCollisionVolumeManagerTest {
     BukkitCollisionVolumeManager manager = new BukkitCollisionVolumeManager(world, ownerKey);
     manager.spawn(ship);
 
-    ShipRuntimeException failure = assertThrows(ShipRuntimeException.class, () -> manager.move(ship));
-    IllegalStateException context = assertInstanceOf(IllegalStateException.class, failure.getCause());
+    ShipRuntimeException failure =
+        assertThrows(ShipRuntimeException.class, () -> manager.move(ship));
+    IllegalStateException context =
+        assertInstanceOf(IllegalStateException.class, failure.getCause());
     assertEquals("Collision move failed for ship " + ship.id(), context.getMessage());
     assertSame(snapshotFailure, context.getCause());
   }

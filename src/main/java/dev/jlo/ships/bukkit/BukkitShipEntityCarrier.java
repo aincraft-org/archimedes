@@ -131,9 +131,9 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
       Bukkit.getLogger()
           .finest(
               "Ship carry teleport failed for ship "
-              + shipId
-              + " and entity "
-              + entity.getUniqueId());
+                  + shipId
+                  + " and entity "
+                  + entity.getUniqueId());
     }
   }
 

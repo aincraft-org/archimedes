@@ -17,7 +17,6 @@ import dev.jlo.ships.ship.ShipRuntimeImpl;
 import dev.jlo.ships.ship.ShipService;
 import dev.jlo.ships.ship.ShipServiceImpl;
 import dev.jlo.ships.store.ShipStore;
-import dev.jlo.ships.ship.ShipRuntimeException;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -113,16 +112,24 @@ public final class ShipsPlugin extends JavaPlugin {
   static final class CleanupCoordinator {
     private CleanupCoordinator() {}
 
+    /**
+     * Attempts both cleanup actions even when an unnormalized runtime failure escapes an adapter.
+     *
+     * @param removeRegistered registered runtime cleanup
+     * @param removeTagged tagged entity cleanup
+     * @param log failure logger
+     */
+    @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
     static void run(
         Runnable removeRegistered, Runnable removeTagged, java.util.function.Consumer<String> log) {
       try {
         removeRegistered.run();
-      } catch (ShipRuntimeException failure) {
+      } catch (RuntimeException failure) {
         log.accept("Failed to remove registered ship runtime: " + failure.getMessage());
       }
       try {
         removeTagged.run();
-      } catch (ShipRuntimeException failure) {
+      } catch (RuntimeException failure) {
         log.accept("Failed to remove tagged ship runtime: " + failure.getMessage());
       }
     }
