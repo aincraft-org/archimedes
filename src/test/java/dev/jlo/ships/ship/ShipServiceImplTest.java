@@ -28,6 +28,9 @@ class ShipServiceImplTest {
   /** Single-block origin key. */
   private static final String ORIGIN_KEY = "100,200,300";
 
+  /** Recorded buoyancy clear operation. */
+  private static final String CLEAR_CALL = "clear";
+
   private static final UUID WORLD = UUID.fromString("00000000-0000-0000-0000-000000000001");
   private static final UUID OWNER = UUID.fromString("00000000-0000-0000-0000-000000000002");
 
@@ -114,7 +117,7 @@ class ShipServiceImplTest {
 
     @Override
     public void clear(Ship ship) {
-      calls.add("clear");
+      calls.add(CLEAR_CALL);
     }
   }
 
@@ -229,6 +232,7 @@ class ShipServiceImplTest {
     assertEquals(1, fakes.persisted.size());
     assertEquals(1, fakes.rendered.size());
   }
+
   @Test
   void rejectsAssemblyInNonBoundWorldBeforeScanningOrMutation() {
     Fakes fakes = new Fakes();
@@ -250,7 +254,7 @@ class ShipServiceImplTest {
 
               @Override
               public boolean clearBlocks(Ship ship) {
-                calls.add("clear");
+                calls.add(CLEAR_CALL);
                 return true;
               }
 
@@ -301,7 +305,7 @@ class ShipServiceImplTest {
 
               @Override
               public boolean clearBlocks(Ship ship) {
-                calls.add("clear");
+                calls.add(CLEAR_CALL);
                 return true;
               }
 
@@ -625,7 +629,7 @@ class ShipServiceImplTest {
             WORLD);
     service.loadAll();
     service.disassemble(ship.id(), OWNER, false);
-    assertTrue(buoyancy.calls.contains("clear"));
+    assertTrue(buoyancy.calls.contains(CLEAR_CALL));
   }
 
   private record MemoryStore(Fakes fakes) implements ShipStoreLike {

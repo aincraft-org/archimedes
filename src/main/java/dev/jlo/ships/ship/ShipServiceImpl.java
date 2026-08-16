@@ -36,6 +36,7 @@ public final class ShipServiceImpl implements ShipService {
 
   /** World in which this service operates. */
   private final UUID worldId;
+
   /** Loaded ships keyed by identifier. */
   private final Map<UUID, Ship> ships = new LinkedHashMap<>();
 
