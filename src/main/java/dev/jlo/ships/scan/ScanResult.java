@@ -33,7 +33,7 @@ public final class ScanResult {
     this.rootX = rootX;
     this.rootY = rootY;
     this.rootZ = rootZ;
-    this.captured = List.copyOf(captured);
+    this.captured = captured == null ? null : List.copyOf(captured);
   }
 
   /** Creates a failed scan result with no captured blocks. */
