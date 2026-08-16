@@ -114,16 +114,16 @@ public final class BukkitShipRenderer implements ShipRendererLike {
    */
   @Override
   public void reposition(Ship ship, double oldY, double newY) {
-    Map<BlockDisplay, ShipBlock> blocksByDisplay = pairDisplays(ship);
-    for (Map.Entry<BlockDisplay, ShipBlock> entry : blocksByDisplay.entrySet()) {
-      try {
+    try {
+      Map<BlockDisplay, ShipBlock> blocksByDisplay = pairDisplays(ship);
+      for (Map.Entry<BlockDisplay, ShipBlock> entry : blocksByDisplay.entrySet()) {
         surface.teleport(entry.getKey(), location(ship, entry.getValue()));
-      } catch (ShipRuntimeException failure) {
-        throw failure;
-      } catch (RuntimeException failure) {
-        throw new ShipRuntimeException(
-            new IllegalStateException("Renderer reposition teleport failed for ship " + ship.id(), failure));
       }
+    } catch (ShipRuntimeException failure) {
+      throw failure;
+    } catch (RuntimeException failure) {
+      throw new ShipRuntimeException(
+          "Renderer reposition failed for ship " + ship.id(), failure);
     }
   }
 
