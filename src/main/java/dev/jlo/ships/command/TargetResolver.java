@@ -10,15 +10,15 @@ import org.bukkit.entity.Player;
 @FunctionalInterface
 public interface TargetResolver {
   /**
-   * Resolves the targeted ship block.
+   * Resolves the targeted block.
    *
    * @param player the acting player
-   * @return the resolved target, or null when no capturable block is in range
+   * @return the resolved target, or null when no non-air target is in range
    */
   Target resolve(Player player);
 
   /**
-   * A capturable target with world coordinates.
+   * A non-air target with world coordinates.
    *
    * @param x the target x coordinate
    * @param y the target y coordinate

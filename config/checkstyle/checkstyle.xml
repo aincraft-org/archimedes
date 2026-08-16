@@ -8,6 +8,7 @@
         <property name="max" value="120"/>
     </module>
     <module name="TreeWalker">
+        <module name="SuppressWarningsHolder"/>
         <module name="AvoidStarImport"/>
         <module name="EmptyLineSeparator"/>
         <module name="ExplicitInitialization"/>
@@ -29,4 +30,5 @@
         <module name="TodoComment"/>
         <module name="UnusedLocalVariable"/>
     </module>
+    <module name="SuppressWarningsFilter"/>
 </module>

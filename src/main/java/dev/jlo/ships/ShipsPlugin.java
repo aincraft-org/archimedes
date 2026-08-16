@@ -31,6 +31,7 @@ public final class ShipsPlugin extends JavaPlugin {
   /** Active ship service. */
   private ShipService service;
 
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   @Override
   public void onEnable() {
     saveDefaultConfig();
@@ -80,12 +81,22 @@ public final class ShipsPlugin extends JavaPlugin {
               new BukkitWorldMutator(world),
               buoyancy,
               config.buoyancyEnabled(),
+              config.worldEnabled(world.getUID()),
               world.getUID());
-      service.loadAll();
-      getServer().getPluginManager().registerEvents(tracker, this);
-    } catch (IllegalStateException failure) {
-      getLogger().severe("Failed to load ships: " + failure.getMessage());
-      getServer().getPluginManager().disablePlugin(this);
+      try {
+        registerAfterLoad(
+            () -> service.loadAll(),
+            () -> getServer().getPluginManager().registerEvents(tracker, this));
+      } finally {
+        if (service == null) {
+          tracker.clear();
+        }
+      }
+    } catch (RuntimeException failure) {
+      CleanupCoordinator.handleLoadFailure(
+          failure,
+          message -> getLogger().severe(message),
+          () -> getServer().getPluginManager().disablePlugin(this));
       return;
     }
     registerCommand(config);
@@ -99,9 +110,49 @@ public final class ShipsPlugin extends JavaPlugin {
 
   @Override
   public void onDisable() {
-    if (service != null) {
-      service.removeAllRuntime();
-      ((ShipServiceImpl) service).runtime().removeAllTagged();
+    if (service == null) {
+      return;
+    }
+    CleanupCoordinator.run(
+        () -> service.removeAllRuntime(),
+        () -> ((ShipServiceImpl) service).runtime().removeAllTagged(),
+        message -> getLogger().severe(message));
+  }
+
+  static void registerAfterLoad(Runnable load, Runnable registration) {
+    load.run();
+    registration.run();
+  }
+
+  static final class CleanupCoordinator {
+    private CleanupCoordinator() {}
+
+    /**
+     * Attempts both cleanup actions even when an unnormalized runtime failure escapes an adapter.
+     *
+     * @param removeRegistered registered runtime cleanup
+     * @param removeTagged tagged entity cleanup
+     * @param log failure logger
+     */
+    @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
+    static void run(
+        Runnable removeRegistered, Runnable removeTagged, java.util.function.Consumer<String> log) {
+      try {
+        removeRegistered.run();
+      } catch (RuntimeException failure) {
+        log.accept("Failed to remove registered ship runtime: " + failure.getMessage());
+      }
+      try {
+        removeTagged.run();
+      } catch (RuntimeException failure) {
+        log.accept("Failed to remove tagged ship runtime: " + failure.getMessage());
+      }
+    }
+
+    static void handleLoadFailure(
+        RuntimeException failure, java.util.function.Consumer<String> logger, Runnable disable) {
+      logger.accept("Failed to load ships: " + failure.getMessage());
+      disable.run();
     }
   }
 

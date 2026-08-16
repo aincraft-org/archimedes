@@ -21,6 +21,11 @@ import org.bukkit.persistence.PersistentDataType;
  * ship's identifier and stable relative block position, and removes every tagged display on
  * disassembly through the surface's world query.
  */
+@SuppressWarnings({
+  "checkstyle:IllegalCatch",
+  "PMD.AvoidCatchingGenericException",
+  "PMD.AvoidDuplicateLiterals"
+})
 public final class BukkitShipRenderer implements ShipRendererLike {
   /** The rendering surface. */
   private final RenderSurface surface;
@@ -49,15 +54,19 @@ public final class BukkitShipRenderer implements ShipRendererLike {
    * @param ship the ship to render
    * @param holder the finalization receiver
    */
-  @Override
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   public void render(Ship ship, ShipHolder holder) {
     List<BlockDisplay> displays = new ArrayList<>(ship.blockCount());
     try {
       renderDisplays(ship, displays);
       surface.shipRendered(ship.id(), displays);
       holder.accept(ship);
-    } catch (ShipRuntimeException failure) {
-      cleanupRender(ship, failure);
+    } catch (RuntimeException failure) {
+      ShipRuntimeException normalized =
+          failure instanceof ShipRuntimeException
+              ? (ShipRuntimeException) failure
+              : new ShipRuntimeException("Bukkit render failed for ship " + ship.id(), failure);
+      cleanupRender(ship, normalized);
     }
   }
 
@@ -78,10 +87,11 @@ public final class BukkitShipRenderer implements ShipRendererLike {
     }
   }
 
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   private void cleanupRender(Ship ship, ShipRuntimeException failure) {
     try {
       surface.removeTagged(shipKey, ship.id().toString());
-    } catch (ShipRuntimeException cleanup) {
+    } catch (RuntimeException cleanup) {
       failure.addSuppressed(cleanup);
     }
     throw failure;
@@ -92,14 +102,28 @@ public final class BukkitShipRenderer implements ShipRendererLike {
    *
    * @param ship the ship to clean up
    */
-  @Override
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   public void removeRuntime(Ship ship) {
-    surface.removeTagged(shipKey, ship.id().toString());
+    try {
+      surface.removeTagged(shipKey, ship.id().toString());
+    } catch (RuntimeException failure) {
+      if (failure instanceof ShipRuntimeException) {
+        throw (ShipRuntimeException) failure;
+      }
+      throw new ShipRuntimeException("Renderer removal failed for ship " + ship.id(), failure);
+    }
   }
 
-  /** Removes all plugin-owned displays, including stale entities. */
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   public void removeAllRuntime() {
-    surface.removeAllTagged(shipKey);
+    try {
+      surface.removeAllTagged(shipKey);
+    } catch (RuntimeException failure) {
+      if (failure instanceof ShipRuntimeException) {
+        throw (ShipRuntimeException) failure;
+      }
+      throw new ShipRuntimeException("Renderer tagged removal failed", failure);
+    }
   }
 
   /**
@@ -109,11 +133,17 @@ public final class BukkitShipRenderer implements ShipRendererLike {
    * @param oldY the previous pose y
    * @param newY the new pose y
    */
-  @Override
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   public void reposition(Ship ship, double oldY, double newY) {
-    Map<BlockDisplay, ShipBlock> blocksByDisplay = pairDisplays(ship);
-    for (Map.Entry<BlockDisplay, ShipBlock> entry : blocksByDisplay.entrySet()) {
-      surface.teleport(entry.getKey(), location(ship, entry.getValue()));
+    try {
+      Map<BlockDisplay, ShipBlock> blocksByDisplay = pairDisplays(ship);
+      for (Map.Entry<BlockDisplay, ShipBlock> entry : blocksByDisplay.entrySet()) {
+        surface.teleport(entry.getKey(), location(ship, entry.getValue()));
+      }
+    } catch (ShipRuntimeException failure) {
+      throw failure;
+    } catch (RuntimeException failure) {
+      throw new ShipRuntimeException("Renderer reposition failed for ship " + ship.id(), failure);
     }
   }
 

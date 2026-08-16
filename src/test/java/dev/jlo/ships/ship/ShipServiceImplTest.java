@@ -25,8 +25,17 @@ class ShipServiceImplTest {
   /** Common capturable material. */
   private static final String STONE = "minecraft:stone";
 
+  /** Tagged runtime sweep marker. */
+  private static final String SWEEP = "sweep";
+
+  private static final String REMOVE_CALL = "remove";
+  private static final String RESTORE_CALL = "restore";
+
   /** Single-block origin key. */
   private static final String ORIGIN_KEY = "100,200,300";
+
+  /** Recorded buoyancy clear operation. */
+  private static final String CLEAR_CALL = "clear";
 
   private static final UUID WORLD = UUID.fromString("00000000-0000-0000-0000-000000000001");
   private static final UUID OWNER = UUID.fromString("00000000-0000-0000-0000-000000000002");
@@ -90,9 +99,11 @@ class ShipServiceImplTest {
   }
 
   /** Buoyancy fake recording calls. */
-  private static final class RecordingBuoyancy implements dev.jlo.ships.buoyancy.Buoyancy {
+  private static class RecordingBuoyancy implements dev.jlo.ships.buoyancy.Buoyancy {
     final List<String> calls = new ArrayList<>();
     boolean riseFails;
+    boolean tickResult;
+    boolean sinkResult = true;
 
     @Override
     public boolean rise(Ship ship) {
@@ -103,18 +114,18 @@ class ShipServiceImplTest {
     @Override
     public boolean tick(Ship ship) {
       calls.add("tick");
-      return false;
+      return tickResult;
     }
 
     @Override
     public boolean sink(Ship ship, int blocks) {
       calls.add("sink");
-      return true;
+      return sinkResult;
     }
 
     @Override
     public void clear(Ship ship) {
-      calls.add("clear");
+      calls.add(CLEAR_CALL);
     }
   }
 
@@ -138,6 +149,114 @@ class ShipServiceImplTest {
         fakes.removedRuntime.addAll(ships);
       }
     };
+  }
+
+  private static Ship ship(Fakes fakes) {
+    return new Ship(
+        UUID.randomUUID(),
+        OWNER,
+        fakes.origin,
+        List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
+  }
+
+  @Test
+  void loadAllInitialSweepFailureClearsRegistryAndAttemptsFinalSweep() {
+    Fakes fakes = new Fakes();
+    Ship persisted = ship(fakes);
+    List<String> sweeps = new ArrayList<>();
+    ShipRuntime runtime =
+        new ShipRuntime() {
+          @Override
+          public void spawn(Ship ship) {}
+
+          @Override
+          public void move(Ship ship, double oldY, double newY) {}
+
+          @Override
+          public void remove(Ship ship) {}
+
+          @Override
+          public void removeAll(Collection<Ship> ships) {}
+
+          @Override
+          public void removeAllTagged() {
+            sweeps.add(SWEEP);
+            if (sweeps.size() == 1) {
+              throw new ShipRuntimeException(new IllegalStateException("initial"));
+            }
+          }
+        };
+    ShipServiceImpl service =
+        new ShipServiceImpl(
+            new ShipStoreLike() {
+              @Override
+              public Map<UUID, Ship> loadAll() {
+                return Map.of(persisted.id(), persisted);
+              }
+
+              @Override
+              public void saveAll(Map<UUID, Ship> ships) {}
+            },
+            (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
+            runtime,
+            fakes,
+            new RecordingBuoyancy(),
+            false,
+            false,
+            WORLD);
+
+    IllegalStateException failure = assertThrows(IllegalStateException.class, service::loadAll);
+
+    assertTrue(failure.getMessage().contains("initial-tag-sweep"));
+    assertEquals(List.of(SWEEP, SWEEP), sweeps);
+    assertTrue(service.all().isEmpty());
+  }
+
+  @Test
+  void loadAllStoreFailureStillAttemptsTaggedCleanup() {
+    Fakes fakes = new Fakes();
+    List<String> sweeps = new ArrayList<>();
+    ShipRuntime runtime =
+        new ShipRuntime() {
+          @Override
+          public void spawn(Ship ship) {}
+
+          @Override
+          public void move(Ship ship, double oldY, double newY) {}
+
+          @Override
+          public void remove(Ship ship) {}
+
+          @Override
+          public void removeAll(Collection<Ship> ships) {}
+
+          @Override
+          public void removeAllTagged() {
+            sweeps.add(SWEEP);
+          }
+        };
+    ShipServiceImpl service =
+        new ShipServiceImpl(
+            new ShipStoreLike() {
+              @Override
+              public Map<UUID, Ship> loadAll() {
+                throw new ShipRuntimeException(new IllegalStateException("store"));
+              }
+
+              @Override
+              public void saveAll(Map<UUID, Ship> ships) {}
+            },
+            (x, y, z) -> List.of(),
+            runtime,
+            fakes,
+            new RecordingBuoyancy(),
+            false,
+            true,
+            WORLD);
+    IllegalStateException failure = assertThrows(IllegalStateException.class, service::loadAll);
+    assertTrue(failure.getMessage().contains("store-load"));
+    assertEquals(List.of(SWEEP), sweeps);
+    assertTrue(service.all().isEmpty());
   }
 
   @Test
@@ -194,12 +313,155 @@ class ShipServiceImplTest {
             fakes,
             new RecordingBuoyancy(),
             false,
+            true,
             WORLD);
 
     IllegalStateException failure = assertThrows(IllegalStateException.class, service::loadAll);
     assertTrue(failure.getMessage().contains(second.id().toString()));
     assertEquals(1, fakes.removedRuntime.size());
     assertEquals(first.id(), fakes.removedRuntime.get(0).id());
+    assertTrue(service.all().isEmpty());
+  }
+
+  @Test
+  void rollbackContinuesAfterPlainRuntimeCleanupFailures() {
+    ShipRuntime failingRuntime =
+        new ShipRuntime() {
+          @Override
+          public void spawn(Ship ship) {}
+
+          @Override
+          public void move(Ship ship, double oldY, double newY) {}
+
+          @Override
+          public void remove(Ship ship) {
+            throw new IllegalStateException(REMOVE_CALL);
+          }
+
+          @Override
+          public void removeAll(Collection<Ship> ships) {}
+        };
+    RecordingBuoyancy buoyancy =
+        new RecordingBuoyancy() {
+          @Override
+          public void clear(Ship ship) {
+            calls.add(CLEAR_CALL);
+            throw new IllegalStateException("clear");
+          }
+        };
+    WorldMutator mutator =
+        new WorldMutator() {
+          @Override
+          public String blockDataAt(int x, int y, int z) {
+            return STONE;
+          }
+
+          @Override
+          public boolean clearBlocks(Ship ship) {
+            return true;
+          }
+
+          @Override
+          public boolean restoreBlocks(Ship ship) {
+            throw new IllegalStateException(RESTORE_CALL);
+          }
+
+          @Override
+          public boolean validateRestore(Ship ship) {
+            return true;
+          }
+
+          @Override
+          public String lastError() {
+            return RESTORE_CALL;
+          }
+        };
+    ShipService service =
+        new ShipServiceImpl(
+            new ShipStoreLike() {
+              public Map<UUID, Ship> loadAll() {
+                return Map.of();
+              }
+
+              @Override
+              public void saveAll(Map<UUID, Ship> ships) {
+                throw new IllegalStateException("persist");
+              }
+            },
+            (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
+            failingRuntime,
+            mutator,
+            buoyancy,
+            true,
+            true,
+            WORLD);
+
+    assertThrows(ShipRuntimeException.class, () -> service.assembleAt(OWNER, 100, 200, 300, WORLD));
+    assertEquals(List.of("rise", CLEAR_CALL), buoyancy.calls);
+    assertEquals("persist", service.lastError());
+  }
+
+  @Test
+  void loadAllContinuesAfterPlainRuntimeCleanupFailures() {
+    Fakes fakes = new Fakes();
+    Ship first = ship(fakes);
+    Ship second = ship(fakes);
+    Map<UUID, Ship> persisted = new java.util.LinkedHashMap<>();
+    persisted.put(first.id(), first);
+    persisted.put(second.id(), second);
+    List<String> calls = new ArrayList<>();
+    ShipRuntime runtime =
+        new ShipRuntime() {
+          @Override
+          public void spawn(Ship ship) {
+            calls.add("spawn-" + ship.id());
+            if (ship.id().equals(second.id())) {
+              throw new IllegalStateException("spawn");
+            }
+          }
+
+          @Override
+          public void move(Ship ship, double oldY, double newY) {}
+
+          @Override
+          public void remove(Ship ship) {
+            calls.add(REMOVE_CALL);
+            throw new IllegalStateException(REMOVE_CALL);
+          }
+
+          @Override
+          public void removeAll(Collection<Ship> ships) {}
+
+          @Override
+          public void removeAllTagged() {
+            calls.add(SWEEP);
+            if (calls.contains(REMOVE_CALL)) {
+              throw new IllegalStateException(SWEEP);
+            }
+          }
+        };
+    ShipService service =
+        new ShipServiceImpl(
+            new ShipStoreLike() {
+              @Override
+              public Map<UUID, Ship> loadAll() {
+                return persisted;
+              }
+
+              @Override
+              public void saveAll(Map<UUID, Ship> ships) {}
+            },
+            (x, y, z) -> List.of(),
+            runtime,
+            fakes,
+            new RecordingBuoyancy(),
+            false,
+            true,
+            WORLD);
+
+    assertThrows(IllegalStateException.class, service::loadAll);
+    assertEquals(
+        List.of(SWEEP, "spawn-" + first.id(), "spawn-" + second.id(), REMOVE_CALL, SWEEP), calls);
     assertTrue(service.all().isEmpty());
   }
 
@@ -221,11 +483,188 @@ class ShipServiceImplTest {
             fakes,
             new RecordingBuoyancy(),
             true,
+            true,
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNotNull(result);
     assertEquals(1, fakes.persisted.size());
     assertEquals(1, fakes.rendered.size());
+  }
+
+  @Test
+  void persistenceRuntimeFailureRollsBackAndNormalizesError() {
+    Fakes fakes = new Fakes();
+    fakes.blocks.put(ORIGIN_KEY, STONE);
+    ShipStoreLike store =
+        new ShipStoreLike() {
+          int saves;
+
+          @Override
+          public Map<UUID, Ship> loadAll() {
+            return fakes.persisted;
+          }
+
+          @Override
+          public void saveAll(Map<UUID, Ship> ships) {
+            if (++saves == 1) {
+              throw new IllegalStateException("persist failed");
+            }
+            fakes.persisted.clear();
+            fakes.persisted.putAll(ships);
+          }
+        };
+    ShipService service =
+        new ShipServiceImpl(
+            store,
+            (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
+            runtime(fakes),
+            fakes,
+            new RecordingBuoyancy(),
+            false,
+            true,
+            WORLD);
+
+    assertNull(service.assembleAt(OWNER, 100, 200, 300, WORLD));
+    assertTrue(fakes.persisted.isEmpty());
+    assertEquals(STONE, fakes.blocks.get(ORIGIN_KEY));
+    assertEquals("persist failed", service.lastError());
+  }
+
+  @Test
+  void nullCauseRuntimeFailureUsesSafeErrorReason() {
+    Fakes fakes = new Fakes();
+    fakes.blocks.put(ORIGIN_KEY, STONE);
+    ShipService service =
+        new ShipServiceImpl(
+            new MemoryStore(fakes),
+            (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
+            new ShipRuntime() {
+              @Override
+              public void spawn(Ship ship) {
+                throw new ShipRuntimeException("spawn failed", null);
+              }
+
+              @Override
+              public void move(Ship ship, double oldY, double newY) {}
+
+              @Override
+              public void remove(Ship ship) {
+                fakes.removedRuntime.add(ship);
+              }
+
+              @Override
+              public void removeAll(Collection<Ship> ships) {}
+            },
+            fakes,
+            new RecordingBuoyancy(),
+            false,
+            true,
+            WORLD);
+
+    assertNull(service.assembleAt(OWNER, 100, 200, 300, WORLD));
+    assertEquals("spawn failed", service.lastError());
+  }
+
+  @Test
+  void rejectsAssemblyInNonBoundWorldBeforeScanningOrMutation() {
+    Fakes fakes = new Fakes();
+    List<String> calls = new ArrayList<>();
+    ShipService service =
+        new ShipServiceImpl(
+            new MemoryStore(fakes),
+            (x, y, z) -> {
+              calls.add("scan");
+              return List.of(new BlockPos(0, 0, 0));
+            },
+            runtime(fakes),
+            new WorldMutator() {
+              @Override
+              public String blockDataAt(int x, int y, int z) {
+                calls.add("blockData");
+                return STONE;
+              }
+
+              @Override
+              public boolean clearBlocks(Ship ship) {
+                calls.add(CLEAR_CALL);
+                return true;
+              }
+
+              @Override
+              public boolean validateRestore(Ship ship) {
+                return true;
+              }
+
+              @Override
+              public boolean restoreBlocks(Ship ship) {
+                calls.add("restore");
+                return true;
+              }
+
+              @Override
+              public String lastError() {
+                return "mutation failed";
+              }
+            },
+            new RecordingBuoyancy(),
+            true,
+            true,
+            WORLD);
+
+    assertNull(service.assembleAt(OWNER, 100, 200, 300, UUID.randomUUID()));
+    assertEquals("Ship assembly is not permitted in this world", service.lastError());
+    assertTrue(calls.isEmpty());
+  }
+
+  @Test
+  void rejectsAssemblyInDisabledBoundWorldBeforeScanningOrMutation() {
+    Fakes fakes = new Fakes();
+    List<String> calls = new ArrayList<>();
+    ShipService service =
+        new ShipServiceImpl(
+            new MemoryStore(fakes),
+            (x, y, z) -> {
+              calls.add("scan");
+              return List.of(new BlockPos(0, 0, 0));
+            },
+            runtime(fakes),
+            new WorldMutator() {
+              @Override
+              public String blockDataAt(int x, int y, int z) {
+                calls.add("blockData");
+                return STONE;
+              }
+
+              @Override
+              public boolean clearBlocks(Ship ship) {
+                calls.add(CLEAR_CALL);
+                return true;
+              }
+
+              @Override
+              public boolean validateRestore(Ship ship) {
+                return true;
+              }
+
+              @Override
+              public boolean restoreBlocks(Ship ship) {
+                calls.add("restore");
+                return true;
+              }
+
+              @Override
+              public String lastError() {
+                return "mutation failed";
+              }
+            },
+            new RecordingBuoyancy(),
+            true,
+            false,
+            WORLD);
+
+    assertNull(service.assembleAt(OWNER, 100, 200, 300, WORLD));
+    assertEquals("Ship assembly is disabled in this world", service.lastError());
+    assertTrue(calls.isEmpty());
   }
 
   @Test
@@ -245,6 +684,7 @@ class ShipServiceImplTest {
             runtime(fakes),
             fakes,
             new RecordingBuoyancy(),
+            true,
             true,
             WORLD);
     service.loadAll();
@@ -269,6 +709,7 @@ class ShipServiceImplTest {
             runtime(fakes),
             fakes,
             new RecordingBuoyancy(),
+            true,
             true,
             WORLD);
     service.loadAll();
@@ -295,6 +736,7 @@ class ShipServiceImplTest {
             runtime(fakes),
             fakes,
             new RecordingBuoyancy(),
+            true,
             true,
             WORLD);
     service.loadAll();
@@ -323,6 +765,7 @@ class ShipServiceImplTest {
             fakes,
             new RecordingBuoyancy(),
             true,
+            true,
             WORLD);
     service.loadAll();
     boolean ok = service.disassemble(ship.id(), OWNER, false);
@@ -341,6 +784,7 @@ class ShipServiceImplTest {
             runtime(fakes),
             fakes,
             new RecordingBuoyancy(),
+            true,
             true,
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
@@ -391,6 +835,7 @@ class ShipServiceImplTest {
             },
             fakes,
             new RecordingBuoyancy(),
+            true,
             true,
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
@@ -443,6 +888,7 @@ class ShipServiceImplTest {
             fakes,
             new RecordingBuoyancy(),
             true,
+            true,
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNull(result);
@@ -463,6 +909,7 @@ class ShipServiceImplTest {
             fakes,
             buoyancy,
             true,
+            true,
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNotNull(result);
@@ -482,6 +929,7 @@ class ShipServiceImplTest {
             runtime(fakes),
             fakes,
             buoyancy,
+            true,
             true,
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
@@ -509,10 +957,111 @@ class ShipServiceImplTest {
             fakes,
             buoyancy,
             true,
+            true,
             WORLD);
     service.loadAll();
     service.disassemble(ship.id(), OWNER, false);
-    assertTrue(buoyancy.calls.contains("clear"));
+    assertTrue(buoyancy.calls.contains(CLEAR_CALL));
+  }
+
+  @Test
+  void tickPersistsExactlyOnceOnlyWhenAnyShipMoves() {
+    Fakes fakes = new Fakes();
+    Ship first = ship(fakes);
+    Ship second = ship(fakes);
+    fakes.persisted.put(first.id(), first);
+    fakes.persisted.put(second.id(), second);
+    RecordingBuoyancy buoyancy = new RecordingBuoyancy();
+    CountingStore store = new CountingStore(fakes);
+    ShipServiceImpl service =
+        new ShipServiceImpl(
+            store, (x, y, z) -> List.of(), runtime(fakes), fakes, buoyancy, true, true, WORLD);
+    service.loadAll();
+    store.saves = 0;
+    service.tick();
+    assertEquals(0, store.saves);
+    buoyancy.tickResult = true;
+    service.tick();
+    assertEquals(1, store.saves);
+  }
+
+  @Test
+  void togglePersistsOnce() {
+    Fakes fakes = new Fakes();
+    Ship ship = ship(fakes);
+    fakes.persisted.put(ship.id(), ship);
+    CountingStore store = new CountingStore(fakes);
+    ShipServiceImpl service =
+        new ShipServiceImpl(
+            store,
+            (x, y, z) -> List.of(),
+            runtime(fakes),
+            fakes,
+            new RecordingBuoyancy(),
+            false,
+            true,
+            WORLD);
+    service.loadAll();
+    store.saves = 0;
+    assertTrue(service.toggleBuoyancy(OWNER, WORLD));
+    assertEquals(1, store.saves);
+  }
+
+  @Test
+  void sinkPersistsOnceOnSuccessAndNotOnFailure() {
+    Fakes fakes = new Fakes();
+    Ship ship = ship(fakes);
+    fakes.persisted.put(ship.id(), ship);
+    RecordingBuoyancy buoyancy = new RecordingBuoyancy();
+    CountingStore store = new CountingStore(fakes);
+    ShipServiceImpl service =
+        new ShipServiceImpl(
+            store, (x, y, z) -> List.of(), runtime(fakes), fakes, buoyancy, true, true, WORLD);
+    service.loadAll();
+    store.saves = 0;
+    assertTrue(service.sink(OWNER, WORLD, 1));
+    assertEquals(1, store.saves);
+    buoyancy.sinkResult = false;
+    assertFalse(service.sink(OWNER, WORLD, 1));
+    assertEquals(1, store.saves);
+  }
+
+  @Test
+  void sinkRejectsNonPositiveBlocksWithoutCallingBuoyancyOrPersistence() {
+    Fakes fakes = new Fakes();
+    Ship ship = ship(fakes);
+    fakes.persisted.put(ship.id(), ship);
+    RecordingBuoyancy buoyancy = new RecordingBuoyancy();
+    CountingStore store = new CountingStore(fakes);
+    ShipServiceImpl service =
+        new ShipServiceImpl(
+            store, (x, y, z) -> List.of(), runtime(fakes), fakes, buoyancy, true, true, WORLD);
+    service.loadAll();
+    store.saves = 0;
+
+    assertFalse(service.sink(OWNER, WORLD, 0));
+    assertFalse(service.sink(OWNER, WORLD, -1));
+    assertEquals(0, store.saves);
+    assertFalse(buoyancy.calls.contains("sink"));
+  }
+
+  private static final class CountingStore implements ShipStoreLike {
+    private final Fakes fakes;
+    int saves;
+
+    CountingStore(Fakes fakes) {
+      this.fakes = fakes;
+    }
+
+    public Map<UUID, Ship> loadAll() {
+      return fakes.persisted;
+    }
+
+    public void saveAll(Map<UUID, Ship> ships) {
+      saves++;
+      fakes.persisted.clear();
+      fakes.persisted.putAll(ships);
+    }
   }
 
   private record MemoryStore(Fakes fakes) implements ShipStoreLike {
@@ -542,31 +1091,5 @@ class ShipServiceImplTest {
 
     @Override
     public void reposition(Ship ship, double oldY, double newY) {}
-  }
-}
-
-/** A deck manager that never blocks. */
-final class NoopDeck extends dev.jlo.ships.deck.DeckManager {
-  NoopDeck() {
-    super(
-        new dev.jlo.ships.deck.DeckSurface() {
-          @Override
-          public boolean canPlace(int x, int y, int z) {
-            return true;
-          }
-
-          @Override
-          public boolean isClear(int x, int y, int z) {
-            return true;
-          }
-
-          @Override
-          public boolean placeBarrier(int x, int y, int z) {
-            return true;
-          }
-
-          @Override
-          public void removeBarrier(int x, int y, int z) {}
-        });
   }
 }

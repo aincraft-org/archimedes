@@ -64,15 +64,17 @@ Success looks like: a ship floats at the shallowest water it sits in, bobs gentl
 
 ### Current notes
 
-- `sink` requires a positive block count at the command and service boundaries; the domain defensively rejects non-positive values. Successful positive sinks remain unbounded below the waterline and leave velocity untouched (test asserts `-3.0` pose).
+- Positive manual sink remains unbounded below the waterline and does not alter velocity. The command and service require `blocks >= 1`; `BuoyancyImpl` also rejects non-positive values defensively.
 - Current geometry-only behavior is intentional: riders contribute no load, and equilibrium is not a force-balance solve. The exact current mass expression is `weight = mass × blockDensity × gravity`.
 
 ## Next
 
-- [ ] Aggregate per-material mass plus rider load, with equilibrium solved from displaced water. This replaces the current geometry-based waterline equilibrium; boarding should change draft.
-- [ ] Verify surface-area behavior from the displacement model: `Δdraft ≈ Δmass ÷ (waterDensity × footprint)` in tests
-- [ ] Decide rise/sink velocity semantics: currently only `tick` resets velocity on blocked path; `rise`/`sink` reject without clearing
-- [ ] Document settling behavior: sub-0.001 move threshold stores velocity and returns false (no move, no path check)
+- [ ] Implement the approved force-balance mass model in `docs/superpowers/specs/2026-08-16-buoyancy-mass-model-design.md`: namespaced per-material densities with validated positive finite fallback, tracked-player-only runtime load, bounded deterministic interpolation, immutable diagnostics, and explicit no-equilibrium states
+- [ ] Verify footprint behavior: `Δdraft ≈ Δmass ÷ (waterDensity × footprint)` within the approved discrete tolerance
+- [x] Keep positive manual sink unbounded below the waterline with velocity untouched; command, service, and domain boundaries reject non-positive distances
+- [x] Decide rise/sink velocity semantics: currently only `tick` resets velocity on blocked path; `rise`/`sink` reject without clearing
+- [x] Approve material/rider equilibrium contract: config-only densities, runtime-only tracked-player mass, no `ships.json` schema change, separate validated `max-fall` default `16.0`, and deterministic overloaded descent/clamp
+- [x] Document settling behavior: sub-0.001 move threshold stores velocity and returns false (no move, no path check)
 - [ ] Record live acceptance: assemble hull in water, observe rise/bob, restart reconstructs at floated position, disassemble restores at floated position
 
 ## Future
@@ -87,15 +89,17 @@ Success looks like: a ship floats at the shallowest water it sits in, bobs gentl
 | Date | Decision | Why |
 |------|----------|-----|
 | 2026-08-16 | Per-block buoyancy + dynamic rider load committed as design direction; mechanism (density vs flag, equilibrium solve) open | User directive: some blocks must be buoyant; player load should dip a raft |
+| 2026-08-16 | Approved per-material density + tracked-player load contract; no persistence schema change | Deterministic force balance and runtime-only load avoid stale persisted mass |
+| 2026-08-16 | Overloaded ships integrate downward to a fixed `max-fall` bound, then clamp with zero downward velocity | Prevent fabricated equilibrium and ratcheting descent while preserving normal path validation |
 | 2026-08-16 | Living specs in `docs/specs/`; dated docs stay in `docs/superpowers/` | User directive |
 | 2026-08-14 | Rigid-body bobbing with real buoyancy mechanics (user choice) | Fractional pose needed for oscillation |
 | 2026-08-14 | Shallowest column surface = effective waterline | Hull floats at shallowest water it sits in |
-| 2026-08-14 | Manual sink requires a positive block count; successful sinks remain unbounded below waterline with velocity untouched | Domain and command validation; debug utility semantics |
+| 2026-08-16 | Positive manual sink remains unbounded below waterline; non-positive input rejected at command, service, and domain boundaries | Preserve debug utility without allowing negative input to raise a ship |
+
 ## Open questions
 
-- [ ] Material model: per-material density values vs boolean buoyant flag vs tiers — which surface in config?
-- [ ] Default densities: baseline table (e.g. oak ≈ 0.6, stone ≈ 2.7); how are unknown materials treated (default density)?
-- [ ] Rider mass: fixed default for players; do mobs/items count?
-- [ ] Equilibrium under load: solve force balance (`submergedVolume(y) × waterDensity = totalMass`) or extend the waterline heuristic with a load offset?
-- [ ] Should physics tick be interpolated for player-perceived smoothness at low TPS?
-- [ ] Should equilibrium consider water *inside* the hull (columns over air pockets)?
+- [x] Material model: validated namespaced per-material density table with positive finite default fallback
+- [x] Rider scope: tracked players only, fixed positive finite configured mass, runtime-only
+- [x] Equilibrium: bounded deterministic force-balance interpolation with immutable diagnostic result
+- [x] Persistence: configuration-only density and runtime-only rider state; no `ships.json` schema change
+- [ ] Should equilibrium consider water *inside* the hull (columns over air pockets)? This is outside the approved first implementation.

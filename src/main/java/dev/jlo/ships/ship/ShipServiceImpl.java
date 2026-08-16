@@ -31,6 +31,9 @@ public final class ShipServiceImpl implements ShipService {
   /** Whether buoyancy is enabled globally. */
   private final boolean buoyancyEnabled;
 
+  /** Whether assembly is enabled in the bound world. */
+  private final boolean worldEnabled;
+
   /** World in which this service operates. */
   private final UUID worldId;
 
@@ -58,6 +61,7 @@ public final class ShipServiceImpl implements ShipService {
    * @param mutator world block mutator
    * @param buoyancy buoyancy controller
    * @param buoyancyEnabled whether buoyancy is enabled globally
+   * @param worldEnabled whether assembly is enabled in the bound world
    * @param worldId operating world identifier
    */
   public ShipServiceImpl(
@@ -67,6 +71,7 @@ public final class ShipServiceImpl implements ShipService {
       WorldMutator mutator,
       dev.jlo.ships.buoyancy.Buoyancy buoyancy,
       boolean buoyancyEnabled,
+      boolean worldEnabled,
       UUID worldId) {
     this.store = store;
     this.scanner = scanner;
@@ -74,13 +79,19 @@ public final class ShipServiceImpl implements ShipService {
     this.mutator = mutator;
     this.buoyancy = buoyancy;
     this.buoyancyEnabled = buoyancyEnabled;
+    this.worldEnabled = worldEnabled;
     this.worldId = worldId;
   }
 
   @Override
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   public Ship assembleAt(UUID playerId, int x, int y, int z, UUID targetWorldId) {
     if (!targetWorldId.equals(worldId)) {
       lastError = "Ship assembly is not permitted in this world";
+      return null;
+    }
+    if (!worldEnabled) {
+      lastError = "Ship assembly is disabled in this world";
       return null;
     }
     List<BlockPos> component = scanner.scan(x, y, z);
@@ -98,28 +109,78 @@ public final class ShipServiceImpl implements ShipService {
       lastError = mutator.lastError();
       return null;
     }
+    boolean runtimeStarted = false;
+    boolean buoyancyStarted = false;
     try {
+      runtimeStarted = true;
       runtime.spawn(ship);
       ships.put(ship.id(), ship);
-      if (buoyancyEnabled && !buoyancy.rise(ship)) {
-        rollback(ship, "Buoyancy path blocked");
-        return null;
+      if (buoyancyEnabled) {
+        buoyancyStarted = true;
+        if (!buoyancy.rise(ship)) {
+          throw new ShipRuntimeException(new IllegalStateException("Buoyancy path blocked"));
+        }
       }
       persistAll();
       return ships.get(ship.id());
-    } catch (ShipRuntimeException failure) {
-      rollback(ship, failure.getMessage());
+    } catch (RuntimeException failure) {
+      ShipRuntimeException normalized =
+          failure instanceof ShipRuntimeException
+              ? (ShipRuntimeException) failure
+              : new ShipRuntimeException(failure);
+      rollback(ship, normalized, runtimeStarted, buoyancyStarted);
       return null;
     }
   }
 
-  private void rollback(Ship ship, String message) {
-    mutator.restoreBlocks(ship);
-    runtime.remove(ship);
-    buoyancy.clear(ship);
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
+  private void rollback(
+      Ship ship, ShipRuntimeException failure, boolean runtimeStarted, boolean buoyancyStarted) {
+    boolean restored = true;
+    try {
+      if (!mutator.restoreBlocks(ship)) {
+        restored = false;
+        failure.addSuppressed(new IllegalStateException(mutator.lastError()));
+      }
+    } catch (RuntimeException cleanup) {
+      restored = false;
+      failure.addSuppressed(normalizeCleanup(cleanup));
+    }
+    if (runtimeStarted) {
+      try {
+        runtime.remove(ship);
+      } catch (RuntimeException cleanup) {
+        restored = false;
+        failure.addSuppressed(normalizeCleanup(cleanup));
+      }
+    }
+    if (buoyancyStarted) {
+      try {
+        buoyancy.clear(ship);
+      } catch (RuntimeException cleanup) {
+        restored = false;
+        failure.addSuppressed(normalizeCleanup(cleanup));
+      }
+    }
     ships.remove(ship.id());
-    persistAll();
-    lastError = "Assembly failed: " + message;
+    try {
+      persistAll();
+    } catch (RuntimeException cleanup) {
+      restored = false;
+      failure.addSuppressed(normalizeCleanup(cleanup));
+    }
+    Throwable cause = failure.getCause();
+    String reason = cause == null ? failure.getMessage() : cause.getMessage();
+    lastError = reason == null ? "unknown failure" : reason;
+    if (!restored) {
+      throw failure;
+    }
+  }
+
+  private static ShipRuntimeException normalizeCleanup(RuntimeException cleanup) {
+    return cleanup instanceof ShipRuntimeException
+        ? (ShipRuntimeException) cleanup
+        : new ShipRuntimeException(cleanup);
   }
 
   @Override
@@ -165,37 +226,43 @@ public final class ShipServiceImpl implements ShipService {
   }
 
   @Override
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   public Map<UUID, Ship> loadAll() {
-    Map<UUID, Ship> loaded = new LinkedHashMap<>(store.loadAll());
     List<Ship> spawned = new ArrayList<>();
-    ships.clear();
     Ship current = null;
-    runtime.removeAllTagged();
+    String phase = "store-load";
+    RuntimeException primary;
     try {
+      Map<UUID, Ship> loaded = new LinkedHashMap<>(store.loadAll());
+      ships.clear();
+      phase = "initial-tag-sweep";
+      runtime.removeAllTagged();
+      phase = "spawn";
       for (Ship ship : loaded.values()) {
         current = ship;
         runtime.spawn(ship);
         spawned.add(ship);
         ships.put(ship.id(), ship);
       }
-    } catch (ShipRuntimeException failure) {
-      for (Ship ship : spawned) {
-        try {
-          runtime.remove(ship);
-        } catch (ShipRuntimeException cleanup) {
-          failure.addSuppressed(cleanup);
-        }
-      }
-      try {
-        runtime.removeAllTagged();
-      } catch (ShipRuntimeException cleanup) {
-        failure.addSuppressed(cleanup);
-      }
-      ships.clear();
-      String shipId = current == null ? "unknown" : current.id().toString();
-      throw new IllegalStateException("Failed to load ship runtime " + shipId, failure);
+      return ships;
+    } catch (RuntimeException failure) {
+      primary = failure;
     }
-    return ships;
+    for (Ship ship : spawned) {
+      try {
+        runtime.remove(ship);
+      } catch (RuntimeException cleanup) {
+        primary.addSuppressed(normalizeCleanup(cleanup));
+      }
+    }
+    try {
+      runtime.removeAllTagged();
+    } catch (RuntimeException cleanup) {
+      primary.addSuppressed(normalizeCleanup(cleanup));
+    }
+    ships.clear();
+    String shipId = current == null ? "unknown" : current.id().toString();
+    throw new IllegalStateException("Failed during " + phase + " for ship " + shipId, primary);
   }
 
   @Override
@@ -238,13 +305,17 @@ public final class ShipServiceImpl implements ShipService {
 
   @Override
   public boolean sink(UUID requesterId, UUID targetWorldId, int blocks) {
+    if (blocks <= 0) {
+      lastError = "Block count must be positive";
+      return false;
+    }
     Ship ship = findOwnedInWorld(requesterId, targetWorldId);
     if (ship == null) {
       lastError = "No ship in this world";
       return false;
     }
     if (!buoyancy.sink(ship, blocks)) {
-      lastError = "Cannot lower ship: path blocked";
+      lastError = "path blocked";
       return false;
     }
     persistAll();

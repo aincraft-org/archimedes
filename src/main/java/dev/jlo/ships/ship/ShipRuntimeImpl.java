@@ -41,58 +41,27 @@ public final class ShipRuntimeImpl implements ShipRuntime {
 
   @Override
   public void spawn(Ship ship) {
+    boolean rendererStarted = false;
     try {
       collisions.spawn(ship);
+      rendererStarted = true;
       renderer.render(ship, ignored -> {});
+      carrier.track(ship, ship.pose().y());
     } catch (ShipRuntimeException failure) {
-      rollbackSpawn(ship, failure);
-    }
-  }
-
-  private void rollbackSpawn(Ship ship, ShipRuntimeException failure) {
-    try {
-      renderer.removeRuntime(ship);
-    } catch (ShipRuntimeException cleanup) {
-      failure.addSuppressed(cleanup);
-    }
-    try {
-      collisions.remove(ship.id());
-    } catch (ShipRuntimeException cleanup) {
-      failure.addSuppressed(cleanup);
-    }
-    throw failure;
-  }
-
-  @Override
-  public void move(Ship ship, double oldY, double newY) {
-    boolean rising = newY > oldY;
-    boolean riderMovedBeforeCollision = false;
-    try {
-      renderer.reposition(ship, oldY, newY);
-      if (rising) {
-        carrier.carry(ship, oldY, newY);
-        riderMovedBeforeCollision = true;
-      }
-      collisions.move(ship);
-      if (!rising) {
-        carrier.carry(ship, oldY, newY);
-      }
-    } catch (ShipRuntimeException failure) {
-      try {
-        collisions.rollback(ship, oldY);
-      } catch (ShipRuntimeException cleanup) {
-        failure.addSuppressed(cleanup);
-      }
-      ship.setPose(new dev.jlo.ships.model.ShipPose(oldY));
-      if (riderMovedBeforeCollision) {
+      if (rendererStarted) {
         try {
-          carrier.carry(ship, newY, oldY);
+          renderer.removeRuntime(ship);
         } catch (ShipRuntimeException cleanup) {
           failure.addSuppressed(cleanup);
         }
       }
       try {
-        renderer.reposition(ship, newY, oldY);
+        collisions.remove(ship.id());
+      } catch (ShipRuntimeException cleanup) {
+        failure.addSuppressed(cleanup);
+      }
+      try {
+        carrier.untrack(ship);
       } catch (ShipRuntimeException cleanup) {
         failure.addSuppressed(cleanup);
       }
@@ -101,26 +70,102 @@ public final class ShipRuntimeImpl implements ShipRuntime {
   }
 
   @Override
+  public void move(Ship ship, double oldY, double newY) {
+    boolean rising = newY > oldY;
+    boolean rendererStarted = false;
+    boolean carrierStarted = false;
+    boolean collisionsStarted = false;
+    try {
+      rendererStarted = true;
+      renderer.reposition(ship, oldY, newY);
+      if (rising) {
+        carrierStarted = true;
+        carrier.carry(ship, oldY, newY);
+      }
+      collisionsStarted = true;
+      collisions.move(ship);
+      if (!rising) {
+        carrierStarted = true;
+        carrier.carry(ship, oldY, newY);
+      }
+      carrier.updatePoseBasis(ship, newY);
+    } catch (ShipRuntimeException failure) {
+      if (collisionsStarted) {
+        try {
+          collisions.rollback(ship, oldY);
+        } catch (ShipRuntimeException cleanup) {
+          failure.addSuppressed(cleanup);
+        }
+      }
+      ship.setPose(new dev.jlo.ships.model.ShipPose(oldY));
+      if (rising && carrierStarted) {
+        try {
+          carrier.carry(ship, newY, oldY);
+        } catch (ShipRuntimeException cleanup) {
+          failure.addSuppressed(cleanup);
+        }
+      }
+      if (carrierStarted) {
+        carrier.updatePoseBasis(ship, oldY);
+      }
+      if (rendererStarted) {
+        try {
+          renderer.reposition(ship, newY, oldY);
+        } catch (ShipRuntimeException cleanup) {
+          failure.addSuppressed(cleanup);
+        }
+      }
+      throw failure;
+    }
+  }
+
+  @Override
   public void remove(Ship ship) {
-    renderer.removeRuntime(ship);
-    collisions.remove(ship.id());
+    ShipRuntimeException failure = null;
+    try {
+      renderer.removeRuntime(ship);
+      collisions.remove(ship.id());
+    } catch (ShipRuntimeException current) {
+      failure = current;
+    } finally {
+      try {
+        carrier.untrack(ship);
+      } catch (ShipRuntimeException cleanup) {
+        if (failure == null) {
+          failure = cleanup;
+        } else {
+          failure.addSuppressed(cleanup);
+        }
+      }
+    }
+    if (failure != null) {
+      throw failure;
+    }
   }
 
   @Override
   public void removeAll(Collection<Ship> ships) {
-    for (Ship ship : ships) {
-      remove(ship);
+    try {
+      for (Ship ship : ships) {
+        remove(ship);
+      }
+      collisions.removeAll();
+    } finally {
+      carrier.clear();
     }
-    collisions.removeAll();
   }
 
-  /** Removes stale plugin-owned runtimes before reconstruction. */
   public void removeAllTagged() {
-    if (renderer instanceof dev.jlo.ships.bukkit.BukkitShipRenderer bukkitRenderer) {
-      bukkitRenderer.removeAllRuntime();
-    }
-    if (collisions instanceof dev.jlo.ships.bukkit.BukkitCollisionVolumeManager bukkitCollisions) {
-      bukkitCollisions.removeAllTagged();
+    try {
+      if (renderer instanceof dev.jlo.ships.bukkit.BukkitShipRenderer bukkitRenderer) {
+        bukkitRenderer.removeAllRuntime();
+      }
+      if (collisions
+          instanceof dev.jlo.ships.bukkit.BukkitCollisionVolumeManager bukkitCollisions) {
+        bukkitCollisions.removeAllTagged();
+      }
+    } finally {
+      carrier.clear();
     }
   }
 }

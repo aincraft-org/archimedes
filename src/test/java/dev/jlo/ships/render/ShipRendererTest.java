@@ -1,12 +1,14 @@
 package dev.jlo.ships.render;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import dev.jlo.ships.model.BlockPos;
 import dev.jlo.ships.model.Ship;
 import dev.jlo.ships.model.ShipBlock;
 import dev.jlo.ships.model.ShipOrigin;
 import dev.jlo.ships.model.ShipPose;
+import dev.jlo.ships.ship.ShipRuntimeException;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -16,13 +18,18 @@ import java.util.Map;
 import java.util.UUID;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
+import org.bukkit.World;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.BlockDisplay;
 import org.junit.jupiter.api.Test;
 
 /** Behavior tests for the block-display ship renderer. */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class ShipRendererTest {
+  private static final String NAMESPACE = "ships"; // shared namespace for test keys
+
   /** Common capturable material. */
+  @SuppressWarnings("PMD.AvoidDuplicateLiterals")
   private static final String STONE = "minecraft:stone";
 
   /** Common world identifier. */
@@ -106,10 +113,14 @@ class ShipRendererTest {
     final List<Location> teleports = new ArrayList<>();
     final Map<String, BlockData> dataById = new HashMap<>();
     final List<UUID> renderedShips = new ArrayList<>();
+    RuntimeException renderFailure;
 
     @Override
     public BlockDisplay spawnBlockDisplay(
         Location location, java.util.function.Consumer<BlockDisplay> config) {
+      if (renderFailure != null) {
+        throw renderFailure;
+      }
       FakeDisplay fake = new FakeDisplay();
       fake.location = location;
       BlockDisplay proxy = fake.proxy();
@@ -155,6 +166,82 @@ class ShipRendererTest {
     public void removeTagged(NamespacedKey key, String shipId) {
       // Test surface: no live entities to remove.
     }
+  }
+
+  @Test
+  void rendererRemovalContinuesToSecondDisplayAndSuppressesItsFailure() {
+    RuntimeException first = new IllegalStateException("first display");
+    RuntimeException second = new IllegalArgumentException("second display");
+    List<Integer> attempts = new ArrayList<>();
+    BlockDisplay firstDisplay = removalDisplay(first, attempts);
+    BlockDisplay secondDisplay = removalDisplay(second, attempts);
+    WorldProxy world = new WorldProxy(List.of(firstDisplay, secondDisplay));
+    RenderSurface surface = RenderSurface.of(world.proxy());
+    ShipRuntimeException thrown =
+        assertThrows(
+            ShipRuntimeException.class,
+            () -> surface.removeTagged(new NamespacedKey(NAMESPACE, "ship"), "ship-id"));
+    assertEquals(2, attempts.size());
+    assertEquals(1, thrown.getSuppressed().length);
+  }
+
+  private static BlockDisplay removalDisplay(RuntimeException failure, List<Integer> attempts) {
+    return (BlockDisplay)
+        Proxy.newProxyInstance(
+            BlockDisplay.class.getClassLoader(),
+            new Class<?>[] {BlockDisplay.class},
+            (proxy, method, args) -> {
+              if (method.getName().equals("getPersistentDataContainer")) {
+                return Proxy.newProxyInstance(
+                    ShipRendererTest.class.getClassLoader(),
+                    new Class<?>[] {org.bukkit.persistence.PersistentDataContainer.class},
+                    (container, containerMethod, containerArgs) -> {
+                      if ("get".equals(containerMethod.getName())) return "ship-id";
+                      return defaultFor(containerMethod.getReturnType());
+                    });
+              }
+              if (method.getName().equals("remove")) {
+                attempts.add(1);
+                throw failure;
+              }
+              return defaultFor(method.getReturnType());
+            });
+  }
+
+  private static final class WorldProxy {
+    private final List<BlockDisplay> displays;
+
+    private WorldProxy(List<BlockDisplay> displays) {
+      this.displays = displays;
+    }
+
+    private World proxy() {
+      return (World)
+          Proxy.newProxyInstance(
+              World.class.getClassLoader(),
+              new Class<?>[] {World.class},
+              (proxy, method, args) -> {
+                if (method.getName().equals("getEntitiesByClass")) return displays;
+                return defaultFor(method.getReturnType());
+              });
+    }
+  }
+
+  @Test
+  void renderNormalizesRuntimeFailureWithShipIdAndCause() {
+    Ship ship = shipWithBlock(0, 0, 0, STONE);
+    RuntimeException cause = new IllegalStateException("render boom");
+    SpySurface surface = new SpySurface();
+    surface.renderFailure = cause;
+    dev.jlo.ships.ship.ShipRuntimeException failure =
+        org.junit.jupiter.api.Assertions.assertThrows(
+            dev.jlo.ships.ship.ShipRuntimeException.class,
+            () ->
+                new dev.jlo.ships.bukkit.BukkitShipRenderer(
+                        surface, new NamespacedKey("ships", "test"))
+                    .render(ship, ignored -> {}));
+    assertEquals("Bukkit render failed for ship " + ship.id(), failure.getMessage());
+    org.junit.jupiter.api.Assertions.assertSame(cause, failure.getCause());
   }
 
   @Test

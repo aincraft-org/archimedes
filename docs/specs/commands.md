@@ -35,18 +35,14 @@ Success looks like: every subcommand has a permission, explicit error messages f
 | `/ship buoyancy` | `ships.buoyancy` | Toggle for the requester's owned ship in the current world (`toggleBuoyancy(requester, world)` — not line-of-sight-targeted) |
 | `/ship sink <n>` | `ships.sink` | Positive integer parse; extra args silently ignored (no arity validation); delegates to service |
 
-## Invariants
-
-- Player-only: one entry check (`instanceof Player`) gates all subcommands; console executors get a clear rejection message.
-- Errors: no target, oversized/forbidden component, occupied restoration space, missing ownership, invalid sink argument — each explicit. Command output owns operation prefixes; service and adapter failures provide reason-only messages, preventing duplicated wording.
-- `ships.command` is enforced by Bukkit via `plugin.yml` `permission:` field before `ShipCommand` runs; each subcommand additionally checks its own permission in the executor (`ships.assemble`, `ships.inspect`, `ships.disassemble`, `ships.buoyancy`, `ships.sink`).
-- Disassembly authorization: owner or operator — enforced in the service (`requesterId`/`isOperator` params); the command looks up the requester's owned ship and passes `player.isOp()`.
+- Assembly delegates only after service world policy: non-bound targets fail first with `Ship assembly is not permitted in this world`; the configured primary world then fails with `Ship assembly is disabled in this world` when disabled. Both failures occur before scanner or world mutation.
+- Player-facing assembly errors retain the service reason after the command's `Cannot assemble: ` prefix.
 
 ## Implementation guidance
 
 - `ShipCommand` keeps a `TargetResolver` (interface) + `ShipService`; tests inject fakes (no Bukkit).
 - Tab completion: first argument only, subcommand list; **no permission filtering, no argument completion** (intentionally returns `List.of()` for later args) — keep honest about this limitation.
-- Messages: user-facing and terse. Current failures can duplicate operation wording when a service/adapter message already contains a prefix. The Next target is reason-only service failures rendered with command-owned prefixes (`Cannot assemble: <lastError()>`, `Cannot disassemble: <lastError()>`, `Cannot toggle buoyancy: <lastError()>`, `Cannot lower ship: <lastError()>`).
+ - Messages: user-facing and terse. Service failures are reason-only and command-owned prefixes render (`Cannot assemble: <lastError()>`, `Cannot disassemble: <lastError()>`, `Cannot toggle buoyancy: <lastError()>`, `Cannot lower ship: <lastError()>`).
 
 ## Current
 
@@ -62,10 +58,9 @@ Success looks like: every subcommand has a permission, explicit error messages f
 
 ## Next
 
-- [ ] Clarify inspect scope (ID+blocks vs doc's owner+origin) and update doc/impl to agree
-- [ ] Consider op-only default for `ships.command` if shared-server deployment needs it (currently `default: true`)
-- [ ] Add argument completion for `sink` (positive integer)
-- [ ] Add permission-rejection tests for inspect/disassemble/buoyancy/sink; sink `< 1` boundary; `BukkitTargetResolver` and `ShipTabCompleter` tests
+ - [x] Inspect output decision: retain `Ship <8-char id> | blocks=<count>`; no owner/origin fields are required (2026-08-16).
+ - [ ] Consider op-only default for `ships.command` if shared-server deployment needs it (currently `default: true`)
+ - [ ] Add argument completion for `sink` (positive integer)
 
 ## Future
 
@@ -77,7 +72,7 @@ Success looks like: every subcommand has a permission, explicit error messages f
 | Date | Decision | Why |
 |------|----------|-----|
 | 2026-08-16 | Living specs in `docs/specs/`; dated docs stay in `docs/superpowers/` | User directive |
-| 2026-08-16 | Error ownership unresolved: current command prefixes can duplicate service/adapter prefixes; reason-only service messages and command-owned prefixes remain a Next target | Document current behavior without claiming implementation |
+| 2026-08-16 | Services return reason-only failures; commands own exactly one operation prefix | Prevent duplicated user-facing error text and keep service reasons reusable |
 | 2026-08-16 | Runtime is bound to the primary Bukkit world; cross-world support remains Future | Current assembly/runtime wiring uses the primary world |
 | 2026-08-14 | `/ship collision-test` debug fixture added behind op permission; kept isolated from production persistence | Spike acceptance; fixture since removed from code (verified 2026-08-16) |
 

@@ -3,10 +3,7 @@ package dev.jlo.ships.command;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 
-/**
- * Resolves the targeted block through {@link Player#getTargetBlockExact(int)}, returning null when
- * nothing capturable is in range.
- */
+/** Resolves a non-air targeted block through {@link Player#getTargetBlockExact(int)}. */
 public final class BukkitTargetResolver implements TargetResolver {
   /** Maximum targeting distance in blocks. */
   private final int distance;

@@ -1,55 +1,81 @@
-# Ship runtime
+# Ship Runtime — Living Spec
+
+> Status: active
+> Last updated: 2026-08-16
+> Owners: jlo
+
+## Intent
+
+Assembled ships exist in the world as runtime artifacts: one `BlockDisplay` per captured block plus an entity collision hull — while `ships.json` stays the only persistence authority. This domain composes rendering, collision, and entity-carry into one transactional lifecycle (spawn / move / remove) and reconciles runtime state on restart.
+
+Success looks like: exact visual alignment to canonical block corners, player-solid hulls without placed blocks, drift-free repositioning, atomic all-or-nothing moves, and deterministic reconstruction from persistence.
 
 ## Boundaries
 
-The runtime composes renderer, collision, and entity-carrier adapters for vertical ship movement. It owns runtime entity reconciliation and cleanup, while persistence and command policy remain outside this domain.
+### In scope
+
+- `ShipTransform` consumption: displays at visual corners, hulls at collision anchors
+- `ShipRenderer` / `RenderSurface` / `BukkitShipRenderer` — per-block BlockDisplays
+- `CollisionHull` / `CollisionVolume` / `CollisionVolumeManager` / `BukkitCollisionVolumeManager` — invisible Shulker hulls
+- `ShipRuntime` / `ShipRuntimeImpl` — spawn/move/remove transactions, rollback
+- `ShipEntityCarrier` / `BukkitShipEntityCarrier` / `BukkitShipRiderTracker` / `TopSurfaceIndex` — rider carry
+- `ShipServiceImpl` assembly/disassembly/load reconciliation wiring
+- Stale-entity sweeps and restart reconstruction
+
+### Out of scope / non-goals
+
+- Physics (buoyancy drives `ShipRuntime.move`; see `buoyancy`)
+- Ship data model and persistence format (see `ship-model`)
+- Command surface (see `commands`)
+- Horizontal navigation, rotation, passenger sitting, damage
 
 ## Invariants
 
-- Hulls spawn at `collisionAnchor` (visual corner + 0.5 on X/Z). Fractional same-anchor moves do not teleport volumes; crossing an integer anchor moves every volume. `rollback` moves all volumes back to the old anchor when the anchor changed.
-- `ShipRuntimeImpl` field order is renderer, collisions, carrier; **spawn order is collisions first, then renderer**. Operation order on move depends on direction:
-  - upward: reposition displays → carry riders → move collisions
-  - downward/equal: reposition displays → move collisions → carry riders
-- Adapter failures in renderer and collision operations are normalized to `ShipRuntimeException` with the operation and ship ID where available; existing `ShipRuntimeException` instances are preserved without double wrapping. Only `RuntimeException` is normalized; `Error` remains uncaught.
-- Collision spawn publishes the per-ship volume map only after every exposed volume is created. A failed partial spawn removes every locally created volume, and cleanup failures are suppressed on the primary failure.
-- Runtime failure handling remains scoped to normalized `ShipRuntimeException`: spawn rolls back (renderer cleanup, collision removal, suppressed cleanup failures) and rethrows; move rolls back (collisions, pose, reversed carrier on rising path, renderer). Best-effort rider transport is explicitly excluded from ship rollback.
-- Collision volumes are invisible, invulnerable, silent, no-AI, gravity-off, collidable Shulkers with `peek=0.0f`, `persistent=false`, PDC ship-id + relative block key, scoreboard tag `ships-collision-<uuid>`.
-- Displays are non-persistent entities tagged with ship UUID + relative `x,y,z` PDC key; identity is model-derived, never reverse-engineered from entity locations.
-- Spawn is all-or-nothing per ship for failures normalized as `ShipRuntimeException`; partial collision entities are cleaned and no partial map state is published.
-- Riders: carry is best-effort — a failed teleport never rolls back the ship move.
+- Displays use **visual** projection: `origin + pose.y + relative`, exact block corner — no implicit `+0.5`.
+- Hulls spawn at `collisionAnchor` (visual corner + 0.5 on X/Z). Fractional moves within the same authoritative floor anchor do not teleport collision volumes; crossing an anchor moves every volume once, and rollback restores every moved volume to the old anchor.
+- `ShipRuntimeImpl` field order is renderer, collisions, carrier; **spawn order is collisions first, then renderer**. Operation order on move: upward repositions displays, carries riders, then moves collisions; downward/equal repositions displays, moves collisions, then carries riders.
+- Adapter failures in renderer and collision operations are normalized to `ShipRuntimeException` with operation and ship context where available; existing `ShipRuntimeException` instances are preserved. Only `RuntimeException` is normalized; `Error` remains uncaught.
+- Carrier tracking is explicit: successful spawn tracks at the committed pose, remove untracks, and every runtime cleanup path clears tracker state.
+- Rider seed and overlap checks use the move transaction's supplied pose basis; tracker updates do not read a concurrently changing pose for that transaction.
 - No barrier/deck blocks are placed by production code; Shulker collision hulls provide runtime collision.
 
-## Decisions
+## Implementation guidance
 
-- The former barrier-backed deck implementation was removed after the Shulker hull became the production collision path; the historical design and spike records remain unchanged.
+- Domain interfaces never import Bukkit; Bukkit adapters live in `dev.jlo.ships.bukkit`.
+- PDC identity uses distinct renderer (`ship-id`) and collision (`collision-owner`) key families; stale sweeps and remove paths remain symmetric with their spawn-time tags.
+- Reposition pairs tagged displays by PDC block key and recomputes from the model; collision volumes are keyed by relative block position.
+- Buoyancy callers change pose then call `runtime.move(oldY,newY)`; runtime failure restores the old pose.
+- `removeAllTagged` is a runtime capability and is invoked only by concrete Bukkit-backed cleanup wiring.
 
 ## Current
 
-- [x] Canonical drift-free rendering (block-corner alignment; negative-pose coverage)
-- [x] Deterministic exposed hull (`CollisionHull.exposedBlocks`, lexicographic; `topExposedBlocks` for carrier)
+- [x] Canonical drift-free rendering and deterministic exposed hulls
 - [x] Production Shulker hull attached to spawn/move/remove lifecycle
-- [x] Adapter/runtime normalization for renderer and collision remove, removeAll, spawn, move, rollback, and cleanup paths; existing SREs are preserved and `Error` remains uncaught
-- [x] Transactional spawn with normalized adapter rollback (collisions → renderer); partial collision entities are cleaned and cleanup failures suppressed
-- [x] Direction-ordered move transaction with rider reversal on rollback
-- [x] `ShipRuntime.move(oldY, newY)` multi-block and repeated-bob support
-- [x] Persistent rider tracking via Bukkit events
-- [x] Carry: Players get relative vertical velocity; other entities teleport vertically; rejected/failed teleports are swallowed (best-effort, no rollback)
-- [x] Restart reconciliation: stale tagged entities swept, models respawned
-- [x] `removeAllRuntime()` + `removeAllTagged()` on disable (no save)
-- [x] Reconciliation is one cleanup boundary: store load, initial tagged-entity sweep, and deterministic per-ship spawn are covered by one `RuntimeException` boundary (but not `Error`). On failure, every already-spawned ship is removed, a final tagged-entity sweep is attempted, and the model registry is cleared even when individual cleanup actions fail. Cleanup failures are suppressed on the primary cause, and the thrown `IllegalStateException` identifies the failing phase and ship (or `unknown` when no ship is active). Store-load failures follow the same path.
-- [x] Plugin disable attempts registered-runtime removal and tagged-entity removal independently, logs each cleanup failure, and never saves persistence during disable.
+- [x] Transactional spawn and direction-ordered move rollback
+- [x] Persistent rider tracking and best-effort vertical carry
+- [x] Adapter/runtime normalization and continued multi-entity cleanup
+- [x] Restart reconciliation: store load, initial tagged-entity sweep, and deterministic spawn are one `RuntimeException` boundary. On failure, every spawned ship is removed, a final tagged-entity sweep is attempted, the model registry is cleared even when individual cleanup actions fail, and cleanup failures are normalized to `ShipRuntimeException` and suppressed on the primary cause. One `IllegalStateException` identifies the failing phase and ship (`unknown` if none is active). `Error` remains uncaught. Store-load failures follow the same cleanup boundary.
+- [x] Plugin disable independently attempts registered-runtime removal and tagged-entity removal, logs each failure, and never saves persistence during disable.
 
-Rider tracking is an explicit runtime lifecycle: a successfully spawned ship is registered with
-the carrier using its committed pose, removal untracks that ship, and complete runtime cleanup
-clears all carrier state. Carry and tracker overlap checks use the pose supplied by the move
-transaction; event processing must not reread a mutable ship pose for the same move window.
+## Next
+
 - [ ] Record live collision acceptance: stand on exposed tops, hull-side blocking, no pass-through, six-directional face checks
-- [ ] Remove dead `deck/` package and stale wording once legacy references are dropped
+- Live attempt on 2026-08-16 remained blocked by an occupied server port and no connected Minecraft client; observed startup evidence and the exact reproduction matrix are recorded in `docs/superpowers/results/2026-08-16-spec-alignment-acceptance.md`. Automated hull tests do not satisfy this item.
+- [x] Remove dead package and stale wording; historical design records retain the original barrier-deck decision.
 - [x] Guard collision `move` so volumes only teleport when the authoritative anchor changes
-- [ ] Add behavioral collision-manager tests for flags, anchors, PDC/scoreboard tags, rollback, and tag cleanup
-- [ ] Document persistence coupling: `ShipServiceImpl.tick` persists once iff any ship moved, respecting only the global buoyancy-enabled scheduler gate
+- [x] Add behavioral collision-manager tests for flags, anchors, PDC/scoreboard tags, rollback, and tag cleanup
+- [x] Document persistence coupling: `ShipServiceImpl.tick` persists once iff any ship moved; direct `tick()` still executes when the global scheduler is disabled, while the disabled scheduler prevents automatic calls.
 
 ## Future
 
 - [ ] Horizontal movement with runtime carry
 - [ ] Chunk management for horizontal travel
+
+## Decisions log
+
+| Date | Decision | Why |
+|------|----------|-----|
+| 2026-08-16 | Living specs in `docs/specs/`; dated docs stay in `docs/superpowers/` as history | User directive |
+| 2026-08-16 | Runtime is bound to the primary Bukkit world; cross-world support remains Future | Current assembly/runtime wiring uses the primary world |
+| 2026-08-15 | Carry is vertical and best-effort | Preserve rider momentum without turning transport into transaction failure |
+| 2026-08-14 | Shulker hulls integrated despite blocked live spike evidence | Acceptance gap remains recorded |

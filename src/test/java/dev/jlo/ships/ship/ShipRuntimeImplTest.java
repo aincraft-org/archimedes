@@ -40,6 +40,50 @@ class ShipRuntimeImplTest {
   }
 
   @Test
+  void spawnCollisionFailureAttemptsOnlyCollisionCleanup() {
+    RecordingRenderer renderer = new RecordingRenderer();
+    RecordingCollision collision = new RecordingCollision();
+    collision.spawnFailure = true;
+    ShipRuntimeException failure =
+        assertThrows(
+            ShipRuntimeException.class,
+            () -> new ShipRuntimeImpl(renderer, collision).spawn(ship()));
+    assertEquals(0, renderer.rendered);
+    assertEquals(1, collision.removed);
+    assertEquals(0, failure.getSuppressed().length);
+  }
+
+  @Test
+  void spawnCleanupFailuresAreSuppressedOnPrimaryFailure() {
+    RecordingRenderer renderer = new RecordingRenderer();
+    renderer.renderFailure = true;
+    renderer.removeFailure = true;
+    RecordingCollision collision = new RecordingCollision();
+    collision.removeFailure = true;
+    ShipRuntimeException failure =
+        assertThrows(
+            ShipRuntimeException.class,
+            () -> new ShipRuntimeImpl(renderer, collision).spawn(ship()));
+    assertEquals(2, failure.getSuppressed().length);
+  }
+
+  @Test
+  void upwardCollisionFailureRestoresBasisAfterReverseCarry() {
+    RecordingCollision collision = new RecordingCollision();
+    collision.moveFailure = true;
+    RecordingCarrier carrier = new RecordingCarrier();
+    carrier.recordCarryBasis = true;
+    Ship ship = ship();
+    ship.setPose(new dev.jlo.ships.model.ShipPose(7));
+
+    assertThrows(
+        ShipRuntimeException.class,
+        () -> new ShipRuntimeImpl(new RecordingRenderer(), collision, carrier).move(ship, 4, 7));
+
+    assertEquals(4.0, carrier.poseBasis);
+  }
+
+  @Test
   void upwardCollisionFailureRollsBackRendererModelAndRiders() {
     List<String> operations = new ArrayList<>();
     RecordingRenderer renderer = new RecordingRenderer(operations);
@@ -82,6 +126,19 @@ class ShipRuntimeImplTest {
   }
 
   @Test
+  void successfulMoveCommitsCarrierPoseBasis() {
+    RecordingCarrier carrier = new RecordingCarrier();
+    Ship ship = ship();
+    ShipRuntime runtime =
+        new ShipRuntimeImpl(new RecordingRenderer(), new RecordingCollision(), carrier);
+    ship.setPose(new dev.jlo.ships.model.ShipPose(7));
+
+    runtime.move(ship, 4, 7);
+
+    assertEquals(7.0, carrier.poseBasis);
+  }
+
+  @Test
   void downwardMoveMovesCollisionBeforeCarrier() {
     List<String> operations = new ArrayList<>();
     RecordingRenderer renderer = new RecordingRenderer(operations);
@@ -93,6 +150,22 @@ class ShipRuntimeImplTest {
     runtime.move(ship, 7, 4);
 
     assertEquals(List.of("renderer:7.0->4.0", COLLISION_MOVE, "carrier:7.0->4.0"), operations);
+  }
+
+  @Test
+  void downwardCollisionFailureDoesNotCarry() {
+    RecordingRenderer renderer = new RecordingRenderer();
+    RecordingCollision collision = new RecordingCollision();
+    collision.moveFailure = true;
+    RecordingCarrier carrier = new RecordingCarrier();
+    Ship ship = ship();
+    ship.setPose(new dev.jlo.ships.model.ShipPose(4));
+
+    assertThrows(
+        ShipRuntimeException.class,
+        () -> new ShipRuntimeImpl(renderer, collision, carrier).move(ship, 7, 4));
+    assertEquals(0, carrier.carryCount);
+    assertEquals(7.0, ship.pose().y());
   }
 
   @Test
@@ -113,6 +186,54 @@ class ShipRuntimeImplTest {
     assertEquals(0.0, carrier.carriedNewY, 0.0001);
   }
 
+  @Test
+  void spawnTracksAtCommittedPoseAndRemoveUntracks() {
+    RecordingCarrier carrier = new RecordingCarrier();
+    Ship ship = ship();
+    ship.setPose(new dev.jlo.ships.model.ShipPose(9));
+    ShipRuntime runtime =
+        new ShipRuntimeImpl(new RecordingRenderer(), new RecordingCollision(), carrier);
+    runtime.spawn(ship);
+    runtime.remove(ship);
+    assertEquals(1, carrier.tracked);
+    assertEquals(9.0, carrier.trackedPoseY);
+    assertEquals(1, carrier.untracked);
+  }
+
+  @Test
+  void rendererRemovalFailureStillUntracks() {
+    RecordingCarrier carrier = new RecordingCarrier();
+    RecordingRenderer renderer = new RecordingRenderer();
+    renderer.removeFailure = true;
+    ShipRuntime runtime = new ShipRuntimeImpl(renderer, new RecordingCollision(), carrier);
+
+    assertThrows(ShipRuntimeException.class, () -> runtime.remove(ship()));
+
+    assertEquals(1, carrier.untracked);
+  }
+
+  @Test
+  void collisionRemovalFailureStillUntracks() {
+    RecordingCarrier carrier = new RecordingCarrier();
+    RecordingCollision collision = new RecordingCollision();
+    collision.removeFailure = true;
+    ShipRuntime runtime = new ShipRuntimeImpl(new RecordingRenderer(), collision, carrier);
+
+    assertThrows(ShipRuntimeException.class, () -> runtime.remove(ship()));
+
+    assertEquals(1, carrier.untracked);
+  }
+
+  @Test
+  void removeAllClearsCarrierEvenWhenRegisteredRemovalFails() {
+    RecordingCarrier carrier = new RecordingCarrier();
+    RecordingRenderer renderer = new RecordingRenderer();
+    renderer.removeFailure = true;
+    ShipRuntime runtime = new ShipRuntimeImpl(renderer, new RecordingCollision(), carrier);
+    assertThrows(RuntimeException.class, () -> runtime.removeAll(List.of(ship())));
+    assertEquals(1, carrier.cleared);
+  }
+
   private static Ship ship() {
     return new Ship(
         UUID.randomUUID(),
@@ -124,6 +245,7 @@ class ShipRuntimeImplTest {
   private static final class RecordingRenderer implements ShipRendererLike {
     int rendered;
     boolean renderFailure;
+    boolean removeFailure;
     private final List<String> operations;
 
     RecordingRenderer() {
@@ -144,7 +266,11 @@ class ShipRuntimeImplTest {
     }
 
     @Override
-    public void removeRuntime(Ship ship) {}
+    public void removeRuntime(Ship ship) {
+      if (removeFailure) {
+        throw new ShipRuntimeException(new IllegalStateException("renderer cleanup"));
+      }
+    }
 
     @Override
     public void reposition(Ship ship, double oldY, double newY) {
@@ -154,6 +280,7 @@ class ShipRuntimeImplTest {
 
   private static final class RecordingCollision implements CollisionVolumeManager {
     int removed;
+    boolean removeFailure;
     boolean spawnFailure;
     boolean moveFailure;
     boolean rolledBack;
@@ -170,6 +297,7 @@ class ShipRuntimeImplTest {
     @Override
     public void spawn(Ship ship) {
       if (spawnFailure) {
+
         throw new ShipRuntimeException(new IllegalStateException(COLLISION_MOVE));
       }
     }
@@ -191,6 +319,9 @@ class ShipRuntimeImplTest {
     @Override
     public void remove(UUID shipId) {
       removed++;
+      if (removeFailure) {
+        throw new ShipRuntimeException(new IllegalStateException("collision cleanup"));
+      }
     }
 
     @Override
@@ -199,8 +330,14 @@ class ShipRuntimeImplTest {
 
   private static final class RecordingCarrier implements ShipEntityCarrier {
     int carryCount;
+    boolean recordCarryBasis;
+    int tracked;
+    int untracked;
+    int cleared;
+    double trackedPoseY = Double.NaN;
     double carriedOldY;
     double carriedNewY;
+    double poseBasis = Double.NaN;
     private final List<String> operations;
 
     RecordingCarrier() {
@@ -212,11 +349,36 @@ class ShipRuntimeImplTest {
     }
 
     @Override
+    public void track(Ship ship, double poseY) {
+      tracked++;
+      trackedPoseY = poseY;
+      operations.add("track:" + poseY);
+    }
+
+    @Override
+    public void untrack(Ship ship) {
+      untracked++;
+    }
+
+    @Override
+    public void updatePoseBasis(Ship ship, double poseY) {
+      poseBasis = poseY;
+    }
+
+    @Override
+    public void clear() {
+      cleared++;
+    }
+
+    @Override
     public void carry(Ship ship, double oldY, double newY) {
       carryCount++;
       operations.add("carrier:" + oldY + "->" + newY);
       carriedOldY = oldY;
       carriedNewY = newY;
+      if (recordCarryBasis) {
+        poseBasis = oldY;
+      }
     }
   }
 }

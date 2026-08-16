@@ -57,13 +57,33 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
   }
 
   @Override
+  public void track(Ship ship, double poseY) {
+    tracker.track(ship, poseY);
+  }
+
+  @Override
+  public void untrack(Ship ship) {
+    tracker.untrack(ship);
+  }
+
+  @Override
+  public void clear() {
+    tracker.clear();
+  }
+
+  @Override
+  public void updatePoseBasis(Ship ship, double poseY) {
+    tracker.updatePoseBasis(ship, poseY);
+  }
+
+  @Override
   public void carry(Ship ship, double oldY, double newY) {
     double delta = newY - oldY;
     if (delta == 0.0) {
       return;
     }
 
-    tracker.track(ship, oldY);
+    tracker.updatePoseBasis(ship, oldY);
     String shipId = ship.id().toString();
     Set<UUID> riders = tracker.riders(ship);
     if (riders.isEmpty()) {
@@ -84,7 +104,7 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
       if (isShipOwned(entity, shipId)) {
         continue;
       }
-      carryEntity(entity, delta);
+      carryEntity(entity, delta, shipId);
     }
   }
 
@@ -99,7 +119,7 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
     return shipId.equals(render);
   }
 
-  private static void carryEntity(Entity entity, double delta) {
+  private static void carryEntity(Entity entity, double delta, String shipId) {
     if (entity instanceof Player) {
       entity.setVelocity(entity.getVelocity().add(new org.bukkit.util.Vector(0, delta, 0)));
       return;
@@ -120,10 +140,42 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
           TeleportFlag.Relative.VELOCITY_X,
           TeleportFlag.Relative.VELOCITY_Y,
           TeleportFlag.Relative.VELOCITY_Z)) {
-        Bukkit.getLogger().finest("Ship carry teleport rejected for " + entity.getUniqueId());
+        Bukkit.getLogger()
+            .finest(
+                "Ship carry teleport rejected for ship "
+                    + shipId
+                    + " and entity "
+                    + entity.getUniqueId());
       }
     } catch (IllegalArgumentException | IllegalStateException failure) {
-      Bukkit.getLogger().finest("Ship carry teleport failed for " + entity.getUniqueId());
+      Bukkit.getLogger()
+          .finest(
+              "Ship carry teleport failed for ship "
+                  + shipId
+                  + " and entity "
+                  + entity.getUniqueId());
+    }
+  }
+
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
+  private static String shipIdForLog(Entity entity) {
+    try {
+      String collision =
+          entity
+              .getPersistentDataContainer()
+              .get(
+                  new org.bukkit.NamespacedKey("ships", "collision-owner"),
+                  PersistentDataType.STRING);
+      if (collision != null) {
+        return collision;
+      }
+      String render =
+          entity
+              .getPersistentDataContainer()
+              .get(new org.bukkit.NamespacedKey("ships", "ship-id"), PersistentDataType.STRING);
+      return render == null ? "<unknown>" : render;
+    } catch (RuntimeException ignored) {
+      return "<unknown>";
     }
   }
 }

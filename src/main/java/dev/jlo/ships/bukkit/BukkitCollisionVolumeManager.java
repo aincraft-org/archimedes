@@ -17,6 +17,11 @@ import org.bukkit.entity.Shulker;
 import org.bukkit.persistence.PersistentDataType;
 
 /** Bukkit collision manager using non-persistent Shulkers for exposed ship blocks. */
+@SuppressWarnings({
+  "checkstyle:IllegalCatch",
+  "PMD.AvoidCatchingGenericException",
+  "PMD.AvoidDuplicateLiterals"
+})
 public final class BukkitCollisionVolumeManager implements CollisionVolumeManager {
   /** Bukkit world containing collision entities. */
   private final World world;
@@ -43,8 +48,9 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
   }
 
   @Override
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   public void spawn(Ship ship) {
-    remove(ship.id());
+    normalizeRemoval(ship.id(), "collision spawn pre-cleanup");
     Map<BlockPos, CollisionVolume> spawned = new HashMap<>();
     try {
       for (BlockPos relative : CollisionHull.exposedBlocks(ship)) {
@@ -73,27 +79,30 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
         spawned.put(relative, new BukkitShulkerCollisionVolume(ship.id(), shulker));
       }
       volumes.put(ship.id(), spawned);
-    } catch (ShipRuntimeException failure) {
-      cleanupSpawned(spawned, failure);
-      throw failure;
-    } catch (IllegalArgumentException failure) {
-      ShipRuntimeException wrapped = new ShipRuntimeException(failure);
-      cleanupSpawned(spawned, wrapped);
-      throw wrapped;
+    } catch (RuntimeException failure) {
+      ShipRuntimeException normalized =
+          failure instanceof ShipRuntimeException
+              ? (ShipRuntimeException) failure
+              : new ShipRuntimeException(
+                  "Bukkit collision spawn failed for ship " + ship.id(), failure);
+      cleanupSpawned(spawned, normalized);
+      throw normalized;
     }
   }
 
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   private static void cleanupSpawned(
       Map<BlockPos, CollisionVolume> spawned, ShipRuntimeException failure) {
     for (CollisionVolume volume : spawned.values()) {
       try {
         volume.remove();
-      } catch (ShipRuntimeException cleanup) {
+      } catch (RuntimeException cleanup) {
         failure.addSuppressed(cleanup);
       }
     }
   }
 
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   @Override
   public void move(Ship ship) {
     Map<BlockPos, CollisionVolume> shipVolumes = volumes.get(ship.id());
@@ -106,29 +115,35 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
       for (Map.Entry<BlockPos, CollisionVolume> entry : shipVolumes.entrySet()) {
         CollisionVolume volume = entry.getValue();
         Location location = ((BukkitShulkerCollisionVolume) volume).entity.getLocation();
-        previous.put(
-            volume,
-            new ShipTransform.CollisionAnchor(location.getX(), location.getY(), location.getZ()));
+        ShipTransform.CollisionAnchor oldAnchor =
+            new ShipTransform.CollisionAnchor(location.getX(), location.getY(), location.getZ());
         ShipTransform.CollisionAnchor anchor = ShipTransform.collisionAnchor(ship, entry.getKey());
+        if (Math.floor(oldAnchor.y()) == Math.floor(anchor.y())) {
+          continue;
+        }
+        previous.put(volume, oldAnchor);
         volume.move(anchor.x(), anchor.y(), anchor.z());
       }
     } catch (ShipRuntimeException failure) {
       rollbackMoved(previous, failure);
       throw failure;
-    } catch (IllegalArgumentException failure) {
-      ShipRuntimeException wrapped = new ShipRuntimeException(failure);
+    } catch (RuntimeException failure) {
+      ShipRuntimeException wrapped =
+          new ShipRuntimeException(
+              new IllegalStateException("Collision move failed for ship " + ship.id(), failure));
       rollbackMoved(previous, wrapped);
       throw wrapped;
     }
   }
 
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   private void rollbackMoved(
       Map<CollisionVolume, ShipTransform.CollisionAnchor> previous, ShipRuntimeException failure) {
     for (Map.Entry<CollisionVolume, ShipTransform.CollisionAnchor> entry : previous.entrySet()) {
       ShipTransform.CollisionAnchor anchor = entry.getValue();
       try {
         entry.getKey().move(anchor.x(), anchor.y(), anchor.z());
-      } catch (ShipRuntimeException cleanup) {
+      } catch (RuntimeException cleanup) {
         failure.addSuppressed(cleanup);
       }
     }
@@ -149,23 +164,112 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
 
   @Override
   public void remove(UUID shipId) {
+    normalizeRemoval(shipId, "collision removal");
+  }
+
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
+  private void normalizeRemoval(UUID shipId, String operation) {
     Map<BlockPos, CollisionVolume> shipVolumes = volumes.remove(shipId);
-    if (shipVolumes != null) {
-      for (CollisionVolume volume : shipVolumes.values()) {
+    if (shipVolumes == null) {
+      return;
+    }
+    ShipRuntimeException failure = null;
+    for (CollisionVolume volume : shipVolumes.values()) {
+      try {
         volume.remove();
+      } catch (RuntimeException cleanup) {
+        ShipRuntimeException normalized =
+            cleanup instanceof ShipRuntimeException
+                ? (ShipRuntimeException) cleanup
+                : new ShipRuntimeException(operation + " failed for ship " + shipId, cleanup);
+        if (failure == null) {
+          failure = normalized;
+        } else {
+          failure.addSuppressed(normalized);
+        }
       }
+    }
+    if (failure != null) {
+      throw failure;
     }
   }
 
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
+  private void removeOneTagged(Shulker shulker, String operation) {
+    try {
+      shulker.remove();
+    } catch (RuntimeException failure) {
+      if (failure instanceof ShipRuntimeException) {
+        throw (ShipRuntimeException) failure;
+      }
+      throw new ShipRuntimeException(operation, failure);
+    }
+  }
+
+  private ShipRuntimeException normalizeFailure(
+      String operation, UUID shipId, RuntimeException failure) {
+    if (failure instanceof ShipRuntimeException) {
+      return (ShipRuntimeException) failure;
+    }
+    return new ShipRuntimeException(operation + " failed for ship " + shipId, failure);
+  }
+
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   @Override
   public void removeAll() {
-    for (Shulker shulker : world.getEntitiesByClass(Shulker.class)) {
-      if (shulker.getPersistentDataContainer().has(ownerKey, PersistentDataType.STRING)) {
-        shulker.remove();
+    ShipRuntimeException failure = null;
+    try {
+      for (Shulker shulker : java.util.List.copyOf(world.getEntitiesByClass(Shulker.class))) {
+        try {
+          if (shulker.getPersistentDataContainer().has(ownerKey, PersistentDataType.STRING)) {
+            UUID shipId = parseShipId(shulker);
+            removeOneTagged(
+                shulker,
+                "collision tagged removal failed" + (shipId == null ? "" : " for ship " + shipId));
+          }
+        } catch (RuntimeException cleanup) {
+          failure = aggregateRemoval(failure, cleanup);
+        }
       }
+    } catch (RuntimeException current) {
+      failure = aggregateRemoval(failure, current);
     }
     for (UUID shipId : java.util.Set.copyOf(volumes.keySet())) {
-      remove(shipId);
+      try {
+        normalizeRemoval(shipId, "collision removal");
+      } catch (RuntimeException cleanup) {
+        ShipRuntimeException normalized = normalizeFailure("collision removal", shipId, cleanup);
+        if (failure == null) {
+          failure = normalized;
+        } else {
+          failure.addSuppressed(normalized);
+        }
+      }
+    }
+    if (failure != null) {
+      throw failure;
+    }
+  }
+
+  private static ShipRuntimeException aggregateRemoval(
+      ShipRuntimeException failure, RuntimeException current) {
+    ShipRuntimeException wrapped =
+        current instanceof ShipRuntimeException runtime
+            ? runtime
+            : new ShipRuntimeException(current);
+    if (failure == null) {
+      return wrapped;
+    }
+    failure.addSuppressed(wrapped);
+    return failure;
+  }
+
+  private UUID parseShipId(Shulker shulker) {
+    String value = shulker.getPersistentDataContainer().get(ownerKey, PersistentDataType.STRING);
+    try {
+      return value == null ? null : UUID.fromString(value);
+    } catch (IllegalArgumentException ignored) {
+      return null;
     }
   }
 
@@ -206,8 +310,10 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
         }
       } catch (ShipRuntimeException failure) {
         throw failure;
-      } catch (IllegalArgumentException failure) {
-        throw new ShipRuntimeException(failure);
+      } catch (RuntimeException failure) {
+        throw new ShipRuntimeException(
+            new IllegalStateException(
+                "Collision move teleport failed for ship " + shipId, failure));
       }
     }
 
@@ -216,7 +322,9 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
       try {
         entity.remove();
       } catch (IllegalArgumentException failure) {
-        throw new ShipRuntimeException(failure);
+        throw new ShipRuntimeException(
+            new IllegalArgumentException(
+                "Failed to remove collision volume for ship " + shipId, failure));
       }
     }
   }

@@ -274,12 +274,35 @@ class ShipCommandTest {
   }
 
   @Test
-  void rejectsAssembleWithoutPermission() {
+  void rejectsInspectWithoutPermission() {
     RecordingService service = new RecordingService();
-    Player player = player(service, false);
-    commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {SUB_ASSEMBLE});
-    assertTrue(service.messages.get(0).contains("lack permission"));
-    assertTrue(service.calls.isEmpty());
+    commandNoTarget(service)
+        .onCommand(player(service, false), CMD, SHIP, new String[] {SUB_INSPECT});
+    assertEquals(0, service.calls.size());
+  }
+
+  @Test
+  void rejectsDisassembleWithoutPermission() {
+    RecordingService service = new RecordingService();
+    commandNoTarget(service)
+        .onCommand(player(service, false), CMD, SHIP, new String[] {SUB_DISASSEMBLE});
+    assertEquals(0, service.calls.size());
+  }
+
+  @Test
+  void rejectsBuoyancyWithoutPermission() {
+    RecordingService service = new RecordingService();
+    commandNoTarget(service)
+        .onCommand(player(service, false), CMD, SHIP, new String[] {SUB_BUOYANCY});
+    assertEquals(0, service.calls.size());
+  }
+
+  @Test
+  void rejectsSinkWithoutPermission() {
+    RecordingService service = new RecordingService();
+    commandNoTarget(service)
+        .onCommand(player(service, false), CMD, SHIP, new String[] {SUB_SINK, "1"});
+    assertEquals(0, service.calls.size());
   }
 
   @Test
@@ -366,6 +389,29 @@ class ShipCommandTest {
     commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {SUB_SINK, "3"});
     assertTrue(service.calls.contains(SUB_SINK));
     assertEquals(3, service.lastSinkBlocks);
+    assertTrue(
+        service.messages.stream()
+            .anyMatch(message -> message.contains("Ship lowered by 3 blocks.")));
+  }
+
+  @Test
+  void sinkRejectsZeroAndNegativeBlocks() {
+    RecordingService service = new RecordingService();
+    Player player = player(service, true);
+    commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {SUB_SINK, "0"});
+    commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {SUB_SINK, "-1"});
+    assertTrue(service.calls.isEmpty());
+    assertTrue(service.messages.get(0).contains("Block count must be positive."));
+    assertTrue(service.messages.get(1).contains("Block count must be positive."));
+  }
+
+  @Test
+  void sinkIgnoresExtraArguments() {
+    RecordingService service = new RecordingService();
+    service.owned = ship();
+    commandNoTarget(service)
+        .onCommand(player(service, true), CMD, SHIP, new String[] {SUB_SINK, "3", "extra"});
+    assertEquals(3, service.lastSinkBlocks);
   }
 
   @Test
@@ -376,5 +422,16 @@ class ShipCommandTest {
     commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {SUB_SINK, "abc"});
     assertTrue(service.messages.get(0).contains("Invalid block count"));
     assertTrue(service.calls.isEmpty());
+  }
+
+  @Test
+  void sinkReportsServiceFailureWithSingleOperationPrefix() {
+    RecordingService service = new RecordingService();
+    service.owned = ship();
+    service.sinkResult = false;
+    service.error = "path blocked";
+    Player player = player(service, true);
+    commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {SUB_SINK, "3"});
+    assertTrue(service.messages.get(0).contains("Cannot lower ship: path blocked"));
   }
 }

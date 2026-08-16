@@ -56,7 +56,7 @@ public interface ShipService {
   /** Persists all registered ships. */
   void saveAll();
 
-  /** Removes all runtime entities and barriers for registered ships. */
+  /** Removes all runtime entities for registered ships. */
   void removeAllRuntime();
 
   /**

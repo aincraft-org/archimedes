@@ -36,10 +36,9 @@ Success looks like: a `Ship` is a pure, unit-testable description of a build (or
 - `ships.json` is the single persistence authority; entities are never persisted (non-persistent at Bukkit level).
 - Persistence must stay backward compatible: missing `pose` → `y=0`; missing `buoyancy` → enabled.
 - Saves are atomic: write temp file, then replace; an interrupted save never leaves a truncated primary file.
-- Scanner is read-only: the scan itself never mutates the world; the assembly service validates the whole component before any mutation.
+- Assembly policy is checked before scanning: a target outside the primary bound world is rejected with `Ship assembly is not permitted in this world`; a disabled bound world is rejected with `Ship assembly is disabled in this world`. Neither path scans or mutates blocks.
 - Forbidden materials are lowercased at load; blank entries dropped; invalid UUIDs in `disabled-worlds` fail load (plugin disables rather than misbehaving).
 - Unsafe supplied config values never silently fall back — validation rejects them and plugin enable fails with a clear log. Missing list and optional scalar keys fall back to code defaults; `maximum-blocks` and `target-distance` instead use loader default `0` and fail validation when absent.
-
 ## Implementation guidance
 
 - Model classes live in `dev.jlo.ships.model`; records for value types (`BlockPos`), final classes with accessors elsewhere. `ShipOrigin` intentionally has no `equals` (identity semantics).
@@ -60,17 +59,17 @@ Success looks like: a `Ship` is a pure, unit-testable description of a build (or
 
 ### Current notes
 
-- `ShipScanner` returns `ScanResult` whose block list is not defensively copied; callers treat it read-only.
+- `ShipScanner` returns `ScanResult` with a single defensive copy of captured positions; the accessor returns that immutable stored list.
 - `config.yml` + loader defaults: max 2048 blocks, target distance 8, `buoyancy-enabled true`, `physics-ticks 1`, `bob-amplitude 0.5`, `max-rise 16`, `block-density 0.5`, `water-density 1.0`, `gravity 0.05`, `damping 0.9`.
 
 ## Next
 
-- [ ] Scan result defensively copied or documented as unmodifiable (contract hardening)
+- [x] Scan result defensively copied; `captured()` exposes the immutable stored list
 
 ## Future
 
-- [x] Disabled-world policy rejects assembly in both the primary bound world and non-primary command-target worlds; cross-world ship support remains Future. World UUIDs are persisted, but runtime remains bound to the primary Bukkit world (`ShipsPlugin.WorldBinding` → `Bukkit.getWorlds().get(0)`).
-- [ ] Aggregate per-material mass and rider load for buoyancy equilibrium (see `buoyancy`); runtime normalization remains a separate Next target (see `ship-runtime`).
+- [ ] Cross-world ship support: world UUIDs are persisted, but current runtime binds assembly to the primary Bukkit world. Non-primary targets and a disabled bound world are rejected before scanning or mutation; extending runtime support beyond the primary world remains Future.
+- [ ] Implement approved aggregate per-material mass and tracked-player runtime load for buoyancy equilibrium; densities remain configuration-only and `ships.json` gains no mass fields (see `docs/superpowers/specs/2026-08-16-buoyancy-mass-model-design.md`)
 - [ ] Versioned persistence schema with migration path
 
 ## Decisions log
@@ -78,6 +77,7 @@ Success looks like: a `Ship` is a pure, unit-testable description of a build (or
 | Date | Decision | Why |
 |------|----------|-----|
 | 2026-08-16 | Living specs live in `docs/specs/`; dated docs in `docs/superpowers/` remain historical record | User directive; one maintained catalog per domain |
+| 2026-08-16 | Material densities are configuration-only; rider mass and equilibrium diagnostics are runtime-only | Avoid schema migration and stale persisted load; recompute from blocks, config, and tracked players |
 | 2026-08-14 | Pose persisted as optional field, not schema version bump | Backward compat without migration machinery |
 | 2026-08-14 | `anchorDy = floor(y)` is authoritative for collision/restoration | Integer cells must match world semantics; fractional y is visual only |
 
