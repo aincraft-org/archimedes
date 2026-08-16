@@ -70,6 +70,24 @@ class BukkitCollisionVolumeManagerTest {
     assertSame(teleport, thrown.getCause().getCause());
     assertTrue(thrown.getCause().getMessage().contains(shipId.toString()));
   }
+
+  @Test
+  void removeAttemptsBothVolumesAndSuppressesSecondFailure() {
+    UUID shipId = UUID.randomUUID();
+    RuntimeException first = new IllegalStateException("first");
+    RuntimeException second = new IllegalArgumentException("second");
+    List<Integer> attempts = new java.util.ArrayList<>();
+    Shulker one = shulkerThatThrowsOnRemove(first, attempts);
+    Shulker two = shulkerThatThrowsOnRemove(second, attempts);
+    BukkitCollisionVolumeManager manager =
+        new BukkitCollisionVolumeManager(
+            worldSpawning(List.of(one, two)), new NamespacedKey("ships", "collision"));
+    manager.spawn(shipWithTwoBlocks(shipId));
+    ShipRuntimeException thrown =
+        assertThrows(ShipRuntimeException.class, () -> manager.remove(shipId));
+    assertEquals(2, attempts.size());
+    assertEquals(1, thrown.getSuppressed().length);
+  }
   private static Ship ship(UUID shipId) {
     return new Ship(
         shipId,
@@ -89,12 +107,20 @@ class BukkitCollisionVolumeManagerTest {
   }
 
   private static Shulker shulkerThatThrowsOnRemove(RuntimeException failure) {
+    return shulkerThatThrowsOnRemove(failure, new java.util.ArrayList<>());
+  }
+
+  private static Shulker shulkerThatThrowsOnRemove(
+      RuntimeException failure, List<Integer> attempts) {
     return (Shulker)
         Proxy.newProxyInstance(
             Shulker.class.getClassLoader(),
             new Class<?>[] {Shulker.class},
             (proxy, method, args) -> {
-              if (method.getName().equals("remove")) throw failure;
+              if (method.getName().equals("remove")) {
+                attempts.add(1);
+                throw failure;
+              }
               if (method.getName().equals("getLocation")) return new Location(null, 0, 0, 0);
               if (method.getName().equals("getPersistentDataContainer")) {
                 return Proxy.newProxyInstance(
@@ -130,30 +156,48 @@ class BukkitCollisionVolumeManagerTest {
   }
 
   private static Shulker shulkerThatThrows(RuntimeException failure) {
-    return (Shulker) Proxy.newProxyInstance(Shulker.class.getClassLoader(), new Class<?>[] {Shulker.class},
-        (proxy, method, args) -> {
-          if (method.getName().equals("teleport")) throw failure;
-          if (method.getName().equals("getLocation")) return new Location(null, 0, 0, 0);
-          if (method.getName().equals("getPersistentDataContainer")) {
-            return Proxy.newProxyInstance(
-                BukkitCollisionVolumeManagerTest.class.getClassLoader(),
-                new Class<?>[] {org.bukkit.persistence.PersistentDataContainer.class},
-                (container, containerMethod, containerArgs) -> {
-                  if ("set".equals(containerMethod.getName())) return null;
-                  return containerMethod.getReturnType() == boolean.class ? false : null;
-                });
-          }
-          if (method.getReturnType() == boolean.class) return true;
-          return null;
-        });
+    return (Shulker)
+        Proxy.newProxyInstance(
+            Shulker.class.getClassLoader(),
+            new Class<?>[] {Shulker.class},
+            (proxy, method, args) -> {
+              if (method.getName().equals("teleport")) throw failure;
+              if (method.getName().equals("getLocation")) return new Location(null, 0, 0, 0);
+              if (method.getName().equals("getPersistentDataContainer")) {
+                return Proxy.newProxyInstance(
+                    BukkitCollisionVolumeManagerTest.class.getClassLoader(),
+                    new Class<?>[] {org.bukkit.persistence.PersistentDataContainer.class},
+                    (container, containerMethod, containerArgs) -> {
+                      if ("set".equals(containerMethod.getName())) return null;
+                      return containerMethod.getReturnType() == boolean.class ? false : null;
+                    });
+              }
+              if (method.getReturnType() == boolean.class) return true;
+              return null;
+            });
   }
+
   private static World worldSpawning(Shulker shulker) {
-    return (World) Proxy.newProxyInstance(World.class.getClassLoader(), new Class<?>[] {World.class},
-        (proxy, method, args) -> {
-          if (method.getName().equals("spawn") && args != null && args.length == 3) return shulker;
-          if (method.getReturnType() == boolean.class) return false;
-          return null;
-        });
+    return worldSpawning(List.of(shulker));
+  }
+
+  private static World worldSpawning(List<Shulker> shulkers) {
+    return (World)
+        Proxy.newProxyInstance(
+            World.class.getClassLoader(),
+            new Class<?>[] {World.class},
+            new java.lang.reflect.InvocationHandler() {
+              private int index;
+
+              @Override
+              public Object invoke(Object proxy, java.lang.reflect.Method method, Object[] args) {
+                if (method.getName().equals("spawn") && args != null && args.length == 3) {
+                  return shulkers.get(Math.min(index++, shulkers.size() - 1));
+                }
+                if (method.getReturnType() == boolean.class) return false;
+                return null;
+              }
+            });
   }
 
   @Test

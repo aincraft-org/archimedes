@@ -1,5 +1,6 @@
 package dev.jlo.ships.render;
 
+import dev.jlo.ships.ship.ShipRuntimeException;
 import dev.jlo.ships.model.ShipOrigin;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -150,11 +151,29 @@ public interface RenderSurface {
 
       @Override
       public void removeTagged(NamespacedKey key, String shipId) {
-        for (Entity entity : world.getEntitiesByClass(BlockDisplay.class)) {
-          String tag = entity.getPersistentDataContainer().get(key, PersistentDataType.STRING);
-          if (shipId.equals(tag)) {
-            entity.remove();
+        ShipRuntimeException failure = null;
+        try {
+          for (Entity entity : world.getEntitiesByClass(BlockDisplay.class)) {
+            try {
+              String tag =
+                  entity.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+              if (shipId.equals(tag)) {
+                entity.remove();
+              }
+            } catch (RuntimeException cleanup) {
+              ShipRuntimeException normalized = normalize("remove", shipId, cleanup);
+              if (failure == null) {
+                failure = normalized;
+              } else {
+                failure.addSuppressed(normalized);
+              }
+            }
           }
+        } catch (RuntimeException enumeration) {
+          throw normalize("remove", shipId, enumeration);
+        }
+        if (failure != null) {
+          throw failure;
         }
       }
 
@@ -172,11 +191,37 @@ public interface RenderSurface {
 
       @Override
       public void removeAllTagged(NamespacedKey key) {
-        for (Entity entity : world.getEntitiesByClass(BlockDisplay.class)) {
-          if (entity.getPersistentDataContainer().has(key, PersistentDataType.STRING)) {
-            entity.remove();
+        ShipRuntimeException failure = null;
+        try {
+          for (Entity entity : world.getEntitiesByClass(BlockDisplay.class)) {
+            try {
+              if (entity.getPersistentDataContainer().has(key, PersistentDataType.STRING)) {
+                entity.remove();
+              }
+            } catch (RuntimeException cleanup) {
+              ShipRuntimeException normalized = normalize("removeAll", null, cleanup);
+              if (failure == null) {
+                failure = normalized;
+              } else {
+                failure.addSuppressed(normalized);
+              }
+            }
           }
+        } catch (RuntimeException enumeration) {
+          throw normalize("removeAll", null, enumeration);
         }
+        if (failure != null) {
+          throw failure;
+        }
+      }
+
+      private ShipRuntimeException normalize(
+          String operation, String shipId, RuntimeException failure) {
+        if (failure instanceof ShipRuntimeException) {
+          return (ShipRuntimeException) failure;
+        }
+        String context = shipId == null ? operation + " failed" : operation + " failed for ship " + shipId;
+        return new ShipRuntimeException(new IllegalStateException(context, failure));
       }
     };
   }
