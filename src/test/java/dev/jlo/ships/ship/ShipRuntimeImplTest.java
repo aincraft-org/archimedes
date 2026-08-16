@@ -234,6 +234,17 @@ class ShipRuntimeImplTest {
     assertEquals(1, carrier.cleared);
   }
 
+  @Test
+  void removeAllTaggedDelegatesToAdaptersAndClearsCarrier() {
+    RecordingRenderer renderer = new RecordingRenderer();
+    RecordingCollision collision = new RecordingCollision();
+    RecordingCarrier carrier = new RecordingCarrier();
+    new ShipRuntimeImpl(renderer, collision, carrier).removeAllTagged();
+    assertEquals(1, renderer.allRuntimeRemoved);
+    assertEquals(1, collision.allTaggedRemoved);
+    assertEquals(1, carrier.cleared);
+  }
+
   private static Ship ship() {
     return new Ship(
         UUID.randomUUID(),
@@ -244,6 +255,7 @@ class ShipRuntimeImplTest {
 
   private static final class RecordingRenderer implements ShipRendererLike {
     int rendered;
+    int allRuntimeRemoved;
     boolean renderFailure;
     boolean removeFailure;
     private final List<String> operations;
@@ -276,10 +288,16 @@ class ShipRuntimeImplTest {
     public void reposition(Ship ship, double oldY, double newY) {
       operations.add("renderer:" + oldY + "->" + newY);
     }
+
+    @Override
+    public void removeAllRuntime() {
+      allRuntimeRemoved++;
+    }
   }
 
   private static final class RecordingCollision implements CollisionVolumeManager {
     int removed;
+    int allTaggedRemoved;
     boolean removeFailure;
     boolean spawnFailure;
     boolean moveFailure;
@@ -326,6 +344,11 @@ class ShipRuntimeImplTest {
 
     @Override
     public void removeAll() {}
+
+    @Override
+    public void removeAllTagged() {
+      allTaggedRemoved++;
+    }
   }
 
   private static final class RecordingCarrier implements ShipEntityCarrier {

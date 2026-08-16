@@ -27,4 +27,7 @@ public interface ShipRendererLike {
    * @param newY the new pose y
    */
   void reposition(Ship ship, double oldY, double newY);
+
+  /** Removes every plugin-owned runtime display, including stale entities. */
+  default void removeAllRuntime() {}
 }

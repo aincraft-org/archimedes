@@ -157,13 +157,8 @@ public final class ShipRuntimeImpl implements ShipRuntime {
 
   public void removeAllTagged() {
     try {
-      if (renderer instanceof dev.jlo.ships.bukkit.BukkitShipRenderer bukkitRenderer) {
-        bukkitRenderer.removeAllRuntime();
-      }
-      if (collisions
-          instanceof dev.jlo.ships.bukkit.BukkitCollisionVolumeManager bukkitCollisions) {
-        bukkitCollisions.removeAllTagged();
-      }
+      renderer.removeAllRuntime();
+      collisions.removeAllTagged();
     } finally {
       carrier.clear();
     }

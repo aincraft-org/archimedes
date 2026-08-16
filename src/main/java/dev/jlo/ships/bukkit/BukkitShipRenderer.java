@@ -114,6 +114,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
     }
   }
 
+  @Override
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   public void removeAllRuntime() {
     try {

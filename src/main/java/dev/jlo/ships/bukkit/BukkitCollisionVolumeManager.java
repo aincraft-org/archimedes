@@ -274,6 +274,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
   }
 
   /** Removes every plugin-owned collision entity, including stale entities. */
+  @Override
   public void removeAllTagged() {
     removeAll();
   }

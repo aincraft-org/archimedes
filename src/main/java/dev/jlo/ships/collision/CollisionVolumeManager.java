@@ -36,4 +36,7 @@ public interface CollisionVolumeManager {
 
   /** Removes all tracked collision volumes. */
   void removeAll();
+
+  /** Removes every plugin-owned collision entity, including stale entities. */
+  default void removeAllTagged() {}
 }
