@@ -145,6 +145,8 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
     }
     if (service.sink(player.getUniqueId(), player.getWorld().getUID(), blocks)) {
       player.sendMessage(ChatColor.GREEN + "Ship lowered by " + blocks + " blocks.");
+    } else {
+      player.sendMessage(ChatColor.RED + "Cannot lower ship: " + service.lastError());
     }
     return true;
   }

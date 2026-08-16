@@ -398,7 +398,7 @@ class ShipServiceImplTest {
 
     assertThrows(ShipRuntimeException.class, () -> service.assembleAt(OWNER, 100, 200, 300, WORLD));
     assertEquals(List.of("rise", CLEAR_CALL), buoyancy.calls);
-    assertEquals("Assembly failed: persist", service.lastError());
+    assertEquals("persist", service.lastError());
   }
 
   @Test
@@ -527,7 +527,7 @@ class ShipServiceImplTest {
     assertNull(service.assembleAt(OWNER, 100, 200, 300, WORLD));
     assertTrue(fakes.persisted.isEmpty());
     assertEquals(STONE, fakes.blocks.get(ORIGIN_KEY));
-    assertEquals("Assembly failed: persist failed", service.lastError());
+    assertEquals("persist failed", service.lastError());
   }
 
   @Test
@@ -562,7 +562,7 @@ class ShipServiceImplTest {
             WORLD);
 
     assertNull(service.assembleAt(OWNER, 100, 200, 300, WORLD));
-    assertEquals("Assembly failed: spawn failed", service.lastError());
+    assertEquals("spawn failed", service.lastError());
   }
 
   @Test

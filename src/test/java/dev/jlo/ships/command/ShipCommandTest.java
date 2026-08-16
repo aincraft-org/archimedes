@@ -377,4 +377,15 @@ class ShipCommandTest {
     assertTrue(service.messages.get(0).contains("Invalid block count"));
     assertTrue(service.calls.isEmpty());
   }
+ 
+  @Test
+  void sinkReportsServiceFailureWithSingleOperationPrefix() {
+    RecordingService service = new RecordingService();
+    service.owned = ship();
+    service.sinkResult = false;
+    service.error = "path blocked";
+    Player player = player(service, true);
+    commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {SUB_SINK, "3"});
+    assertTrue(service.messages.get(0).contains("Cannot lower ship: path blocked"));
+  }
 }
