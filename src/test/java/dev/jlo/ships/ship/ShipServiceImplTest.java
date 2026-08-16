@@ -21,6 +21,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 /** Behavior tests for the ship assembly service. */
+  /** Tagged runtime sweep marker. */
+  private static final String SWEEP = "sweep";
 class ShipServiceImplTest {
   /** Common capturable material. */
   private static final String STONE = "minecraft:stone";
@@ -172,7 +174,7 @@ class ShipServiceImplTest {
 
           @Override
           public void removeAllTagged() {
-            sweeps.add("sweep");
+            sweeps.add(SWEEP);
             if (sweeps.size() == 1) {
               throw new ShipRuntimeException(new IllegalStateException("initial"));
             }
@@ -200,7 +202,7 @@ class ShipServiceImplTest {
     IllegalStateException failure = assertThrows(IllegalStateException.class, service::loadAll);
 
     assertTrue(failure.getMessage().contains("initial-tag-sweep"));
-    assertEquals(List.of("sweep", "sweep"), sweeps);
+    assertEquals(List.of(SWEEP, SWEEP), sweeps);
     assertTrue(service.all().isEmpty());
   }
 
@@ -224,7 +226,7 @@ class ShipServiceImplTest {
 
           @Override
           public void removeAllTagged() {
-            sweeps.add("sweep");
+            sweeps.add(SWEEP);
           }
         };
     ShipServiceImpl service =
@@ -247,7 +249,7 @@ class ShipServiceImplTest {
             WORLD);
     IllegalStateException failure = assertThrows(IllegalStateException.class, service::loadAll);
     assertTrue(failure.getMessage().contains("store-load"));
-    assertEquals(List.of("sweep"), sweeps);
+    assertEquals(List.of(SWEEP), sweeps);
     assertTrue(service.all().isEmpty());
   }
 

@@ -122,12 +122,8 @@ public final class ShipServiceImpl implements ShipService {
       }
       persistAll();
       return ships.get(ship.id());
-    } catch (RuntimeException failure) {
-      ShipRuntimeException normalized =
-          failure instanceof ShipRuntimeException
-              ? (ShipRuntimeException) failure
-              : new ShipRuntimeException("Ship assembly failed", failure);
-      rollback(ship, normalized, runtimeStarted, buoyancyStarted);
+    } catch (ShipRuntimeException failure) {
+      rollback(ship, failure, runtimeStarted, buoyancyStarted);
       return null;
     }
   }
@@ -236,7 +232,7 @@ public final class ShipServiceImpl implements ShipService {
         ships.put(ship.id(), ship);
       }
       return ships;
-    } catch (RuntimeException failure) {
+    } catch (ShipRuntimeException failure) {
       primary = failure;
     }
     for (Ship ship : spawned) {

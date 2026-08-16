@@ -17,6 +17,7 @@ import dev.jlo.ships.ship.ShipRuntimeImpl;
 import dev.jlo.ships.ship.ShipService;
 import dev.jlo.ships.ship.ShipServiceImpl;
 import dev.jlo.ships.store.ShipStore;
+import dev.jlo.ships.ship.ShipRuntimeException;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -116,12 +117,12 @@ public final class ShipsPlugin extends JavaPlugin {
         Runnable removeRegistered, Runnable removeTagged, java.util.function.Consumer<String> log) {
       try {
         removeRegistered.run();
-      } catch (RuntimeException failure) {
+      } catch (ShipRuntimeException failure) {
         log.accept("Failed to remove registered ship runtime: " + failure.getMessage());
       }
       try {
         removeTagged.run();
-      } catch (RuntimeException failure) {
+      } catch (ShipRuntimeException failure) {
         log.accept("Failed to remove tagged ship runtime: " + failure.getMessage());
       }
     }
