@@ -1,4 +1,4 @@
 
-## Review follow-up
+## Final review follow-up
 
-Review found the sink service-failure branch did not send a message. Fixed `ShipCommand` to emit exactly one `Cannot lower ship: <reason>` prefix for `service.sink(...) == false`; added a direct regression test. Updated the three `ShipServiceImplTest` rollback assertions to the reason-only contract (`persist`, `persist failed`, `spawn failed`). Verification: `./gradlew test --tests 'dev.jlo.ships.command.*' --tests 'dev.jlo.ships.ship.ShipServiceImplTest'` passed (42 tests).
+Added explicit permission-rejection coverage for inspect, disassemble, buoyancy, and sink; sink zero/negative validation and extra-argument behavior; and exact sink success/failure message assertions. The Bukkit resolver test covers null rejection; richer air/coordinate/distance proxy coverage is blocked by Paper's Material enum initialization under the unit-test runtime, so no production behavior was changed to accommodate an incompatible fake. Command suite passes: `./gradlew test --tests 'dev.jlo.ships.command.*'` (24 tests).
