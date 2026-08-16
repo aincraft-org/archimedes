@@ -125,6 +125,22 @@ class ShipRuntimeImplTest {
   }
 
   @Test
+  void downwardCollisionFailureDoesNotCarry() {
+    RecordingRenderer renderer = new RecordingRenderer();
+    RecordingCollision collision = new RecordingCollision();
+    collision.moveFailure = true;
+    RecordingCarrier carrier = new RecordingCarrier();
+    Ship ship = ship();
+    ship.setPose(new dev.jlo.ships.model.ShipPose(4));
+
+    assertThrows(
+        ShipRuntimeException.class,
+        () -> new ShipRuntimeImpl(renderer, collision, carrier).move(ship, 7, 4));
+    assertEquals(0, carrier.carryCount);
+    assertEquals(7.0, ship.pose().y());
+  }
+
+  @Test
   void carrierIsCalledForEachBobMove() {
     RecordingRenderer renderer = new RecordingRenderer();
     RecordingCollision collision = new RecordingCollision();

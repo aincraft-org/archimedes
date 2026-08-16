@@ -122,8 +122,12 @@ public final class ShipServiceImpl implements ShipService {
       }
       persistAll();
       return ships.get(ship.id());
-    } catch (ShipRuntimeException failure) {
-      rollback(ship, failure, runtimeStarted, buoyancyStarted);
+    } catch (RuntimeException failure) {
+      ShipRuntimeException normalized =
+          failure instanceof ShipRuntimeException
+              ? (ShipRuntimeException) failure
+              : new ShipRuntimeException("Ship assembly failed", failure);
+      rollback(ship, normalized, runtimeStarted, buoyancyStarted);
       return null;
     }
   }
@@ -163,11 +167,14 @@ public final class ShipServiceImpl implements ShipService {
       restored = false;
       failure.addSuppressed(cleanup);
     }
-    lastError = "Assembly failed: " + failure.getCause().getMessage();
+    Throwable cause = failure.getCause();
+    String reason = cause == null ? failure.getMessage() : cause.getMessage();
+    lastError = "Assembly failed: " + (reason == null ? "unknown failure" : reason);
     if (!restored) {
       throw failure;
     }
   }
+
 
 
   @Override

@@ -234,6 +234,80 @@ class ShipServiceImplTest {
   }
 
   @Test
+  void persistenceRuntimeFailureRollsBackAndNormalizesError() {
+    Fakes fakes = new Fakes();
+    fakes.blocks.put(ORIGIN_KEY, STONE);
+    ShipStoreLike store =
+        new ShipStoreLike() {
+          int saves;
+
+          @Override
+          public Map<UUID, Ship> loadAll() {
+            return fakes.persisted;
+          }
+
+          @Override
+          public void saveAll(Map<UUID, Ship> ships) {
+            if (++saves == 1) {
+              throw new IllegalStateException("persist failed");
+            }
+            fakes.persisted.clear();
+            fakes.persisted.putAll(ships);
+          }
+        };
+    ShipService service =
+        new ShipServiceImpl(
+            store,
+            (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
+            runtime(fakes),
+            fakes,
+            new RecordingBuoyancy(),
+            false,
+            true,
+            WORLD);
+
+    assertNull(service.assembleAt(OWNER, 100, 200, 300, WORLD));
+    assertTrue(fakes.persisted.isEmpty());
+    assertEquals(STONE, fakes.blocks.get(ORIGIN_KEY));
+    assertEquals("Assembly failed: persist failed", service.lastError());
+  }
+
+
+  @Test
+  void nullCauseRuntimeFailureUsesSafeErrorReason() {
+    Fakes fakes = new Fakes();
+    fakes.blocks.put(ORIGIN_KEY, STONE);
+    ShipService service =
+        new ShipServiceImpl(
+            new MemoryStore(fakes),
+            (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
+            new ShipRuntime() {
+              @Override
+              public void spawn(Ship ship) {
+                throw new ShipRuntimeException("spawn failed", null);
+              }
+
+              @Override
+              public void move(Ship ship, double oldY, double newY) {}
+
+              @Override
+              public void remove(Ship ship) {
+                fakes.removedRuntime.add(ship);
+              }
+
+              @Override
+              public void removeAll(Collection<Ship> ships) {}
+            },
+            fakes,
+            new RecordingBuoyancy(),
+            false,
+            true,
+            WORLD);
+
+    assertNull(service.assembleAt(OWNER, 100, 200, 300, WORLD));
+    assertEquals("Assembly failed: spawn failed", service.lastError());
+  }
+  @Test
   void rejectsAssemblyInNonBoundWorldBeforeScanningOrMutation() {
     Fakes fakes = new Fakes();
     List<String> calls = new ArrayList<>();
