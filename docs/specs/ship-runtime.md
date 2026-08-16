@@ -41,11 +41,11 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 
 ## Implementation guidance
 
-- Domain interfaces never import Bukkit; Bukkit adapters live in `dev.jlo.ships.bukkit`.
+- Domain interfaces live in `:api` and never import Bukkit except the documented `compileOnly` leaks; Paper-free runtime composition (`ShipRuntimeImpl`, `CollisionHull`) lives in `:common`; Bukkit adapters live in `:paper` under `dev.jlo.ships.bukkit`.
 - PDC identity uses distinct renderer (`ship-id`) and collision (`collision-owner`) key families; stale sweeps and remove paths remain symmetric with their spawn-time tags.
 - Reposition pairs tagged displays by PDC block key and recomputes from the model; collision volumes are keyed by relative block position.
 - Buoyancy callers change pose then call `runtime.move(oldY,newY)`; runtime failure restores the old pose.
-- `removeAllTagged` is a runtime capability and is invoked only by concrete Bukkit-backed cleanup wiring.
+- `removeAllTagged` is a runtime capability: `ShipRuntimeImpl` delegates to `ShipRendererLike.removeAllRuntime()` and `CollisionVolumeManager.removeAllTagged()`, which Bukkit adapters implement as tagged-entity sweeps.
 
 ## Current
 
@@ -77,5 +77,6 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 |------|----------|-----|
 | 2026-08-16 | Living specs in `docs/specs/`; dated docs stay in `docs/superpowers/` as history | User directive |
 | 2026-08-16 | Runtime is bound to the primary Bukkit world; cross-world support remains Future | Current assembly/runtime wiring uses the primary world |
+| 2026-08-16 | Split plugin into Gradle `api` / `common` / `paper` | Public types vs Paper-free impls vs plugin adapters; `paperweight` only on `paper` |
 | 2026-08-15 | Carry is vertical and best-effort | Preserve rider momentum without turning transport into transaction failure |
 | 2026-08-14 | Shulker hulls integrated despite blocked live spike evidence | Acceptance gap remains recorded |

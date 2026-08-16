@@ -45,7 +45,8 @@ Success looks like: a `Ship` is a pure, unit-testable description of a build (or
 - JSON via Gson in `ShipStore`; version field not present — compatibility is handled by optional fields only.
 - `StoreAdapter` (in `ShipsPlugin`) wraps store I/O checked exceptions into service-contract exceptions; `ShipStore.loadAll()` and `saveAll()` declare `IOException` for filesystem failures, while malformed JSON parsing errors such as Gson's `JsonSyntaxException` propagate unchecked from `loadAll()`.
 - Config loading pattern: `ShipConfigLoader` validates every supplied value. Missing `maximum-blocks` and `target-distance` are read with a numeric default of `0`, then fail the positive-value checks; missing list keys produce empty forbidden-material and disabled-world sets; other missing keys use the code defaults: buoyancy enabled, physics ticks `1`, bob amplitude `0.5`, max rise `16.0`, gravity `0.05`, water density `1.0`, block density `0.5`, and damping `0.9`. Unsafe supplied values fail enable; missing keys do not generally fall back for the two required positive integers.
-- Tests mirror packages: `model/`, `scan/`, `store/`, `config/` JUnit suites must stay green under `./gradlew check` (Spotless + Checkstyle + PMD + SpotBugs, Java 25, Paper 26.2).
+- Gradle layout: models, `ShipConfig`, and scan/service interfaces live in `:api`; `ShipScanner` and `ShipStore` live in `:common`; `ShipConfigLoader` lives in `:paper` (it reads Bukkit `FileConfiguration`).
+- Tests mirror packages and modules: `api` owns `model/` tests, `common` owns `scan/` and `store/` tests, `paper` owns `config/` loader tests. Suites must stay green under `./gradlew check` (Spotless + Checkstyle + PMD + SpotBugs, Java 25, Paper 26.2).
 
 ## Current
 
@@ -78,6 +79,7 @@ Success looks like: a `Ship` is a pure, unit-testable description of a build (or
 |------|----------|-----|
 | 2026-08-16 | Living specs live in `docs/specs/`; dated docs in `docs/superpowers/` remain historical record | User directive; one maintained catalog per domain |
 | 2026-08-16 | Material densities are configuration-only; rider mass and equilibrium diagnostics are runtime-only | Avoid schema migration and stale persisted load; recompute from blocks, config, and tracked players |
+| 2026-08-16 | Public models/interfaces in `:api`; scanner/store in `:common`; config loader in `:paper` | Gradle submodule split keeps Paper toolchain off domain implementations |
 | 2026-08-14 | Pose persisted as optional field, not schema version bump | Backward compat without migration machinery |
 | 2026-08-14 | `anchorDy = floor(y)` is authoritative for collision/restoration | Integer cells must match world semantics; fractional y is visual only |
 

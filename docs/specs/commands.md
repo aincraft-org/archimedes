@@ -40,7 +40,7 @@ Success looks like: every subcommand has a permission, explicit error messages f
 
 ## Implementation guidance
 
-- `ShipCommand` keeps a `TargetResolver` (interface) + `ShipService`; tests inject fakes (no Bukkit).
+- `TargetResolver` lives in `:api` (Bukkit `Player` leak via `compileOnly` `paper-api`); `ShipCommand`, `ShipTabCompleter`, and `BukkitTargetResolver` live in `:paper`. Tests inject fakes (no live player).
 - Tab completion: first argument only, subcommand list; **no permission filtering, no argument completion** (intentionally returns `List.of()` for later args) — keep honest about this limitation.
  - Messages: user-facing and terse. Service failures are reason-only and command-owned prefixes render (`Cannot assemble: <lastError()>`, `Cannot disassemble: <lastError()>`, `Cannot toggle buoyancy: <lastError()>`, `Cannot lower ship: <lastError()>`).
 

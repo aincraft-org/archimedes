@@ -43,7 +43,7 @@ Success looks like: a ship floats at the shallowest water it sits in, bobs gentl
 
 ## Implementation guidance
 
-- Physics is unit-testable without Bukkit: `BuoyancySurface` interface keeps engine/resolver pure; `BukkitBuoyancySurface` adapts `World` (`isWater` = exact `Material.WATER`; `isClear` = air or water).
+- Physics is unit-testable without Bukkit: `Buoyancy` / `BuoyancySurface` live in `:api`; engine/resolver/`BuoyancyImpl` live in `:common`; `BukkitBuoyancySurface` lives in `:paper` and adapts `World` (`isWater` = exact `Material.WATER`; `isClear` = air or water).
 - Per-ship state (velocity, equilibrium) lives in `BuoyancyImpl` maps keyed by ship UUID; cleared on disassembly/rollback (`clear(Ship)`).
 - `ShipService.tick` drives `buoyancy.tick` per ship and persists once iff any ship moved; the scheduler only runs when the **global** `config.buoyancy-enabled` is true (per-ship toggles cannot re-enable physics when the scheduler is off).
 - Path clearance: `BuoyancyImpl.pathClear` hand-rolls integer cells from `floor(min/max y)` spans over `origin + y + rel` (no `ShipTransform.cell` call today); allowed when air or water. Prefer centralizing this with the transform in future.
