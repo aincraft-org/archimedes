@@ -115,8 +115,11 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     } catch (ShipRuntimeException failure) {
       rollbackMoved(previous, failure);
       throw failure;
-    } catch (IllegalArgumentException failure) {
-      ShipRuntimeException wrapped = new ShipRuntimeException(failure);
+    } catch (RuntimeException failure) {
+      ShipRuntimeException wrapped =
+          new ShipRuntimeException(
+              new IllegalStateException(
+                  "Collision move failed for ship " + ship.id(), failure));
       rollbackMoved(previous, wrapped);
       throw wrapped;
     }
@@ -207,7 +210,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
       } catch (ShipRuntimeException failure) {
         throw failure;
       } catch (RuntimeException failure) {
-        throw new ShipRuntimeException(
+throw new ShipRuntimeException(
             new IllegalStateException("Collision move teleport failed for ship " + shipId, failure));
       }
     }

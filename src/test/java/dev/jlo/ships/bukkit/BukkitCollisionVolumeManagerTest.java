@@ -1,5 +1,7 @@
 package dev.jlo.ships.bukkit;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -152,5 +154,62 @@ class BukkitCollisionVolumeManagerTest {
           if (method.getReturnType() == boolean.class) return false;
           return null;
         });
+  }
+
+  @Test
+  void moveNormalizesLocationSnapshotFailureWithShipContext() {
+    RuntimeException snapshotFailure = new RuntimeException("snapshot failed");
+    Shulker shulker =
+        proxy(
+            Shulker.class,
+            (ignored, method, args) -> {
+              if (method.getName().equals("getLocation")) {
+                throw snapshotFailure;
+              }
+              return defaultValue(method.getReturnType());
+            });
+    World world =
+        proxy(
+            World.class,
+            (ignored, method, args) ->
+                method.getName().equals("spawn") ? shulker : defaultValue(method.getReturnType()));
+    NamespacedKey ownerKey = new NamespacedKey("ships", "collision");
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(UUID.randomUUID(), 0, 64, 0),
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), "minecraft:stone")));
+
+    BukkitCollisionVolumeManager manager = new BukkitCollisionVolumeManager(world, ownerKey);
+    manager.spawn(ship);
+
+    ShipRuntimeException failure = assertThrows(ShipRuntimeException.class, () -> manager.move(ship));
+    IllegalStateException context = assertInstanceOf(IllegalStateException.class, failure.getCause());
+    assertEquals("Collision move failed for ship " + ship.id(), context.getMessage());
+    assertSame(snapshotFailure, context.getCause());
+  }
+
+  private static <T> T proxy(Class<T> type, java.lang.reflect.InvocationHandler handler) {
+    return type.cast(Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[] {type}, handler));
+  }
+
+  private static Object defaultValue(Class<?> type) {
+    if (!type.isPrimitive()) {
+      return null;
+    }
+    if (type == boolean.class) {
+      return false;
+    }
+    if (type == char.class) {
+      return '\0';
+    }
+    if (type == byte.class || type == short.class || type == int.class || type == long.class) {
+      return 0;
+    }
+    if (type == float.class || type == double.class) {
+      return 0.0;
+    }
+    return null;
   }
 }
