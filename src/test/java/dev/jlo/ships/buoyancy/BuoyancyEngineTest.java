@@ -17,6 +17,12 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class BuoyancyEngineTest {
+  private static final String ORIGIN_X = "100";
+  private static final String ORIGIN_Y = "205";
+  private static final String ORIGIN_Z = "300";
+  private static final String WATER_BLOCK = ORIGIN_X + "," + ORIGIN_Y + "," + ORIGIN_Z;
+  private static final String ORIGIN_BLOCK = ORIGIN_X + ",200," + ORIGIN_Z;
+
   private static ShipRuntime runtime() {
     return new ShipRuntime() {
       @Override
@@ -58,6 +64,7 @@ class BuoyancyEngineTest {
             .toList();
     return new Ship(UUID.randomUUID(), UUID.randomUUID(), origin, blocks, pose, true);
   }
+
   @Test
   void disabledRiseTickAndSinkHaveCurrentNoOpSemantics() {
     FakeSurface surface = new FakeSurface();
@@ -75,7 +82,7 @@ class BuoyancyEngineTest {
   @Test
   void blockedRisePreservesPose() {
     FakeSurface surface = new FakeSurface();
-    surface.solid.add("100,200,300");
+    surface.solid.add(ORIGIN_BLOCK);
     Ship ship = shipAt(new ShipPose(0), new BlockPos(0, 0, 0));
     BuoyancyImpl buoyancy =
         new BuoyancyImpl(surface, new BuoyancyEngine(0.05, 1.0, 0.5, 0.9, 1.0), runtime(), 10, 0.5);
@@ -87,7 +94,7 @@ class BuoyancyEngineTest {
   @Test
   void blockedTickResetsVelocity() {
     FakeSurface surface = new FakeSurface();
-    surface.water.add("100,205,300");
+    surface.water.add(WATER_BLOCK);
     Ship ship = shipAt(new ShipPose(5), new BlockPos(0, 0, 0));
     BuoyancyImpl buoyancy =
         new BuoyancyImpl(surface, new BuoyancyEngine(0.05, 1.0, 0.5, 0.9, 1.0), runtime(), 10, 0.5);
@@ -100,7 +107,7 @@ class BuoyancyEngineTest {
   @Test
   void lowerBobBoundaryReflectsVelocity() {
     FakeSurface surface = new FakeSurface();
-    surface.water.add("100,205,300");
+    surface.water.add(WATER_BLOCK);
     Ship ship = shipAt(new ShipPose(5), new BlockPos(0, 0, 0));
     BuoyancyImpl buoyancy =
         new BuoyancyImpl(surface, new BuoyancyEngine(0.05, 1.0, 0.5, 0.9, 1.0), runtime(), 10, 0.5);
@@ -116,10 +123,11 @@ class BuoyancyEngineTest {
   @Test
   void subThresholdTickStoresVelocityWithoutPathCheck() {
     FakeSurface surface = new FakeSurface();
-    surface.water.add("100,205,300");
+    surface.water.add(WATER_BLOCK);
     Ship ship = shipAt(new ShipPose(5), new BlockPos(0, 0, 0));
     BuoyancyImpl buoyancy =
-        new BuoyancyImpl(surface, new BuoyancyEngine(0.00001, 1.0, 0.5, 0.9, 1.0), runtime(), 10, 0.5);
+        new BuoyancyImpl(
+            surface, new BuoyancyEngine(0.00001, 1.0, 0.5, 0.9, 1.0), runtime(), 10, 0.5);
     buoyancy.rise(ship);
     surface.solid.add("100,205,300");
 
@@ -134,10 +142,13 @@ class BuoyancyEngineTest {
     ShipRuntime failing =
         new ShipRuntime() {
           public void spawn(Ship ignored) {}
+
           public void move(Ship ignored, double oldY, double newY) {
             throw new dev.jlo.ships.ship.ShipRuntimeException(new IllegalStateException("move"));
           }
+
           public void remove(Ship ignored) {}
+
           public void removeAll(java.util.Collection<Ship> ignored) {}
         };
     BuoyancyImpl buoyancy =
@@ -188,8 +199,7 @@ class BuoyancyEngineTest {
     FakeSurface surface = new FakeSurface();
     Ship ship = shipAt(new ShipPose(0), new BlockPos(0, 0, 0));
     BuoyancyImpl buoyancy =
-        new BuoyancyImpl(
-            surface, new BuoyancyEngine(0.05, 1.0, 0.5, 0.9, 1.0), runtime(), 10, 0.5);
+        new BuoyancyImpl(surface, new BuoyancyEngine(0.05, 1.0, 0.5, 0.9, 1.0), runtime(), 10, 0.5);
 
     assertFalse(buoyancy.sink(ship, 0));
     assertFalse(buoyancy.sink(ship, -1));
