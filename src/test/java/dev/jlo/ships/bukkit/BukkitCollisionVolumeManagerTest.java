@@ -108,9 +108,10 @@ class BukkitCollisionVolumeManagerTest {
   @Test
   void moveNegativeFractionalFloorsSkipThenTeleportEveryVolumeOnce() {
     UUID shipId = UUID.randomUUID();
-    java.util.List<Location> teleports = new java.util.ArrayList<>();
-    Shulker one = recordingShulker(new Location(null, 0.5, -1.75, 0.5), teleports);
-    Shulker two = recordingShulker(new Location(null, 1.5, -1.75, 0.5), teleports);
+    java.util.List<Location> oneTeleports = new java.util.ArrayList<>();
+    java.util.List<Location> twoTeleports = new java.util.ArrayList<>();
+    Shulker one = recordingShulker(new Location(null, 0.5, -1.75, 0.5), oneTeleports);
+    Shulker two = recordingShulker(new Location(null, 1.5, -1.75, 0.5), twoTeleports);
     Ship ship = shipWithTwoBlocks(shipId);
     ship.setPose(new dev.jlo.ships.model.ShipPose(-1.75));
     BukkitCollisionVolumeManager manager =
@@ -120,13 +121,19 @@ class BukkitCollisionVolumeManagerTest {
 
     ship.setPose(new dev.jlo.ships.model.ShipPose(-1.25));
     manager.move(ship);
-    assertEquals(0, teleports.size());
+    assertEquals(0, oneTeleports.size());
+    assertEquals(0, twoTeleports.size());
 
     ship.setPose(new dev.jlo.ships.model.ShipPose(-0.75));
     manager.move(ship);
-    assertEquals(2, teleports.size());
-    assertTrue(
-        teleports.stream().allMatch(location -> Math.abs(location.getY() - (-0.75)) < 1.0e-9));
+    assertEquals(1, oneTeleports.size());
+    assertEquals(1, twoTeleports.size());
+    assertEquals(0.5, oneTeleports.get(0).getX());
+    assertEquals(-0.75, oneTeleports.get(0).getY());
+    assertEquals(0.5, oneTeleports.get(0).getZ());
+    assertEquals(1.5, twoTeleports.get(0).getX());
+    assertEquals(-0.75, twoTeleports.get(0).getY());
+    assertEquals(0.5, twoTeleports.get(0).getZ());
   }
 
   @Test
