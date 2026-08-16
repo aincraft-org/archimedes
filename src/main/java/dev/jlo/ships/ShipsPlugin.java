@@ -13,7 +13,6 @@ import dev.jlo.ships.config.ShipConfigLoader;
 import dev.jlo.ships.model.Ship;
 import dev.jlo.ships.render.RenderSurface;
 import dev.jlo.ships.ship.ShipRuntime;
-import dev.jlo.ships.ship.ShipRuntimeException;
 import dev.jlo.ships.ship.ShipRuntimeImpl;
 import dev.jlo.ships.ship.ShipService;
 import dev.jlo.ships.ship.ShipServiceImpl;
@@ -104,15 +103,27 @@ public final class ShipsPlugin extends JavaPlugin {
     if (service == null) {
       return;
     }
-    try {
-      service.removeAllRuntime();
-    } catch (ShipRuntimeException failure) {
-      getLogger().severe("Failed to remove registered ship runtime: " + failure.getMessage());
-    }
-    try {
-      ((ShipServiceImpl) service).runtime().removeAllTagged();
-    } catch (ShipRuntimeException failure) {
-      getLogger().severe("Failed to remove tagged ship runtime: " + failure.getMessage());
+    CleanupCoordinator.run(
+        () -> service.removeAllRuntime(),
+        () -> ((ShipServiceImpl) service).runtime().removeAllTagged(),
+        message -> getLogger().severe(message));
+  }
+
+  static final class CleanupCoordinator {
+    private CleanupCoordinator() {}
+
+    static void run(
+        Runnable removeRegistered, Runnable removeTagged, java.util.function.Consumer<String> log) {
+      try {
+        removeRegistered.run();
+      } catch (RuntimeException failure) {
+        log.accept("Failed to remove registered ship runtime: " + failure.getMessage());
+      }
+      try {
+        removeTagged.run();
+      } catch (RuntimeException failure) {
+        log.accept("Failed to remove tagged ship runtime: " + failure.getMessage());
+      }
     }
   }
 
