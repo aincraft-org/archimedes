@@ -21,11 +21,11 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 /** Behavior tests for the ship assembly service. */
-  /** Tagged runtime sweep marker. */
-  private static final String SWEEP = "sweep";
 class ShipServiceImplTest {
   /** Common capturable material. */
   private static final String STONE = "minecraft:stone";
+  /** Tagged runtime sweep marker. */
+  private static final String SWEEP = "sweep";
 
   /** Single-block origin key. */
   private static final String ORIGIN_KEY = "100,200,300";

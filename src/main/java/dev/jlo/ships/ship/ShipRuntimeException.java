@@ -8,7 +8,12 @@ package dev.jlo.ships.ship;
  * cleanup failures as suppressed exceptions.
  */
 public final class ShipRuntimeException extends RuntimeException {
-  /** Creates a normalized runtime failure. */
+  /**
+   * Creates a normalized runtime failure.
+   *
+   * @param message operation-specific failure context
+   * @param cause underlying unchecked API or runtime failure
+   */
   public ShipRuntimeException(String message, Throwable cause) {
     super(message, cause);
   }

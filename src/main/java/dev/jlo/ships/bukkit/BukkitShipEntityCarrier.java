@@ -136,6 +136,7 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
               + entity.getUniqueId());
     }
   }
+
   private static String shipIdForLog(Entity entity) {
     try {
       String collision =
