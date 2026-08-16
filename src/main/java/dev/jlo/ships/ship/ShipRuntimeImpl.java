@@ -65,10 +65,18 @@ public final class ShipRuntimeImpl implements ShipRuntime {
 
   @Override
   public void move(Ship ship, double oldY, double newY) {
+    boolean rising = newY > oldY;
+    boolean riderMovedBeforeCollision = false;
     try {
       renderer.reposition(ship, oldY, newY);
+      if (rising) {
+        carrier.carry(ship, oldY, newY);
+        riderMovedBeforeCollision = true;
+      }
       collisions.move(ship);
-      carrier.carry(ship, oldY, newY);
+      if (!rising) {
+        carrier.carry(ship, oldY, newY);
+      }
     } catch (ShipRuntimeException failure) {
       try {
         collisions.rollback(ship, oldY);
@@ -76,6 +84,13 @@ public final class ShipRuntimeImpl implements ShipRuntime {
         failure.addSuppressed(cleanup);
       }
       ship.setPose(new dev.jlo.ships.model.ShipPose(oldY));
+      if (riderMovedBeforeCollision) {
+        try {
+          carrier.carry(ship, newY, oldY);
+        } catch (ShipRuntimeException cleanup) {
+          failure.addSuppressed(cleanup);
+        }
+      }
       try {
         renderer.reposition(ship, newY, oldY);
       } catch (ShipRuntimeException cleanup) {

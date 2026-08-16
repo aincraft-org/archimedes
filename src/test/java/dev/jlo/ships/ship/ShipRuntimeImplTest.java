@@ -9,12 +9,16 @@ import dev.jlo.ships.model.BlockPos;
 import dev.jlo.ships.model.Ship;
 import dev.jlo.ships.model.ShipBlock;
 import dev.jlo.ships.model.ShipOrigin;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 /** Tests runtime composition transaction boundaries. */
 class ShipRuntimeImplTest {
+  private static final String COLLISION_MOVE = "collision";
+  private static final String COLLISION_ROLLBACK = "collisionRollback";
+
   @Test
   void collisionFailurePreventsRendering() {
     RecordingRenderer renderer = new RecordingRenderer();
@@ -36,37 +40,59 @@ class ShipRuntimeImplTest {
   }
 
   @Test
-  void collisionMoveFailureRollsBackRendererAndModelPose() {
-    RecordingRenderer renderer = new RecordingRenderer();
-    RecordingCollision collision = new RecordingCollision();
+  void upwardCollisionFailureRollsBackRendererModelAndRiders() {
+    List<String> operations = new ArrayList<>();
+    RecordingRenderer renderer = new RecordingRenderer(operations);
+    RecordingCollision collision = new RecordingCollision(operations);
     collision.moveFailure = true;
-    RecordingCarrier carrier = new RecordingCarrier();
+    RecordingCarrier carrier = new RecordingCarrier(operations);
     Ship ship = ship();
     ShipRuntime runtime = new ShipRuntimeImpl(renderer, collision, carrier);
     ship.setPose(new dev.jlo.ships.model.ShipPose(7));
     assertThrows(RuntimeException.class, () -> runtime.move(ship, 4, 7));
 
     assertEquals(4.0, ship.pose().y());
-    assertEquals("7.0->4.0", renderer.lastReposition);
+    assertEquals(
+        List.of(
+            "renderer:4.0->7.0",
+            "carrier:4.0->7.0",
+            COLLISION_MOVE,
+            COLLISION_ROLLBACK,
+            "carrier:7.0->4.0",
+            "renderer:7.0->4.0"),
+        operations);
     assertTrue(collision.rolledBack);
-    assertEquals(0.0, carrier.carriedOldY);
-    assertEquals(0.0, carrier.carriedNewY);
+    assertEquals(2, carrier.carryCount);
+    assertEquals(7.0, carrier.carriedOldY);
+    assertEquals(4.0, carrier.carriedNewY);
   }
 
   @Test
-  void carrierIsCalledAfterSuccessfulMove() {
-    RecordingRenderer renderer = new RecordingRenderer();
-    RecordingCollision collision = new RecordingCollision();
-    RecordingCarrier carrier = new RecordingCarrier();
+  void upwardMoveCarriesBeforeCollision() {
+    List<String> operations = new ArrayList<>();
+    RecordingRenderer renderer = new RecordingRenderer(operations);
+    RecordingCollision collision = new RecordingCollision(operations);
+    RecordingCarrier carrier = new RecordingCarrier(operations);
     Ship ship = ship();
     ShipRuntime runtime = new ShipRuntimeImpl(renderer, collision, carrier);
     ship.setPose(new dev.jlo.ships.model.ShipPose(7));
     runtime.move(ship, 4, 7);
 
-    assertEquals("4.0->7.0", renderer.lastReposition);
-    assertTrue(collision.moved);
-    assertEquals(4.0, carrier.carriedOldY);
-    assertEquals(7.0, carrier.carriedNewY);
+    assertEquals(List.of("renderer:4.0->7.0", "carrier:4.0->7.0", COLLISION_MOVE), operations);
+  }
+
+  @Test
+  void downwardMoveMovesCollisionBeforeCarrier() {
+    List<String> operations = new ArrayList<>();
+    RecordingRenderer renderer = new RecordingRenderer(operations);
+    RecordingCollision collision = new RecordingCollision(operations);
+    RecordingCarrier carrier = new RecordingCarrier(operations);
+    Ship ship = ship();
+    ShipRuntime runtime = new ShipRuntimeImpl(renderer, collision, carrier);
+    ship.setPose(new dev.jlo.ships.model.ShipPose(4));
+    runtime.move(ship, 7, 4);
+
+    assertEquals(List.of("renderer:7.0->4.0", COLLISION_MOVE, "carrier:7.0->4.0"), operations);
   }
 
   @Test
@@ -98,6 +124,15 @@ class ShipRuntimeImplTest {
   private static final class RecordingRenderer implements ShipRendererLike {
     int rendered;
     boolean renderFailure;
+    private final List<String> operations;
+
+    RecordingRenderer() {
+      this(new ArrayList<>());
+    }
+
+    RecordingRenderer(List<String> operations) {
+      this.operations = operations;
+    }
 
     @Override
     public void render(Ship ship, ShipHolder holder) {
@@ -111,31 +146,37 @@ class ShipRuntimeImplTest {
     @Override
     public void removeRuntime(Ship ship) {}
 
-    String lastReposition;
-
     @Override
     public void reposition(Ship ship, double oldY, double newY) {
-      lastReposition = oldY + "->" + newY;
+      operations.add("renderer:" + oldY + "->" + newY);
     }
   }
 
   private static final class RecordingCollision implements CollisionVolumeManager {
     int removed;
-    boolean moved;
     boolean spawnFailure;
     boolean moveFailure;
     boolean rolledBack;
+    private final List<String> operations;
+
+    RecordingCollision() {
+      this(new ArrayList<>());
+    }
+
+    RecordingCollision(List<String> operations) {
+      this.operations = operations;
+    }
 
     @Override
     public void spawn(Ship ship) {
       if (spawnFailure) {
-        throw new ShipRuntimeException(new IllegalStateException("collision"));
+        throw new ShipRuntimeException(new IllegalStateException(COLLISION_MOVE));
       }
     }
 
     @Override
     public void move(Ship ship) {
-      moved = true;
+      operations.add(COLLISION_MOVE);
       if (moveFailure) {
         throw new ShipRuntimeException(new IllegalStateException("move"));
       }
@@ -144,6 +185,7 @@ class ShipRuntimeImplTest {
     @Override
     public void rollback(Ship ship, double oldY) {
       rolledBack = true;
+      operations.add(COLLISION_ROLLBACK);
     }
 
     @Override
@@ -159,10 +201,20 @@ class ShipRuntimeImplTest {
     int carryCount;
     double carriedOldY;
     double carriedNewY;
+    private final List<String> operations;
+
+    RecordingCarrier() {
+      this(new ArrayList<>());
+    }
+
+    RecordingCarrier(List<String> operations) {
+      this.operations = operations;
+    }
 
     @Override
     public void carry(Ship ship, double oldY, double newY) {
       carryCount++;
+      operations.add("carrier:" + oldY + "->" + newY);
       carriedOldY = oldY;
       carriedNewY = newY;
     }
