@@ -83,7 +83,8 @@ public final class ShipsPlugin extends JavaPlugin {
               config.buoyancyEnabled(),
               config.worldEnabled(world.getUID()),
               world.getUID());
-      service.loadAll();
+      registerAfterLoad(
+          service::loadAll, () -> getServer().getPluginManager().registerEvents(tracker, this));
     } catch (RuntimeException failure) {
       CleanupCoordinator.handleLoadFailure(
           failure,
@@ -109,6 +110,11 @@ public final class ShipsPlugin extends JavaPlugin {
         () -> service.removeAllRuntime(),
         () -> ((ShipServiceImpl) service).runtime().removeAllTagged(),
         message -> getLogger().severe(message));
+  }
+
+  static void registerAfterLoad(Runnable load, Runnable registration) {
+    load.run();
+    registration.run();
   }
 
   static final class CleanupCoordinator {
