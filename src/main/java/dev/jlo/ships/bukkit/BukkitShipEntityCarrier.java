@@ -2,6 +2,7 @@ package dev.jlo.ships.bukkit;
 
 import dev.jlo.ships.model.Ship;
 import dev.jlo.ships.ship.ShipEntityCarrier;
+import io.papermc.paper.entity.TeleportFlag;
 import java.util.Set;
 import java.util.UUID;
 import org.bukkit.Bukkit;
@@ -9,6 +10,7 @@ import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.persistence.PersistentDataType;
 
 /**
@@ -107,7 +109,12 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
             current.getYaw(),
             current.getPitch());
     try {
-      if (!entity.teleport(dest)) {
+      if (!entity.teleport(
+          dest,
+          PlayerTeleportEvent.TeleportCause.PLUGIN,
+          TeleportFlag.Relative.VELOCITY_X,
+          TeleportFlag.Relative.VELOCITY_Y,
+          TeleportFlag.Relative.VELOCITY_Z)) {
         Bukkit.getLogger().finest("Ship carry teleport rejected for " + entity.getUniqueId());
       }
     } catch (IllegalArgumentException | IllegalStateException failure) {
