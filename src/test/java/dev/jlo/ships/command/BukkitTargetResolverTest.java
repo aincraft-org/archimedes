@@ -14,6 +14,10 @@ class BukkitTargetResolverTest {
   }
 
   private static Player player(Block block) {
-    return (Player) Proxy.newProxyInstance(BukkitTargetResolverTest.class.getClassLoader(), new Class<?>[] {Player.class}, (p, method, args) -> method.getName().equals("getTargetBlockExact") ? block : null);
+    return (Player)
+        Proxy.newProxyInstance(
+            BukkitTargetResolverTest.class.getClassLoader(),
+            new Class<?>[] {Player.class},
+            (p, method, args) -> method.getName().equals("getTargetBlockExact") ? block : null);
   }
 }
