@@ -38,7 +38,7 @@ Success looks like: every subcommand has a permission, explicit error messages f
 ## Invariants
 
 - Player-only: one entry check (`instanceof Player`) gates all subcommands; console executors get a clear rejection message.
-- Errors: no target, oversized/forbidden component, occupied restoration space, missing ownership, invalid sink argument — each explicit. `lastError()` contains only the service failure reason, without an operation prefix. Commands own `Cannot assemble:`, `Cannot disassemble:`, `Cannot toggle buoyancy:`, and `Cannot lower ship:`.
+- Errors: no target, oversized/forbidden component, occupied restoration space, missing ownership, invalid sink argument — each explicit. Current command output adds operation prefixes, but some service/adapter failures already contain prefixes, causing duplicated wording. Reason-only service messages with command-owned prefixes remain an unresolved Next alignment target.
 - `ships.command` is enforced by Bukkit via `plugin.yml` `permission:` field before `ShipCommand` runs; each subcommand additionally checks its own permission in the executor (`ships.assemble`, `ships.inspect`, `ships.disassemble`, `ships.buoyancy`, `ships.sink`).
 - Disassembly authorization: owner or operator — enforced in the service (`requesterId`/`isOperator` params); the command looks up the requester's owned ship and passes `player.isOp()`.
 
@@ -46,7 +46,7 @@ Success looks like: every subcommand has a permission, explicit error messages f
 
 - `ShipCommand` keeps a `TargetResolver` (interface) + `ShipService`; tests inject fakes (no Bukkit).
 - Tab completion: first argument only, subcommand list; **no permission filtering, no argument completion** (intentionally returns `List.of()` for later args) — keep honest about this limitation.
-- Messages: user-facing and terse; commands render service failures as `Cannot assemble: <lastError()>`, `Cannot disassemble: <lastError()>`, `Cannot toggle buoyancy: <lastError()>`, or `Cannot lower ship: <lastError()>`. `lastError()` itself has no operation prefix.
+- Messages: user-facing and terse. Current failures can duplicate operation wording when a service/adapter message already contains a prefix. The Next target is reason-only service failures rendered with command-owned prefixes (`Cannot assemble: <lastError()>`, `Cannot disassemble: <lastError()>`, `Cannot toggle buoyancy: <lastError()>`, `Cannot lower ship: <lastError()>`).
 
 ## Current
 
@@ -77,7 +77,7 @@ Success looks like: every subcommand has a permission, explicit error messages f
 | Date | Decision | Why |
 |------|----------|-----|
 | 2026-08-16 | Living specs in `docs/specs/`; dated docs stay in `docs/superpowers/` | User directive |
-| 2026-08-16 | Commands own operation prefixes; `ShipService.lastError()` stores reason only | Keep service errors reusable and command output explicit |
+| 2026-08-16 | Error ownership unresolved: current command prefixes can duplicate service/adapter prefixes; reason-only service messages and command-owned prefixes remain a Next target | Document current behavior without claiming implementation |
 | 2026-08-16 | Runtime is bound to the primary Bukkit world; cross-world support remains Future | Current assembly/runtime wiring uses the primary world |
 | 2026-08-14 | `/ship collision-test` debug fixture added behind op permission; kept isolated from production persistence | Spike acceptance; fixture since removed from code (verified 2026-08-16) |
 

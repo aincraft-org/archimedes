@@ -19,7 +19,7 @@ Maintained living specs for the Ships Paper plugin (`dev.jlo.ships`, Paper 26.2,
 - Mutations are transactional: validate → mutate → persist on the happy path; rollback is scoped to `ShipRuntimeException` (spawn/move) with suppressed cleanup failures; `remove`/`removeAll`/collision removal propagate directly. Unchecked adapter/entity failures may bypass cleanup.
 - Current runtime is bound to the primary Bukkit world only. Command resolution may identify another world, but assembly there is rejected; cross-world runtime support remains Future. Once Task 3 lands, `disabled-worlds` must also reject the bound world.
 - Ownership: ships are player-owned; disassembly requires owner or operator.
-- Errors: `lastError()` contains a service failure reason without an operation prefix; commands own `Cannot assemble:`, `Cannot disassemble:`, `Cannot toggle buoyancy:`, and `Cannot lower ship:`. `ShipRuntimeException` represents runtime faults; plugin disables on enable/load/reconciliation failure.
+- Errors: Current command output adds operation prefixes, but some service and adapter failures already contain prefixes, so users can see duplicated wording. Reason-only service messages with command-owned prefixes remain a Next alignment target; this is unresolved rather than an implemented ownership decision. `ShipRuntimeException` represents runtime faults; plugin disables on enable/load/reconciliation failure.
 - Quality gate: `./gradlew check` — Spotless, Checkstyle, PMD, SpotBugs all fail-on-violation. Tests mirror packages.
 
 ## Known debt & stale docs (tracked in per-domain specs)
