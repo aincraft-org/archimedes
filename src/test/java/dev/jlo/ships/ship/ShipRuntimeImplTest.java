@@ -68,6 +68,22 @@ class ShipRuntimeImplTest {
   }
 
   @Test
+  void upwardCollisionFailureRestoresBasisAfterReverseCarry() {
+    RecordingCollision collision = new RecordingCollision();
+    collision.moveFailure = true;
+    RecordingCarrier carrier = new RecordingCarrier();
+    carrier.recordCarryBasis = true;
+    Ship ship = ship();
+    ship.setPose(new dev.jlo.ships.model.ShipPose(7));
+
+    assertThrows(
+        ShipRuntimeException.class,
+        () -> new ShipRuntimeImpl(new RecordingRenderer(), collision, carrier).move(ship, 4, 7));
+
+    assertEquals(4.0, carrier.poseBasis);
+  }
+
+  @Test
   void upwardCollisionFailureRollsBackRendererModelAndRiders() {
     List<String> operations = new ArrayList<>();
     RecordingRenderer renderer = new RecordingRenderer(operations);
@@ -313,6 +329,7 @@ class ShipRuntimeImplTest {
 
   private static final class RecordingCarrier implements ShipEntityCarrier {
     int carryCount;
+    boolean recordCarryBasis;
     int tracked;
     int untracked;
     int cleared;
@@ -356,6 +373,10 @@ class ShipRuntimeImplTest {
       operations.add("carrier:" + oldY + "->" + newY);
       carriedOldY = oldY;
       carriedNewY = newY;
+      if (recordCarryBasis) {
+        poseBasis = oldY;
+      }
     }
   }
+
 }

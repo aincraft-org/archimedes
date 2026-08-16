@@ -98,15 +98,15 @@ public final class ShipRuntimeImpl implements ShipRuntime {
         }
       }
       ship.setPose(new dev.jlo.ships.model.ShipPose(oldY));
-      if (carrierStarted) {
-        carrier.updatePoseBasis(ship, oldY);
-      }
       if (rising && carrierStarted) {
         try {
           carrier.carry(ship, newY, oldY);
         } catch (ShipRuntimeException cleanup) {
           failure.addSuppressed(cleanup);
         }
+      }
+      if (carrierStarted) {
+        carrier.updatePoseBasis(ship, oldY);
       }
       if (rendererStarted) {
         try {
