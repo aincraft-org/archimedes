@@ -55,6 +55,9 @@ public final class BukkitShipRiderTracker implements Listener {
   /** Rider sets keyed by ship id. */
   private final Map<UUID, Set<UUID>> ridersByShip = new HashMap<>();
 
+  /** Stored pose basis keyed by ship id. */
+  private final Map<UUID, Double> poseBasisByShip = new HashMap<>();
+
   /** Reverse lookup from entity id to the ship it is currently riding. */
   private final Map<UUID, UUID> shipByEntity = new HashMap<>();
 
@@ -86,6 +89,7 @@ public final class BukkitShipRiderTracker implements Listener {
    */
   public void track(Ship ship, double seedPoseY) {
     UUID shipId = ship.id();
+    poseBasisByShip.put(shipId, seedPoseY);
     boolean added =
         indices.putIfAbsent(
                 shipId, TopSurfaceIndex.build(CollisionHull.topExposedBlocks(ship), ship))
@@ -95,10 +99,20 @@ public final class BukkitShipRiderTracker implements Listener {
     }
   }
 
+  /**
+   * Updates the stored pose basis used by event-time overlap checks.
+   *
+   * @param ship ship whose basis is updated
+   * @param poseY pose basis to store
+   */
+  public void updatePoseBasis(Ship ship, double poseY) {
+    poseBasisByShip.put(ship.id(), poseY);
+  }
+
   /** Clears every index and rider association. */
   public void clear() {
-    indices.clear();
     ridersByShip.clear();
+    poseBasisByShip.clear();
     shipByEntity.clear();
   }
 
@@ -135,6 +149,7 @@ public final class BukkitShipRiderTracker implements Listener {
         shipByEntity.remove(rider);
       }
     }
+    poseBasisByShip.remove(shipId);
     indices.remove(shipId);
   }
 
@@ -240,7 +255,7 @@ public final class BukkitShipRiderTracker implements Listener {
         continue;
       }
       TopSurfaceIndex index = indexFor(ship);
-      double poseY = ship.pose().y();
+      double poseY = poseBasisByShip.getOrDefault(ship.id(), 0.0);
       if (index.overlaps(boundsAt(entity, location), poseY)) {
         chosen = ship;
         break;
@@ -256,7 +271,7 @@ public final class BukkitShipRiderTracker implements Listener {
           continue;
         }
         TopSurfaceIndex index = indexFor(ship);
-        double poseY = ship.pose().y();
+        double poseY = poseBasisByShip.getOrDefault(ship.id(), 0.0);
         if (index.overlaps(boundsAt(entity, location), poseY)) {
           chosen = ship;
           break;

@@ -24,6 +24,14 @@ public interface ShipEntityCarrier {
    */
   default void untrack(Ship ship) {}
 
+  /**
+   * Updates the stored pose basis after a committed or rolled-back runtime move.
+   *
+   * @param ship ship whose basis is updated
+   * @param poseY pose basis to store
+   */
+  default void updatePoseBasis(Ship ship, double poseY) {}
+
   /** Clears all tracked ships and riders. */
   default void clear() {}
 

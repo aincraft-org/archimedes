@@ -60,7 +60,11 @@ public final class ShipRuntimeImpl implements ShipRuntime {
       } catch (ShipRuntimeException cleanup) {
         failure.addSuppressed(cleanup);
       }
-      carrier.untrack(ship);
+      try {
+        carrier.untrack(ship);
+      } catch (ShipRuntimeException cleanup) {
+        failure.addSuppressed(cleanup);
+      }
       throw failure;
     }
   }
@@ -93,6 +97,9 @@ public final class ShipRuntimeImpl implements ShipRuntime {
         }
       }
       ship.setPose(new dev.jlo.ships.model.ShipPose(oldY));
+      if (carrierStarted) {
+        carrier.updatePoseBasis(ship, oldY);
+      }
       if (rising && carrierStarted) {
         try {
           carrier.carry(ship, newY, oldY);

@@ -72,13 +72,18 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
   }
 
   @Override
+  public void updatePoseBasis(Ship ship, double poseY) {
+    tracker.updatePoseBasis(ship, poseY);
+  }
+
+  @Override
   public void carry(Ship ship, double oldY, double newY) {
     double delta = newY - oldY;
     if (delta == 0.0) {
       return;
     }
 
-    tracker.track(ship, oldY);
+    tracker.updatePoseBasis(ship, oldY);
     String shipId = ship.id().toString();
     Set<UUID> riders = tracker.riders(ship);
     if (riders.isEmpty()) {
