@@ -37,7 +37,7 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 - Adapter failures in renderer and collision operations are normalized to `ShipRuntimeException` with operation and ship context where available; existing `ShipRuntimeException` instances are preserved. Only `RuntimeException` is normalized; `Error` remains uncaught.
 - Carrier tracking is explicit: successful spawn tracks at the committed pose, remove untracks, and every runtime cleanup path clears tracker state.
 - Rider seed and overlap checks use the move transaction's supplied pose basis; tracker updates do not read a concurrently changing pose for that transaction.
-- No barrier/deck blocks are placed by production code (deck package is legacy).
+- No barrier/deck blocks are placed by production code; Shulker collision hulls provide runtime collision.
 
 ## Implementation guidance
 
@@ -61,7 +61,7 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 
 - [ ] Record live collision acceptance: stand on exposed tops, hull-side blocking, no pass-through, six-directional face checks
 - Live attempt on 2026-08-16 remained blocked by an occupied server port and no connected Minecraft client; observed startup evidence and the exact reproduction matrix are recorded in `docs/superpowers/results/2026-08-16-spec-alignment-acceptance.md`. Automated hull tests do not satisfy this item.
-- [ ] Remove dead `deck/` package and stale wording once legacy references are dropped
+- [x] Remove dead package and stale wording; historical design records retain the original barrier-deck decision.
 - [x] Guard collision `move` so volumes only teleport when the authoritative anchor changes
 - [x] Add behavioral collision-manager tests for flags, anchors, PDC/scoreboard tags, rollback, and tag cleanup
 - [x] Document persistence coupling: `ShipServiceImpl.tick` persists once iff any ship moved; direct `tick()` still executes when the global scheduler is disabled, while the disabled scheduler prevents automatic calls.

@@ -1,7 +1,7 @@
 name: Ships
 version: '${version}'
 main: dev.jlo.ships.ShipsPlugin
-description: Build stationary block-display ships with walkable decks
+description: Build persistent display-and-collision ships
 api-version: '26.2'
 author: jlo
 commands:

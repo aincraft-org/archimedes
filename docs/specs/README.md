@@ -24,10 +24,7 @@ Maintained living specs for the Ships Paper plugin (`dev.jlo.ships`, Paper 26.2,
 
 ## Known debt & stale docs (tracked in per-domain specs)
 
-- `deck/` package (`DeckManager`, `DeckSurface`, `BukkitDeckSurface`) is dead production code — no wiring in `src/main` outside itself; tests remain. Remove after legacy helper references dropped (see ship-runtime).
-- `docs/superpowers/results/2026-08-14-non-block-collision-spike.md` says BLOCKED; Shulker hulls were integrated into production anyway. Live player-collision acceptance never recorded (see ship-runtime).
 - `docs/superpowers/specs/2026-08-13-ship-building-design.md` is stale (immutable ships, barrier decks, capability checks, inspect reports owner+origin).
-- Stale Javadocs/wording: `ShipService.removeAllRuntime` ("entities and barriers"), plugin.yml description ("walkable decks"), `ShipServiceImplTest.NoopDeck` helper (see ship-runtime).
 - `ships.json` has no schema version; compatibility via optional fields only (see ship-model).
 
 ## How to update

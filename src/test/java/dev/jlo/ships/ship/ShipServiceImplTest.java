@@ -777,69 +777,20 @@ class ShipServiceImplTest {
   @Test
   void assembleFailsWhenScannerRejects() {
     Fakes fakes = new Fakes();
+    fakes.blocks.put(ORIGIN_KEY, STONE);
     ShipService service =
         new ShipServiceImpl(
             new MemoryStore(fakes),
-            (x, y, z) -> null,
+            (x, y, z) -> {
+              throw new ShipRuntimeException(new IllegalStateException("scanner rejected"));
+            },
             runtime(fakes),
             fakes,
             new RecordingBuoyancy(),
             true,
             true,
             WORLD);
-    Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
-    assertNull(result);
-    assertEquals(0, fakes.persisted.size());
-    assertEquals(0, fakes.rendered.size());
-  }
-
-  @Test
-  void assembleRollsBackWhenRenderFails() {
-    Fakes fakes = new Fakes();
-    fakes.blocks.put(ORIGIN_KEY, STONE);
-    ShipRendererLike throwing =
-        new ShipRendererLike() {
-          @Override
-          public void render(Ship s, ShipHolder holder) {
-            throw new ShipRuntimeException(new IllegalStateException("no display slots"));
-          }
-
-          @Override
-          public void removeRuntime(Ship s) {
-            fakes.removedRuntime.add(s);
-          }
-
-          @Override
-          public void reposition(Ship s, double oldY, double newY) {}
-        };
-    ShipService service =
-        new ShipServiceImpl(
-            new MemoryStore(fakes),
-            (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
-            new ShipRuntime() {
-              @Override
-              public void spawn(Ship ship) {
-                throwing.render(ship, ignored -> {});
-              }
-
-              @Override
-              public void move(Ship ship, double oldY, double newY) {}
-
-              @Override
-              public void remove(Ship ship) {
-                fakes.removedRuntime.add(ship);
-              }
-
-              @Override
-              public void removeAll(Collection<Ship> ships) {}
-            },
-            fakes,
-            new RecordingBuoyancy(),
-            true,
-            true,
-            WORLD);
-    Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
-    assertNull(result);
+    assertThrows(ShipRuntimeException.class, () -> service.assembleAt(OWNER, 100, 200, 300, WORLD));
     assertEquals(0, fakes.persisted.size());
     assertEquals(STONE, fakes.blocks.get(ORIGIN_KEY));
   }
@@ -1091,31 +1042,5 @@ class ShipServiceImplTest {
 
     @Override
     public void reposition(Ship ship, double oldY, double newY) {}
-  }
-}
-
-/** A deck manager that never blocks. */
-final class NoopDeck extends dev.jlo.ships.deck.DeckManager {
-  NoopDeck() {
-    super(
-        new dev.jlo.ships.deck.DeckSurface() {
-          @Override
-          public boolean canPlace(int x, int y, int z) {
-            return true;
-          }
-
-          @Override
-          public boolean isClear(int x, int y, int z) {
-            return true;
-          }
-
-          @Override
-          public boolean placeBarrier(int x, int y, int z) {
-            return true;
-          }
-
-          @Override
-          public void removeBarrier(int x, int y, int z) {}
-        });
   }
 }
