@@ -106,11 +106,34 @@ class BukkitCollisionVolumeManagerTest {
   }
 
   @Test
-  void rollbackReturnsAllVolumesToOldAnchors() {
+  void moveNegativeFractionalFloorsSkipThenTeleportEveryVolumeOnce() {
     UUID shipId = UUID.randomUUID();
     java.util.List<Location> teleports = new java.util.ArrayList<>();
-    Shulker one = recordingShulker(new Location(null, 100.5, 65.0, 200.5), teleports);
-    Shulker two = recordingShulker(new Location(null, 101.5, 66.0, 200.5), teleports);
+    Shulker one = recordingShulker(new Location(null, 0.5, -1.75, 0.5), teleports);
+    Shulker two = recordingShulker(new Location(null, 1.5, -1.75, 0.5), teleports);
+    Ship ship = shipWithTwoBlocks(shipId);
+    ship.setPose(new dev.jlo.ships.model.ShipPose(-1.75));
+    BukkitCollisionVolumeManager manager =
+        new BukkitCollisionVolumeManager(
+            worldSpawning(List.of(one, two)), new NamespacedKey(NAMESPACE, COLLISION_KEY));
+    manager.spawn(ship);
+
+    ship.setPose(new dev.jlo.ships.model.ShipPose(-1.25));
+    manager.move(ship);
+    assertEquals(0, teleports.size());
+
+    ship.setPose(new dev.jlo.ships.model.ShipPose(-0.75));
+    manager.move(ship);
+    assertEquals(2, teleports.size());
+    assertTrue(teleports.stream().allMatch(location -> location.getY() == -0.75));
+  }
+
+  @Test
+  void rollbackReturnsAllVolumesToExactOldAnchors() {
+    UUID shipId = UUID.randomUUID();
+    java.util.List<Location> teleports = new java.util.ArrayList<>();
+    Shulker one = recordingShulker(new Location(null, 0.5, 1.5, 0.5), teleports);
+    Shulker two = recordingShulker(new Location(null, 1.5, 1.5, 0.5), teleports);
     Ship ship = shipWithTwoBlocks(shipId);
     ship.setPose(new dev.jlo.ships.model.ShipPose(1.5));
     BukkitCollisionVolumeManager manager =
@@ -120,9 +143,11 @@ class BukkitCollisionVolumeManagerTest {
 
     manager.rollback(ship, 0.25);
 
-    assertEquals(2, teleports.size());
-    assertTrue(teleports.stream().allMatch(location -> location.getY() >= 0.0));
-    assertTrue(teleports.stream().allMatch(location -> location.getY() <= 2.0));
+    assertEquals(
+        java.util.Set.of("0.5,0.25,0.5", "1.5,0.25,0.5"),
+        teleports.stream()
+            .map(location -> location.getX() + "," + location.getY() + "," + location.getZ())
+            .collect(java.util.stream.Collectors.toSet()));
   }
 
   @SuppressWarnings("PMD.AvoidDuplicateLiterals")

@@ -1,12 +1,9 @@
 
-## Follow-up review fixes
-Strengthened the focused test coverage after review rejection:
-- `spawnConfiguresTaggedInvisibleInvulnerableNonPersistentCollisionAtCanonicalAnchor` now captures and asserts every required Shulker setter argument (`AI`, invisibility, invulnerability, silence, gravity, collidability, peek, persistence), both PDC values, scoreboard tag, and exact canonical spawn location.
-- Added multi-volume movement coverage using fractional negative floors: unchanged authoritative floor produces zero teleports, while crossing the boundary teleports both volumes exactly once.
-- Added multi-volume rollback coverage asserting both volumes return into the old-anchor range.
+## Second review coverage fixes
+Added exact negative-floor progression coverage: pose `-1.75 -> -1.25` remains authoritative floor `-2` with zero teleports, then `-1.25 -> -0.75` crosses to floor `-1` and teleports both volumes exactly once at `y=-0.75`. Strengthened rollback to assert exact old anchors `(0.5,0.25,0.5)` and `(1.5,0.25,0.5)` for the two volumes.
 
-Follow-up GREEN command:
+Final focused command:
 ```bash
 ./gradlew test --tests dev.jlo.ships.bukkit.BukkitCollisionVolumeManagerTest
 ```
-Outcome: `BUILD SUCCESSFUL`; 9 tests completed, 0 failed.
+Outcome: `BUILD SUCCESSFUL`; focused test file passed with 9 tests and 0 failures.
