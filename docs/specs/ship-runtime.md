@@ -61,8 +61,8 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 
 - [ ] Record live collision acceptance: stand on exposed tops, hull-side blocking, no pass-through, six-directional face checks
 - [ ] Remove dead `deck/` package and stale wording once legacy references are dropped
-- [ ] Guard collision `move` so volumes only teleport when the authoritative anchor changes
-- [ ] Add behavioral collision-manager tests for flags, anchors, PDC/scoreboard tags, rollback, and tag cleanup
+- [x] Guard collision `move` so volumes only teleport when the authoritative anchor changes
+- [x] Add behavioral collision-manager tests for flags, anchors, PDC/scoreboard tags, rollback, and tag cleanup
 - [ ] Document persistence coupling: `ShipServiceImpl.tick` persists once iff any ship moved
 
 ## Future
