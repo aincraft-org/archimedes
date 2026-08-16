@@ -42,7 +42,7 @@ Success looks like: every subcommand has a permission, explicit error messages f
 
 - `ShipCommand` keeps a `TargetResolver` (interface) + `ShipService`; tests inject fakes (no Bukkit).
 - Tab completion: first argument only, subcommand list; **no permission filtering, no argument completion** (intentionally returns `List.of()` for later args) — keep honest about this limitation.
-- Messages: user-facing and terse. Current failures can duplicate operation wording when a service/adapter message already contains a prefix. The Next target is reason-only service failures rendered with command-owned prefixes (`Cannot assemble: <lastError()>`, `Cannot disassemble: <lastError()>`, `Cannot toggle buoyancy: <lastError()>`, `Cannot lower ship: <lastError()>`).
+ - Messages: user-facing and terse. Service failures are reason-only and command-owned prefixes render (`Cannot assemble: <lastError()>`, `Cannot disassemble: <lastError()>`, `Cannot toggle buoyancy: <lastError()>`, `Cannot lower ship: <lastError()>`).
 
 ## Current
 
@@ -58,10 +58,9 @@ Success looks like: every subcommand has a permission, explicit error messages f
 
 ## Next
 
-- [ ] Clarify inspect scope (ID+blocks vs doc's owner+origin) and update doc/impl to agree
-- [ ] Consider op-only default for `ships.command` if shared-server deployment needs it (currently `default: true`)
-- [ ] Add argument completion for `sink` (positive integer)
-- [ ] Add permission-rejection tests for inspect/disassemble/buoyancy/sink; sink `< 1` boundary; `BukkitTargetResolver` and `ShipTabCompleter` tests
+ - [x] Inspect output decision: retain `Ship <8-char id> | blocks=<count>`; no owner/origin fields are required (2026-08-16).
+ - [ ] Consider op-only default for `ships.command` if shared-server deployment needs it (currently `default: true`)
+ - [ ] Add argument completion for `sink` (positive integer)
 
 ## Future
 

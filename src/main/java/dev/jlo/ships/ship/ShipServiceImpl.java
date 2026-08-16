@@ -171,7 +171,7 @@ public final class ShipServiceImpl implements ShipService {
     }
     Throwable cause = failure.getCause();
     String reason = cause == null ? failure.getMessage() : cause.getMessage();
-    lastError = "Assembly failed: " + (reason == null ? "unknown failure" : reason);
+    lastError = reason == null ? "unknown failure" : reason;
     if (!restored) {
       throw failure;
     }
@@ -315,7 +315,7 @@ public final class ShipServiceImpl implements ShipService {
       return false;
     }
     if (!buoyancy.sink(ship, blocks)) {
-      lastError = "Cannot lower ship: path blocked";
+      lastError = "path blocked";
       return false;
     }
     persistAll();
