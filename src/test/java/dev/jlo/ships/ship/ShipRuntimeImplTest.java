@@ -381,5 +381,4 @@ class ShipRuntimeImplTest {
       }
     }
   }
-
 }

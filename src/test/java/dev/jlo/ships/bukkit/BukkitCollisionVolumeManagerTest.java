@@ -28,6 +28,7 @@ class BukkitCollisionVolumeManagerTest {
   private static final String SPAWN = "spawn";
   private static final String SPAWNED_AT_KEY = "spawn";
   private static final String GET_LOCATION = "getLocation";
+
   @Test
   void spawnConfiguresTaggedInvisibleInvulnerableNonPersistentCollisionAtCanonicalAnchor() {
     UUID shipId = UUID.randomUUID();
@@ -307,8 +308,7 @@ class BukkitCollisionVolumeManagerTest {
             });
   }
 
-  private static Shulker recordingShulker(
-      Location initial, java.util.List<Location> teleports) {
+  private static Shulker recordingShulker(Location initial, java.util.List<Location> teleports) {
     return proxy(
         Shulker.class,
         (ignored, method, args) -> {
@@ -327,6 +327,7 @@ class BukkitCollisionVolumeManagerTest {
           return defaultValue(method.getReturnType());
         });
   }
+
   private static Shulker shulkerThatThrows(RuntimeException failure) {
     return (Shulker)
         Proxy.newProxyInstance(

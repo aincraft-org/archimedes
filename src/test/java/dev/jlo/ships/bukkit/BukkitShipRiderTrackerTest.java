@@ -36,6 +36,7 @@ class BukkitShipRiderTrackerTest {
 
     assertEquals(List.of(entityId), List.copyOf(tracker.riders(ship)));
   }
+
   private static io.papermc.paper.event.entity.EntityMoveEvent newMoveEvent(
       Entity entity, Location to) {
     return new io.papermc.paper.event.entity.EntityMoveEvent(

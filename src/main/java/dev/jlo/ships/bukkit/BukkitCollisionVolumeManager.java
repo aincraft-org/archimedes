@@ -117,8 +117,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
         Location location = ((BukkitShulkerCollisionVolume) volume).entity.getLocation();
         ShipTransform.CollisionAnchor oldAnchor =
             new ShipTransform.CollisionAnchor(location.getX(), location.getY(), location.getZ());
-        ShipTransform.CollisionAnchor anchor =
-            ShipTransform.collisionAnchor(ship, entry.getKey());
+        ShipTransform.CollisionAnchor anchor = ShipTransform.collisionAnchor(ship, entry.getKey());
         if (Math.floor(oldAnchor.y()) == Math.floor(anchor.y())) {
           continue;
         }
