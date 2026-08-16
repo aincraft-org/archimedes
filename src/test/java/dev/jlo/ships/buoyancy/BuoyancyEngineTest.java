@@ -131,6 +131,27 @@ class BuoyancyEngineTest {
   }
 
   @Test
+  void bobbingReflectsAtUpperAmplitudeBoundary() {
+    FakeSurface surface = new FakeSurface();
+    surface.water.add("100,199,300");
+    Ship ship = shipAt(new ShipPose(0), new BlockPos(0, 0, 0));
+    BuoyancyImpl buoyancy =
+        new BuoyancyImpl(surface, new BuoyancyEngine(0.05, 1.0, 0.5, 0.9, 1.0), runtime(), 10, 0.5);
+
+    assertTrue(buoyancy.rise(ship));
+    boolean reachedUpperBoundary = false;
+    boolean movedDownAfterBoundary = false;
+    for (int tick = 0; tick < 20; tick++) {
+      double previousY = ship.pose().y();
+      buoyancy.tick(ship);
+      reachedUpperBoundary |= Math.abs(ship.pose().y() + 0.5) < 0.000001;
+      movedDownAfterBoundary |= reachedUpperBoundary && ship.pose().y() < previousY;
+    }
+    assertTrue(reachedUpperBoundary);
+    assertTrue(movedDownAfterBoundary);
+  }
+
+  @Test
   void sinkAllowsNegativePose() {
     Ship ship = shipAt(new ShipPose(0), new BlockPos(0, 0, 0));
     FakeSurface surface = new FakeSurface();

@@ -75,17 +75,27 @@ public final class BuoyancyImpl implements Buoyancy {
     double velocity = velocities.getOrDefault(ship.id(), 0.0);
     BuoyancyEngine.Step step = engine.step(ship, velocity, surface);
     double equilibrium = equilibria.getOrDefault(ship.id(), ship.pose().y());
-    double clamped = clamp(ship, step.y(), equilibrium);
-    if (Math.abs(clamped - ship.pose().y()) < 0.001) {
+    double lower = equilibrium - bobAmplitude;
+    double upper = Math.min(maxRise, equilibrium + bobAmplitude);
+    double nextY = step.y();
+    double nextVelocity = step.velocity();
+    if (nextY < lower) {
+      nextY = lower;
+      nextVelocity = Math.abs(nextVelocity);
+    } else if (nextY > upper) {
+      nextY = upper;
+      nextVelocity = -Math.abs(nextVelocity);
+    }
+    if (Math.abs(nextY - ship.pose().y()) < 0.001) {
+      velocities.put(ship.id(), nextVelocity);
+      return false;
+    }
+    if (!pathClear(ship, ship.pose().y(), nextY)) {
       velocities.put(ship.id(), 0.0);
       return false;
     }
-    if (!pathClear(ship, ship.pose().y(), clamped)) {
-      velocities.put(ship.id(), 0.0);
-      return false;
-    }
-    velocities.put(ship.id(), step.velocity());
-    return moveTo(ship, ship.pose().y(), clamped);
+    velocities.put(ship.id(), nextVelocity);
+    return moveTo(ship, ship.pose().y(), nextY);
   }
 
   @Override
@@ -104,12 +114,6 @@ public final class BuoyancyImpl implements Buoyancy {
   public void clear(Ship ship) {
     velocities.remove(ship.id());
     equilibria.remove(ship.id());
-  }
-
-  private double clamp(Ship ship, double y, double equilibrium) {
-    double lower = equilibrium - bobAmplitude;
-    double upper = Math.min(maxRise, equilibrium + bobAmplitude);
-    return Math.max(lower, Math.min(upper, y));
   }
 
   private boolean moveTo(Ship ship, double oldY, double newY) {
