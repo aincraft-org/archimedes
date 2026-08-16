@@ -113,6 +113,7 @@ class BuoyancyResolverTest {
     Ship ship = shipAt(new ShipPose(0), new BlockPos(0, 0, 0), new BlockPos(1, 0, 0));
     assertEquals(203, BuoyancyResolver.waterSurfaceY(ship, surface));
   }
+
   @Test
   void fractionalNegativeAnchorDyUsesShiftedSamplingWindow() {
     FakeSurface surface = new FakeSurface();
@@ -130,8 +131,7 @@ class BuoyancyResolverTest {
     // boundaries are y=135 and y=136 respectively.
     surface.water.add("100,135,300");
     surface.water.add("101,136,300");
-    Ship ship =
-        shipAt(new ShipPose(-0.5), new BlockPos(0, 0, 0), new BlockPos(1, 1, 0));
+    Ship ship = shipAt(new ShipPose(-0.5), new BlockPos(0, 0, 0), new BlockPos(1, 1, 0));
 
     assertEquals(135, BuoyancyResolver.waterSurfaceY(ship, surface));
   }
