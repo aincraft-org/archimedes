@@ -64,14 +64,14 @@ Success looks like: a ship floats at the shallowest water it sits in, bobs gentl
 
 ### Current notes
 
-- `sink` has no waterline bound and no velocity interaction today (test asserts `-3.0` pose). The service method accepts any integer (negative would raise the ship); the command layer already requires `blocks >= 1`.
+- Positive manual sink remains unbounded below the waterline and does not alter velocity. The command and service require `blocks >= 1`; `BuoyancyImpl` also rejects non-positive values defensively.
 - Current geometry-only behavior is intentional: riders contribute no load, and equilibrium is not a force-balance solve. The exact current mass expression is `weight = mass × blockDensity × gravity`.
 
 ## Next
 
 - [ ] Implement the approved force-balance mass model in `docs/superpowers/specs/2026-08-16-buoyancy-mass-model-design.md`: namespaced per-material densities with validated positive finite fallback, tracked-player-only runtime load, bounded deterministic interpolation, immutable diagnostics, and explicit no-equilibrium states
 - [ ] Verify footprint behavior: `Δdraft ≈ Δmass ÷ (waterDensity × footprint)` within the approved discrete tolerance
-- [x] Decide whether to keep free `sink` (already implemented; negative allowed, velocity untouched) or clamp at the waterline per the old dated contract, and add missing velocity-clear/negative-input coverage — Current contract keeps free sink; public command accepts positive integers and service validation remains defensive.
+- [x] Keep positive manual sink unbounded below the waterline with velocity untouched; command, service, and domain boundaries reject non-positive distances
 - [x] Decide rise/sink velocity semantics: currently only `tick` resets velocity on blocked path; `rise`/`sink` reject without clearing
 - [x] Approve material/rider equilibrium contract: config-only densities, runtime-only tracked-player mass, no `ships.json` schema change, separate validated `max-fall` default `16.0`, and deterministic overloaded descent/clamp
 - [x] Document settling behavior: sub-0.001 move threshold stores velocity and returns false (no move, no path check)
@@ -94,7 +94,7 @@ Success looks like: a ship floats at the shallowest water it sits in, bobs gentl
 | 2026-08-16 | Living specs in `docs/specs/`; dated docs stay in `docs/superpowers/` | User directive |
 | 2026-08-14 | Rigid-body bobbing with real buoyancy mechanics (user choice) | Fractional pose needed for oscillation |
 | 2026-08-14 | Shallowest column surface = effective waterline | Hull floats at shallowest water it sits in |
-| 2026-08-14 | Manual sink unbounded below waterline (implementation) | Debug utility; pending contract decision (Next) |
+| 2026-08-16 | Positive manual sink remains unbounded below waterline; non-positive input rejected at command, service, and domain boundaries | Preserve debug utility without allowing negative input to raise a ship |
 
 ## Open questions
 

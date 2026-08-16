@@ -68,7 +68,7 @@ Success looks like: a `Ship` is a pure, unit-testable description of a build (or
 
 ## Future
 
-- [ ] Cross-world ship support: world UUIDs are already persisted (`ShipStore`, `WorldMutator` keyed by world); current runtime binds assembly to the primary Bukkit world (`ShipsPlugin.WorldBinding` → `Bukkit.getWorlds().get(0)`). Command resolution may identify another world, but assembly is rejected there. Once Task 3 lands, `disabled-worlds` must also reject the bound world.
+- [ ] Cross-world ship support: world UUIDs are persisted, but current runtime binds assembly to the primary Bukkit world. Non-primary targets and a disabled bound world are rejected before scanning or mutation; extending runtime support beyond the primary world remains Future.
 - [ ] Implement approved aggregate per-material mass and tracked-player runtime load for buoyancy equilibrium; densities remain configuration-only and `ships.json` gains no mass fields (see `docs/superpowers/specs/2026-08-16-buoyancy-mass-model-design.md`)
 - [ ] Versioned persistence schema with migration path
 

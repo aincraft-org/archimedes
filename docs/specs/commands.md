@@ -72,7 +72,7 @@ Success looks like: every subcommand has a permission, explicit error messages f
 | Date | Decision | Why |
 |------|----------|-----|
 | 2026-08-16 | Living specs in `docs/specs/`; dated docs stay in `docs/superpowers/` | User directive |
-| 2026-08-16 | Error ownership unresolved: current command prefixes can duplicate service/adapter prefixes; reason-only service messages and command-owned prefixes remain a Next target | Document current behavior without claiming implementation |
+| 2026-08-16 | Services return reason-only failures; commands own exactly one operation prefix | Prevent duplicated user-facing error text and keep service reasons reusable |
 | 2026-08-16 | Runtime is bound to the primary Bukkit world; cross-world support remains Future | Current assembly/runtime wiring uses the primary world |
 | 2026-08-14 | `/ship collision-test` debug fixture added behind op permission; kept isolated from production persistence | Spike acceptance; fixture since removed from code (verified 2026-08-16) |
 

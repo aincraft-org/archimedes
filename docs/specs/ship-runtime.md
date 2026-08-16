@@ -32,7 +32,7 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 ## Invariants
 
 - Displays use **visual** projection: `origin + pose.y + relative`, exact block corner — no implicit `+0.5`.
-- Hulls spawn at `collisionAnchor` (visual corner + 0.5 on X/Z). `move` teleports every volume on every move; rollback moves all volumes back to the old anchor.
+- Hulls spawn at `collisionAnchor` (visual corner + 0.5 on X/Z). Fractional moves within the same authoritative floor anchor do not teleport collision volumes; crossing an anchor moves every volume once, and rollback restores every moved volume to the old anchor.
 - `ShipRuntimeImpl` field order is renderer, collisions, carrier; **spawn order is collisions first, then renderer**. Operation order on move: upward repositions displays, carries riders, then moves collisions; downward/equal repositions displays, moves collisions, then carries riders.
 - Adapter failures in renderer and collision operations are normalized to `ShipRuntimeException` with operation and ship context where available; existing `ShipRuntimeException` instances are preserved. Only `RuntimeException` is normalized; `Error` remains uncaught.
 - Carrier tracking is explicit: successful spawn tracks at the committed pose, remove untracks, and every runtime cleanup path clears tracker state.
