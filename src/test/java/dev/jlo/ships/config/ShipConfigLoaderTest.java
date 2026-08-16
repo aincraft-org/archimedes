@@ -23,6 +23,47 @@ class ShipConfigLoaderTest {
     assertEquals(8, loaded.targetDistance());
     assertTrue(loaded.forbiddenMaterials().contains("minecraft:water"));
   }
+  @Test
+  void normalizesForbiddenMaterialsAndDropsBlankEntries() {
+    YamlConfiguration config = new YamlConfiguration();
+    config.set(ShipConfigLoader.MAXIMUM_BLOCKS_KEY, 100);
+    config.set(ShipConfigLoader.TARGET_DISTANCE_KEY, 8);
+    config.set(
+        ShipConfigLoader.FORBIDDEN_MATERIALS_KEY,
+        java.util.List.of("STONE", " ", "minecraft:LAVA"));
+
+    ShipConfig loaded = ShipConfigLoader.load(config);
+
+    assertEquals(java.util.Set.of("stone", "minecraft:lava"), loaded.forbiddenMaterials());
+  }
+
+  @Test
+  void usesDocumentedDefaultsForMissingOptionalKeys() {
+    YamlConfiguration config = new YamlConfiguration();
+    config.set(ShipConfigLoader.MAXIMUM_BLOCKS_KEY, 100);
+    config.set(ShipConfigLoader.TARGET_DISTANCE_KEY, 8);
+
+    ShipConfig loaded = ShipConfigLoader.load(config);
+
+    assertTrue(loaded.buoyancyEnabled());
+    assertEquals(1, loaded.physicsTicks());
+    assertEquals(0.5, loaded.bobAmplitude());
+    assertEquals(16.0, loaded.maxRise());
+    assertEquals(0.05, loaded.gravity());
+    assertEquals(1.0, loaded.waterDensity());
+    assertEquals(0.5, loaded.blockDensity());
+    assertEquals(0.9, loaded.damping());
+  }
+
+  @Test
+  void rejectsNonFiniteRangeValue() {
+    YamlConfiguration config = new YamlConfiguration();
+    config.set(ShipConfigLoader.MAXIMUM_BLOCKS_KEY, 100);
+    config.set(ShipConfigLoader.TARGET_DISTANCE_KEY, 8);
+    config.set(ShipConfigLoader.DAMPING_KEY, Double.NaN);
+
+    assertThrows(IllegalArgumentException.class, () -> ShipConfigLoader.load(config));
+  }
 
   @Test
   void rejectsNonPositiveMaximum() {

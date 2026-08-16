@@ -80,6 +80,7 @@ public final class ShipsPlugin extends JavaPlugin {
               new BukkitWorldMutator(world),
               buoyancy,
               config.buoyancyEnabled(),
+              config.worldEnabled(world.getUID()),
               world.getUID());
       service.loadAll();
       getServer().getPluginManager().registerEvents(tracker, this);

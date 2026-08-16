@@ -31,9 +31,11 @@ public final class ShipServiceImpl implements ShipService {
   /** Whether buoyancy is enabled globally. */
   private final boolean buoyancyEnabled;
 
+  /** Whether assembly is enabled in the bound world. */
+  private final boolean worldEnabled;
+
   /** World in which this service operates. */
   private final UUID worldId;
-
   /** Loaded ships keyed by identifier. */
   private final Map<UUID, Ship> ships = new LinkedHashMap<>();
 
@@ -58,6 +60,7 @@ public final class ShipServiceImpl implements ShipService {
    * @param mutator world block mutator
    * @param buoyancy buoyancy controller
    * @param buoyancyEnabled whether buoyancy is enabled globally
+   * @param worldEnabled whether assembly is enabled in the bound world
    * @param worldId operating world identifier
    */
   public ShipServiceImpl(
@@ -67,6 +70,7 @@ public final class ShipServiceImpl implements ShipService {
       WorldMutator mutator,
       dev.jlo.ships.buoyancy.Buoyancy buoyancy,
       boolean buoyancyEnabled,
+      boolean worldEnabled,
       UUID worldId) {
     this.store = store;
     this.scanner = scanner;
@@ -74,6 +78,7 @@ public final class ShipServiceImpl implements ShipService {
     this.mutator = mutator;
     this.buoyancy = buoyancy;
     this.buoyancyEnabled = buoyancyEnabled;
+    this.worldEnabled = worldEnabled;
     this.worldId = worldId;
   }
 
@@ -81,6 +86,10 @@ public final class ShipServiceImpl implements ShipService {
   public Ship assembleAt(UUID playerId, int x, int y, int z, UUID targetWorldId) {
     if (!targetWorldId.equals(worldId)) {
       lastError = "Ship assembly is not permitted in this world";
+      return null;
+    }
+    if (!worldEnabled) {
+      lastError = "Ship assembly is disabled in this world";
       return null;
     }
     List<BlockPos> component = scanner.scan(x, y, z);

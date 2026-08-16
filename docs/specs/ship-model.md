@@ -36,10 +36,9 @@ Success looks like: a `Ship` is a pure, unit-testable description of a build (or
 - `ships.json` is the single persistence authority; entities are never persisted (non-persistent at Bukkit level).
 - Persistence must stay backward compatible: missing `pose` → `y=0`; missing `buoyancy` → enabled.
 - Saves are atomic: write temp file, then replace; an interrupted save never leaves a truncated primary file.
-- Scanner is read-only: the scan itself never mutates the world; the assembly service validates the whole component before any mutation.
+- Assembly policy is checked before scanning: a target outside the primary bound world is rejected with `Ship assembly is not permitted in this world`; a disabled bound world is rejected with `Ship assembly is disabled in this world`. Neither path scans or mutates blocks.
 - Forbidden materials are lowercased at load; blank entries dropped; invalid UUIDs in `disabled-worlds` fail load (plugin disables rather than misbehaving).
 - Unsafe supplied config values never silently fall back — validation rejects them and plugin enable fails with a clear log. Missing list and optional scalar keys fall back to code defaults; `maximum-blocks` and `target-distance` instead use loader default `0` and fail validation when absent.
-
 ## Implementation guidance
 
 - Model classes live in `dev.jlo.ships.model`; records for value types (`BlockPos`), final classes with accessors elsewhere. `ShipOrigin` intentionally has no `equals` (identity semantics).

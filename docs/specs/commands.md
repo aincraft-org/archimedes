@@ -35,12 +35,8 @@ Success looks like: every subcommand has a permission, explicit error messages f
 | `/ship buoyancy` | `ships.buoyancy` | Toggle for the requester's owned ship in the current world (`toggleBuoyancy(requester, world)` — not line-of-sight-targeted) |
 | `/ship sink <n>` | `ships.sink` | Positive integer parse; extra args silently ignored (no arity validation); delegates to service |
 
-## Invariants
-
-- Player-only: one entry check (`instanceof Player`) gates all subcommands; console executors get a clear rejection message.
-- Errors: no target, oversized/forbidden component, occupied restoration space, missing ownership, invalid sink argument — each explicit. Current command output adds operation prefixes, but some service/adapter failures already contain prefixes, causing duplicated wording. Reason-only service messages with command-owned prefixes remain an unresolved Next alignment target.
-- `ships.command` is enforced by Bukkit via `plugin.yml` `permission:` field before `ShipCommand` runs; each subcommand additionally checks its own permission in the executor (`ships.assemble`, `ships.inspect`, `ships.disassemble`, `ships.buoyancy`, `ships.sink`).
-- Disassembly authorization: owner or operator — enforced in the service (`requesterId`/`isOperator` params); the command looks up the requester's owned ship and passes `player.isOp()`.
+- Assembly delegates only after service world policy: non-bound targets fail first with `Ship assembly is not permitted in this world`; the configured primary world then fails with `Ship assembly is disabled in this world` when disabled. Both failures occur before scanner or world mutation.
+- Player-facing assembly errors retain the service reason after the command's `Cannot assemble: ` prefix.
 
 ## Implementation guidance
 

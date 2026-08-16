@@ -194,6 +194,7 @@ class ShipServiceImplTest {
             fakes,
             new RecordingBuoyancy(),
             false,
+            true,
             WORLD);
 
     IllegalStateException failure = assertThrows(IllegalStateException.class, service::loadAll);
@@ -221,11 +222,113 @@ class ShipServiceImplTest {
             fakes,
             new RecordingBuoyancy(),
             true,
+            true,
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNotNull(result);
     assertEquals(1, fakes.persisted.size());
     assertEquals(1, fakes.rendered.size());
+  }
+  @Test
+  void rejectsAssemblyInNonBoundWorldBeforeScanningOrMutation() {
+    Fakes fakes = new Fakes();
+    List<String> calls = new ArrayList<>();
+    ShipService service =
+        new ShipServiceImpl(
+            new MemoryStore(fakes),
+            (x, y, z) -> {
+              calls.add("scan");
+              return List.of(new BlockPos(0, 0, 0));
+            },
+            runtime(fakes),
+            new WorldMutator() {
+              @Override
+              public String blockDataAt(int x, int y, int z) {
+                calls.add("blockData");
+                return STONE;
+              }
+
+              @Override
+              public boolean clearBlocks(Ship ship) {
+                calls.add("clear");
+                return true;
+              }
+
+              @Override
+              public boolean validateRestore(Ship ship) {
+                return true;
+              }
+
+              @Override
+              public boolean restoreBlocks(Ship ship) {
+                calls.add("restore");
+                return true;
+              }
+
+              @Override
+              public String lastError() {
+                return "mutation failed";
+              }
+            },
+            new RecordingBuoyancy(),
+            true,
+            true,
+            WORLD);
+
+    assertNull(service.assembleAt(OWNER, 100, 200, 300, UUID.randomUUID()));
+    assertEquals("Ship assembly is not permitted in this world", service.lastError());
+    assertTrue(calls.isEmpty());
+  }
+
+  @Test
+  void rejectsAssemblyInDisabledBoundWorldBeforeScanningOrMutation() {
+    Fakes fakes = new Fakes();
+    List<String> calls = new ArrayList<>();
+    ShipService service =
+        new ShipServiceImpl(
+            new MemoryStore(fakes),
+            (x, y, z) -> {
+              calls.add("scan");
+              return List.of(new BlockPos(0, 0, 0));
+            },
+            runtime(fakes),
+            new WorldMutator() {
+              @Override
+              public String blockDataAt(int x, int y, int z) {
+                calls.add("blockData");
+                return STONE;
+              }
+
+              @Override
+              public boolean clearBlocks(Ship ship) {
+                calls.add("clear");
+                return true;
+              }
+
+              @Override
+              public boolean validateRestore(Ship ship) {
+                return true;
+              }
+
+              @Override
+              public boolean restoreBlocks(Ship ship) {
+                calls.add("restore");
+                return true;
+              }
+
+              @Override
+              public String lastError() {
+                return "mutation failed";
+              }
+            },
+            new RecordingBuoyancy(),
+            true,
+            false,
+            WORLD);
+
+    assertNull(service.assembleAt(OWNER, 100, 200, 300, WORLD));
+    assertEquals("Ship assembly is disabled in this world", service.lastError());
+    assertTrue(calls.isEmpty());
   }
 
   @Test
@@ -245,6 +348,7 @@ class ShipServiceImplTest {
             runtime(fakes),
             fakes,
             new RecordingBuoyancy(),
+            true,
             true,
             WORLD);
     service.loadAll();
@@ -269,6 +373,7 @@ class ShipServiceImplTest {
             runtime(fakes),
             fakes,
             new RecordingBuoyancy(),
+            true,
             true,
             WORLD);
     service.loadAll();
@@ -295,6 +400,7 @@ class ShipServiceImplTest {
             runtime(fakes),
             fakes,
             new RecordingBuoyancy(),
+            true,
             true,
             WORLD);
     service.loadAll();
@@ -323,6 +429,7 @@ class ShipServiceImplTest {
             fakes,
             new RecordingBuoyancy(),
             true,
+            true,
             WORLD);
     service.loadAll();
     boolean ok = service.disassemble(ship.id(), OWNER, false);
@@ -341,6 +448,7 @@ class ShipServiceImplTest {
             runtime(fakes),
             fakes,
             new RecordingBuoyancy(),
+            true,
             true,
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
@@ -391,6 +499,7 @@ class ShipServiceImplTest {
             },
             fakes,
             new RecordingBuoyancy(),
+            true,
             true,
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
@@ -443,6 +552,7 @@ class ShipServiceImplTest {
             fakes,
             new RecordingBuoyancy(),
             true,
+            true,
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNull(result);
@@ -463,6 +573,7 @@ class ShipServiceImplTest {
             fakes,
             buoyancy,
             true,
+            true,
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNotNull(result);
@@ -482,6 +593,7 @@ class ShipServiceImplTest {
             runtime(fakes),
             fakes,
             buoyancy,
+            true,
             true,
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
@@ -508,6 +620,7 @@ class ShipServiceImplTest {
             runtime(fakes),
             fakes,
             buoyancy,
+            true,
             true,
             WORLD);
     service.loadAll();
