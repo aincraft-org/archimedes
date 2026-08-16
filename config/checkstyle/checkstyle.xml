@@ -15,9 +15,7 @@
         <module name="HiddenField">
         <property name="ignoreConstructorParameter" value="true"/>
     </module>
-        <module name="IllegalCatch">
-            <property name="illegalClassNames" value="Exception,Error,Throwable"/>
-        </module>
+        <module name="IllegalCatch"/>
         <module name="JavadocMethod"/>
         <module name="JavadocType"/>
         <module name="JavadocVariable"/>
