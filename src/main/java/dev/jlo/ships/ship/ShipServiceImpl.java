@@ -140,14 +140,14 @@ public final class ShipServiceImpl implements ShipService {
         restored = false;
         failure.addSuppressed(new IllegalStateException(mutator.lastError()));
       }
-    } catch (RuntimeException cleanup) {
+    } catch (ShipRuntimeException cleanup) {
       restored = false;
       failure.addSuppressed(cleanup);
     }
     if (runtimeStarted) {
       try {
         runtime.remove(ship);
-      } catch (RuntimeException cleanup) {
+      } catch (ShipRuntimeException cleanup) {
         restored = false;
         failure.addSuppressed(cleanup);
       }
@@ -155,7 +155,7 @@ public final class ShipServiceImpl implements ShipService {
     if (buoyancyStarted) {
       try {
         buoyancy.clear(ship);
-      } catch (RuntimeException cleanup) {
+      } catch (ShipRuntimeException cleanup) {
         restored = false;
         failure.addSuppressed(cleanup);
       }
@@ -163,7 +163,7 @@ public final class ShipServiceImpl implements ShipService {
     ships.remove(ship.id());
     try {
       persistAll();
-    } catch (RuntimeException cleanup) {
+    } catch (ShipRuntimeException cleanup) {
       restored = false;
       failure.addSuppressed(cleanup);
     }
@@ -174,8 +174,6 @@ public final class ShipServiceImpl implements ShipService {
       throw failure;
     }
   }
-
-
 
   @Override
   public Ship findOwnedInWorld(UUID playerId, UUID targetWorldId) {
@@ -238,7 +236,7 @@ public final class ShipServiceImpl implements ShipService {
         ships.put(ship.id(), ship);
       }
       return ships;
-    } catch (ShipRuntimeException failure) {
+    } catch (RuntimeException failure) {
       primary = failure;
     }
     for (Ship ship : spawned) {

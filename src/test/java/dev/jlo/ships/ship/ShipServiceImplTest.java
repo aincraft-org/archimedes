@@ -194,6 +194,7 @@ class ShipServiceImplTest {
             fakes,
             new RecordingBuoyancy(),
             false,
+            false,
             WORLD);
 
     IllegalStateException failure = assertThrows(IllegalStateException.class, service::loadAll);
@@ -220,6 +221,11 @@ class ShipServiceImplTest {
 
           @Override
           public void removeAll(Collection<Ship> ships) {}
+
+          @Override
+          public void removeAllTagged() {
+            sweeps.add("sweep");
+          }
         };
     ShipServiceImpl service =
         new ShipServiceImpl(
@@ -237,14 +243,11 @@ class ShipServiceImplTest {
             fakes,
             new RecordingBuoyancy(),
             false,
+            true,
             WORLD);
-
-    assertTrue(
-        assertThrows(IllegalStateException.class, service::loadAll)
-            .getMessage()
-            .contains("store-load"));
-
-    assertTrue(sweeps.isEmpty());
+    IllegalStateException failure = assertThrows(IllegalStateException.class, service::loadAll);
+    assertTrue(failure.getMessage().contains("store-load"));
+    assertEquals(List.of("sweep"), sweeps);
     assertTrue(service.all().isEmpty());
   }
 
@@ -377,7 +380,6 @@ class ShipServiceImplTest {
     assertEquals("Assembly failed: persist failed", service.lastError());
   }
 
-
   @Test
   void nullCauseRuntimeFailureUsesSafeErrorReason() {
     Fakes fakes = new Fakes();
@@ -412,6 +414,7 @@ class ShipServiceImplTest {
     assertNull(service.assembleAt(OWNER, 100, 200, 300, WORLD));
     assertEquals("Assembly failed: spawn failed", service.lastError());
   }
+
   @Test
   void rejectsAssemblyInNonBoundWorldBeforeScanningOrMutation() {
     Fakes fakes = new Fakes();
