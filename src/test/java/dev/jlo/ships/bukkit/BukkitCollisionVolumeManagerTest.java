@@ -125,7 +125,8 @@ class BukkitCollisionVolumeManagerTest {
     ship.setPose(new dev.jlo.ships.model.ShipPose(-0.75));
     manager.move(ship);
     assertEquals(2, teleports.size());
-    assertTrue(teleports.stream().allMatch(location -> Math.abs(location.getY() - (-0.75)) < 1.0e-9));
+    assertTrue(
+        teleports.stream().allMatch(location -> Math.abs(location.getY() - (-0.75)) < 1.0e-9));
   }
 
   @Test
