@@ -29,6 +29,7 @@ class BukkitCollisionVolumeManagerTest {
   void spawnConfiguresTaggedInvisibleInvulnerableNonPersistentCollisionAtCanonicalAnchor() {
     UUID shipId = UUID.randomUUID();
     java.util.Map<String, Object> values = new java.util.HashMap<>();
+    java.util.Map<String, Location> spawnedAt = new java.util.HashMap<>();
     java.util.Set<String> tags = new java.util.HashSet<>();
     org.bukkit.persistence.PersistentDataContainer data =
         proxy(
@@ -36,9 +37,6 @@ class BukkitCollisionVolumeManagerTest {
             (ignored, method, args) -> {
               if ("set".equals(method.getName())) {
                 values.put(args[0].toString(), args[2]);
-              }
-              if ("has".equals(method.getName())) {
-                return values.containsKey(args[0].toString());
               }
               return defaultValue(method.getReturnType());
             });
@@ -48,10 +46,29 @@ class BukkitCollisionVolumeManagerTest {
             (ignored, method, args) -> {
               String name = method.getName();
               if ("getPersistentDataContainer".equals(name)) return data;
-              if ("addScoreboardTag".equals(name)) return tags.add((String) args[0]);
-              if ("getLocation".equals(name)) return new Location(null, 100.5, 66.25, 200.5);
+              if ("addScoreboardTag".equals(name)) {
+                tags.add((String) args[0]);
+                return true;
+              }
+              if (name.startsWith("set")) {
+                values.put(name, args[0]);
+                return null;
+              }
               if ("remove".equals(name)) return null;
-              if (method.getReturnType() == boolean.class) return true;
+              return defaultValue(method.getReturnType());
+            });
+    World world =
+        proxy(
+            World.class,
+            (ignored, method, args) -> {
+              if ("spawn".equals(method.getName()) && args.length == 3) {
+                spawnedAt.put("spawn", (Location) args[0]);
+                @SuppressWarnings("unchecked")
+                java.util.function.Consumer<Shulker> callback =
+                    (java.util.function.Consumer<Shulker>) args[2];
+                callback.accept(shulker);
+                return shulker;
+              }
               return defaultValue(method.getReturnType());
             });
     Ship ship =
@@ -63,95 +80,75 @@ class BukkitCollisionVolumeManagerTest {
             new dev.jlo.ships.model.ShipPose(1.25),
             true);
     BukkitCollisionVolumeManager manager =
-        new BukkitCollisionVolumeManager(
-            worldSpawning(shulker), new NamespacedKey(NAMESPACE, COLLISION_KEY));
+        new BukkitCollisionVolumeManager(world, new NamespacedKey(NAMESPACE, COLLISION_KEY));
 
     manager.spawn(ship);
 
+    assertEquals(100.5, spawnedAt.get("spawn").getX());
+    assertEquals(66.25, spawnedAt.get("spawn").getY());
+    assertEquals(200.5, spawnedAt.get("spawn").getZ());
+    assertEquals(false, values.get("setAI"));
+    assertEquals(true, values.get("setInvisible"));
+    assertEquals(true, values.get("setInvulnerable"));
+    assertEquals(true, values.get("setSilent"));
+    assertEquals(false, values.get("setGravity"));
+    assertEquals(true, values.get("setCollidable"));
+    assertEquals(0.0f, values.get("setPeek"));
+    assertEquals(false, values.get("setPersistent"));
+    assertEquals(shipId.toString(), values.get("ships:collision"));
+    assertEquals("0,1,0", values.get("ships:collision-block"));
+    assertTrue(tags.contains("ships-collision-" + shipId));
   }
-
   @Test
-  void moveSkipsTeleportWithinSameAuthoritativeFloorAndMovesAcrossBoundary() {
+  void moveUsesAuthoritativeFloorForMultiplePositiveAndNegativeVolumes() {
     UUID shipId = UUID.randomUUID();
     java.util.List<Location> teleports = new java.util.ArrayList<>();
-    Shulker shulker =
-        proxy(
-            Shulker.class,
-            (ignored, method, args) -> {
-              if ("getLocation".equals(method.getName())) return new Location(null, 100.5, 64.25, 200.5);
-              if ("teleport".equals(method.getName())) {
-                teleports.add((Location) args[0]);
-                return true;
-              }
-              if ("getPersistentDataContainer".equals(method.getName())) {
-                return proxy(
-                    org.bukkit.persistence.PersistentDataContainer.class,
-                    (container, containerMethod, containerArgs) -> defaultValue(containerMethod.getReturnType()));
-              }
-              if (method.getReturnType() == boolean.class) return true;
-              return defaultValue(method.getReturnType());
-            });
+    Shulker one = recordingShulker(new Location(null, 100.5, -0.25, 200.5), teleports);
+    Shulker two = recordingShulker(new Location(null, 101.5, -0.25, 200.5), teleports);
     Ship ship =
         new Ship(
             shipId,
             UUID.randomUUID(),
-            new ShipOrigin(UUID.randomUUID(), 100, 64, 200),
-            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)),
-            new dev.jlo.ships.model.ShipPose(0.25),
+            new ShipOrigin(UUID.randomUUID(), 100, 0, 200),
+            List.of(
+                new ShipBlock(new BlockPos(0, 0, 0), STONE),
+                new ShipBlock(new BlockPos(1, 0, 0), STONE)),
+            new dev.jlo.ships.model.ShipPose(-0.25),
             true);
     BukkitCollisionVolumeManager manager =
         new BukkitCollisionVolumeManager(
-            worldSpawning(shulker), new NamespacedKey(NAMESPACE, COLLISION_KEY));
+            worldSpawning(List.of(one, two)), new NamespacedKey(NAMESPACE, COLLISION_KEY));
     manager.spawn(ship);
 
-    ship.setPose(new dev.jlo.ships.model.ShipPose(0.75));
+    ship.setPose(new dev.jlo.ships.model.ShipPose(-0.75));
     manager.move(ship);
     assertEquals(0, teleports.size());
 
-    ship.setPose(new dev.jlo.ships.model.ShipPose(1.0));
+    ship.setPose(new dev.jlo.ships.model.ShipPose(0.25));
     manager.move(ship);
-    assertEquals(1, teleports.size());
-    assertEquals(65.0, teleports.get(0).getY());
+    assertEquals(2, teleports.size());
+    assertEquals(0.25, teleports.get(0).getY());
+    assertEquals(0.25, teleports.get(1).getY());
   }
 
   @Test
-  void rollbackReturnsEveryVolumeToOldCanonicalAnchor() {
+  void rollbackReturnsAllVolumesToOldAnchors() {
     UUID shipId = UUID.randomUUID();
     java.util.List<Location> teleports = new java.util.ArrayList<>();
-    Shulker shulker =
-        proxy(
-            Shulker.class,
-            (ignored, method, args) -> {
-              if ("getLocation".equals(method.getName())) return new Location(null, 100.5, 64.0, 200.5);
-              if ("teleport".equals(method.getName())) {
-                teleports.add((Location) args[0]);
-                return true;
-              }
-              if ("getPersistentDataContainer".equals(method.getName())) {
-                return proxy(
-                    org.bukkit.persistence.PersistentDataContainer.class,
-                    (container, containerMethod, containerArgs) -> defaultValue(containerMethod.getReturnType()));
-              }
-              if (method.getReturnType() == boolean.class) return true;
-              return defaultValue(method.getReturnType());
-            });
-    Ship ship =
-        new Ship(
-            shipId,
-            UUID.randomUUID(),
-            new ShipOrigin(UUID.randomUUID(), 100, 64, 200),
-            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)),
-            new dev.jlo.ships.model.ShipPose(1.0),
-            true);
+    Shulker one = recordingShulker(new Location(null, 100.5, 65.0, 200.5), teleports);
+    Shulker two = recordingShulker(new Location(null, 101.5, 66.0, 200.5), teleports);
+    Ship ship = shipWithTwoBlocks(shipId);
+    ship.setPose(new dev.jlo.ships.model.ShipPose(1.5));
     BukkitCollisionVolumeManager manager =
         new BukkitCollisionVolumeManager(
-            worldSpawning(shulker), new NamespacedKey(NAMESPACE, COLLISION_KEY));
+            worldSpawning(List.of(one, two)), new NamespacedKey(NAMESPACE, COLLISION_KEY));
     manager.spawn(ship);
 
-    manager.rollback(ship, 0.0);
+    manager.rollback(ship, 0.25);
 
-    assertEquals(1, teleports.size());
-    assertEquals(64.0, teleports.get(0).getY());
+    assertEquals(2, teleports.size());
+    assertTrue(teleports.stream().allMatch(location -> location.getY() >= 0.0));
+    assertTrue(teleports.stream().allMatch(location -> location.getY() <= 2.0));
   }
 
   @SuppressWarnings("PMD.AvoidDuplicateLiterals")
@@ -337,6 +334,26 @@ class BukkitCollisionVolumeManagerTest {
             });
   }
 
+  private static Shulker recordingShulker(
+      Location initial, java.util.List<Location> teleports) {
+    return proxy(
+        Shulker.class,
+        (ignored, method, args) -> {
+          if ("getLocation".equals(method.getName())) return initial;
+          if ("teleport".equals(method.getName())) {
+            teleports.add((Location) args[0]);
+            return true;
+          }
+          if ("getPersistentDataContainer".equals(method.getName())) {
+            return proxy(
+                org.bukkit.persistence.PersistentDataContainer.class,
+                (container, containerMethod, containerArgs) ->
+                    defaultValue(containerMethod.getReturnType()));
+          }
+          if (method.getReturnType() == boolean.class) return true;
+          return defaultValue(method.getReturnType());
+        });
+  }
   private static Shulker shulkerThatThrows(RuntimeException failure) {
     return (Shulker)
         Proxy.newProxyInstance(
