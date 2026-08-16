@@ -110,6 +110,19 @@ class ShipRuntimeImplTest {
   }
 
   @Test
+  void successfulMoveCommitsCarrierPoseBasis() {
+    RecordingCarrier carrier = new RecordingCarrier();
+    Ship ship = ship();
+    ShipRuntime runtime =
+        new ShipRuntimeImpl(new RecordingRenderer(), new RecordingCollision(), carrier);
+    ship.setPose(new dev.jlo.ships.model.ShipPose(7));
+
+    runtime.move(ship, 4, 7);
+
+    assertEquals(7.0, carrier.poseBasis);
+  }
+
+  @Test
   void downwardMoveMovesCollisionBeforeCarrier() {
     List<String> operations = new ArrayList<>();
     RecordingRenderer renderer = new RecordingRenderer(operations);
@@ -167,6 +180,30 @@ class ShipRuntimeImplTest {
     runtime.spawn(ship);
     runtime.remove(ship);
     assertEquals(1, carrier.tracked);
+    assertEquals(1, carrier.untracked);
+  }
+
+  @Test
+  void rendererRemovalFailureStillUntracks() {
+    RecordingCarrier carrier = new RecordingCarrier();
+    RecordingRenderer renderer = new RecordingRenderer();
+    renderer.removeFailure = true;
+    ShipRuntime runtime = new ShipRuntimeImpl(renderer, new RecordingCollision(), carrier);
+
+    assertThrows(ShipRuntimeException.class, () -> runtime.remove(ship()));
+
+    assertEquals(1, carrier.untracked);
+  }
+
+  @Test
+  void collisionRemovalFailureStillUntracks() {
+    RecordingCarrier carrier = new RecordingCarrier();
+    RecordingCollision collision = new RecordingCollision();
+    collision.removeFailure = true;
+    ShipRuntime runtime = new ShipRuntimeImpl(new RecordingRenderer(), collision, carrier);
+
+    assertThrows(ShipRuntimeException.class, () -> runtime.remove(ship()));
+
     assertEquals(1, carrier.untracked);
   }
 
@@ -281,6 +318,7 @@ class ShipRuntimeImplTest {
     int cleared;
     double carriedOldY;
     double carriedNewY;
+    double poseBasis = Double.NaN;
     private final List<String> operations;
 
     RecordingCarrier() {
@@ -300,6 +338,11 @@ class ShipRuntimeImplTest {
     @Override
     public void untrack(Ship ship) {
       untracked++;
+    }
+
+    @Override
+    public void updatePoseBasis(Ship ship, double poseY) {
+      poseBasis = poseY;
     }
 
     @Override

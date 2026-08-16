@@ -111,6 +111,7 @@ public final class BukkitShipRiderTracker implements Listener {
 
   /** Clears every index and rider association. */
   public void clear() {
+    indices.clear();
     ridersByShip.clear();
     poseBasisByShip.clear();
     shipByEntity.clear();

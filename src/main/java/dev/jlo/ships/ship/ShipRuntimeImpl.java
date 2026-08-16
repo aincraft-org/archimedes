@@ -88,6 +88,7 @@ public final class ShipRuntimeImpl implements ShipRuntime {
         carrierStarted = true;
         carrier.carry(ship, oldY, newY);
       }
+      carrier.updatePoseBasis(ship, newY);
     } catch (ShipRuntimeException failure) {
       if (collisionsStarted) {
         try {
@@ -120,9 +121,26 @@ public final class ShipRuntimeImpl implements ShipRuntime {
 
   @Override
   public void remove(Ship ship) {
-    renderer.removeRuntime(ship);
-    collisions.remove(ship.id());
-    carrier.untrack(ship);
+    ShipRuntimeException failure = null;
+    try {
+      renderer.removeRuntime(ship);
+      collisions.remove(ship.id());
+    } catch (ShipRuntimeException current) {
+      failure = current;
+    } finally {
+      try {
+        carrier.untrack(ship);
+      } catch (ShipRuntimeException cleanup) {
+        if (failure == null) {
+          failure = cleanup;
+        } else {
+          failure.addSuppressed(cleanup);
+        }
+      }
+    }
+    if (failure != null) {
+      throw failure;
+    }
   }
 
   @Override
