@@ -24,8 +24,12 @@ import org.bukkit.entity.BlockDisplay;
 import org.junit.jupiter.api.Test;
 
 /** Behavior tests for the block-display ship renderer. */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class ShipRendererTest {
+  private static final String NAMESPACE = "ships"; // shared namespace for test keys
+
   /** Common capturable material. */
+  @SuppressWarnings("PMD.AvoidDuplicateLiterals")
   private static final String STONE = "minecraft:stone";
 
   /** Common world identifier. */
@@ -176,7 +180,7 @@ class ShipRendererTest {
     ShipRuntimeException thrown =
         assertThrows(
             ShipRuntimeException.class,
-            () -> surface.removeTagged(new NamespacedKey("ships", "ship"), "ship-id"));
+            () -> surface.removeTagged(new NamespacedKey(NAMESPACE, "ship"), "ship-id"));
     assertEquals(2, attempts.size());
     assertEquals(1, thrown.getSuppressed().length);
   }

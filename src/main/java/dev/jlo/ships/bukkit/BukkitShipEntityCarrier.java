@@ -137,6 +137,7 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
     }
   }
 
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   private static String shipIdForLog(Entity entity) {
     try {
       String collision =

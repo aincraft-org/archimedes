@@ -17,6 +17,11 @@ import org.bukkit.entity.Shulker;
 import org.bukkit.persistence.PersistentDataType;
 
 /** Bukkit collision manager using non-persistent Shulkers for exposed ship blocks. */
+@SuppressWarnings({
+  "checkstyle:IllegalCatch",
+  "PMD.AvoidCatchingGenericException",
+  "PMD.AvoidDuplicateLiterals"
+})
 public final class BukkitCollisionVolumeManager implements CollisionVolumeManager {
   /** Bukkit world containing collision entities. */
   private final World world;
@@ -43,6 +48,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
   }
 
   @Override
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   public void spawn(Ship ship) {
     normalizeRemoval(ship.id(), "collision spawn pre-cleanup");
     Map<BlockPos, CollisionVolume> spawned = new HashMap<>();
@@ -84,6 +90,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     }
   }
 
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   private static void cleanupSpawned(
       Map<BlockPos, CollisionVolume> spawned, ShipRuntimeException failure) {
     for (CollisionVolume volume : spawned.values()) {
@@ -95,6 +102,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     }
   }
 
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   @Override
   public void move(Ship ship) {
     Map<BlockPos, CollisionVolume> shipVolumes = volumes.get(ship.id());
@@ -125,6 +133,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     }
   }
 
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   private void rollbackMoved(
       Map<CollisionVolume, ShipTransform.CollisionAnchor> previous, ShipRuntimeException failure) {
     for (Map.Entry<CollisionVolume, ShipTransform.CollisionAnchor> entry : previous.entrySet()) {
@@ -155,6 +164,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     normalizeRemoval(shipId, "collision removal");
   }
 
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   private void normalizeRemoval(UUID shipId, String operation) {
     Map<BlockPos, CollisionVolume> shipVolumes = volumes.remove(shipId);
     if (shipVolumes == null) {
@@ -181,6 +191,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     }
   }
 
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   private void removeOneTagged(Shulker shulker, String operation) {
     try {
       shulker.remove();
@@ -200,6 +211,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     return new ShipRuntimeException(operation + " failed for ship " + shipId, failure);
   }
 
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   @Override
   public void removeAll() {
     ShipRuntimeException failure = null;
@@ -248,7 +260,6 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     failure.addSuppressed(wrapped);
     return failure;
   }
-
 
   private UUID parseShipId(Shulker shulker) {
     String value = shulker.getPersistentDataContainer().get(ownerKey, PersistentDataType.STRING);

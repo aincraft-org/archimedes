@@ -21,6 +21,11 @@ import org.bukkit.entity.Shulker;
 import org.junit.jupiter.api.Test;
 
 class BukkitCollisionVolumeManagerTest {
+  private static final String NAMESPACE = "ships";
+  private static final String COLLISION_KEY = "collision";
+  private static final String STONE = "minecraft:stone";
+
+  @SuppressWarnings("PMD.AvoidDuplicateLiterals")
   @Test
   void removeAllContinuesAfterTaggedMetadataFailure() {
     RuntimeException metadata = new IllegalStateException("metadata");
@@ -60,13 +65,14 @@ class BukkitCollisionVolumeManagerTest {
                     : defaultValue(method.getReturnType()));
 
     BukkitCollisionVolumeManager manager =
-        new BukkitCollisionVolumeManager(world, new NamespacedKey("ships", "collision"));
+        new BukkitCollisionVolumeManager(world, new NamespacedKey(NAMESPACE, COLLISION_KEY));
 
     ShipRuntimeException thrown = assertThrows(ShipRuntimeException.class, manager::removeAll);
     assertSame(metadata, thrown.getCause());
     assertEquals(1, removals.get());
   }
 
+  @SuppressWarnings("PMD.AvoidDuplicateLiterals")
   @Test
   void spawnNormalizesGenericRuntimeAndCleansEveryLocal() {
     UUID shipId = UUID.randomUUID();
@@ -74,7 +80,7 @@ class BukkitCollisionVolumeManagerTest {
     Shulker first = shulkerThatThrowsOnRemove(new IllegalArgumentException("cleanup"));
     World world = worldSpawningThenFails(first, failure);
     BukkitCollisionVolumeManager manager =
-        new BukkitCollisionVolumeManager(world, new NamespacedKey("ships", "collision"));
+        new BukkitCollisionVolumeManager(world, new NamespacedKey(NAMESPACE, COLLISION_KEY));
 
     ShipRuntimeException thrown =
         assertThrows(ShipRuntimeException.class, () -> manager.spawn(shipWithTwoBlocks(shipId)));
@@ -90,7 +96,7 @@ class BukkitCollisionVolumeManagerTest {
     Shulker first = shulkerThatThrowsOnRemove(new IllegalArgumentException("cleanup"));
     BukkitCollisionVolumeManager manager =
         new BukkitCollisionVolumeManager(
-            worldSpawningThenFails(first, failure), new NamespacedKey("ships", "collision"));
+            worldSpawningThenFails(first, failure), new NamespacedKey(NAMESPACE, COLLISION_KEY));
 
     ShipRuntimeException thrown =
         assertThrows(ShipRuntimeException.class, () -> manager.spawn(shipWithTwoBlocks(shipId)));
@@ -106,7 +112,7 @@ class BukkitCollisionVolumeManagerTest {
     Shulker shulker = shulkerThatThrows(teleport);
     World world = worldSpawning(shulker);
     BukkitCollisionVolumeManager manager =
-        new BukkitCollisionVolumeManager(world, new NamespacedKey("ships", "collision"));
+        new BukkitCollisionVolumeManager(world, new NamespacedKey(NAMESPACE, COLLISION_KEY));
     Ship ship = ship(shipId);
     manager.spawn(ship);
 
@@ -126,7 +132,7 @@ class BukkitCollisionVolumeManagerTest {
     Shulker two = shulkerThatThrowsOnRemove(second, attempts);
     BukkitCollisionVolumeManager manager =
         new BukkitCollisionVolumeManager(
-            worldSpawning(List.of(one, two)), new NamespacedKey("ships", "collision"));
+            worldSpawning(List.of(one, two)), new NamespacedKey(NAMESPACE, COLLISION_KEY));
     manager.spawn(shipWithTwoBlocks(shipId));
     ShipRuntimeException thrown =
         assertThrows(ShipRuntimeException.class, () -> manager.remove(shipId));
@@ -139,7 +145,7 @@ class BukkitCollisionVolumeManagerTest {
         shipId,
         UUID.randomUUID(),
         new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
-        List.of(new ShipBlock(new BlockPos(0, 0, 0), "minecraft:stone")));
+        List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
   }
 
   private static Ship shipWithTwoBlocks(UUID shipId) {
@@ -148,8 +154,8 @@ class BukkitCollisionVolumeManagerTest {
         UUID.randomUUID(),
         new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
         List.of(
-            new ShipBlock(new BlockPos(0, 0, 0), "minecraft:stone"),
-            new ShipBlock(new BlockPos(1, 0, 0), "minecraft:stone")));
+            new ShipBlock(new BlockPos(0, 0, 0), STONE),
+            new ShipBlock(new BlockPos(1, 0, 0), STONE)));
   }
 
   private static Shulker shulkerThatThrowsOnRemove(RuntimeException failure) {

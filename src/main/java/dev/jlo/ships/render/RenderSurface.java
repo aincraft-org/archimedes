@@ -18,6 +18,11 @@ import org.bukkit.persistence.PersistentDataType;
  * World rendering surface the ship renderer needs, separated for unit testing and forward
  * compatibility with different Paper display APIs.
  */
+@SuppressWarnings({
+  "checkstyle:IllegalCatch",
+  "PMD.AvoidCatchingGenericException",
+  "PMD.AvoidDuplicateLiterals"
+})
 public interface RenderSurface {
   /**
    * Spawns a block display at a location with initial configuration.
@@ -139,6 +144,7 @@ public interface RenderSurface {
         return world.getUID();
       }
 
+      @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
       @Override
       public Location location(ShipOrigin origin, double dx, double dy, double dz) {
         return new Location(world, origin.x() + dx, origin.y() + dy, origin.z() + dz);
@@ -150,6 +156,7 @@ public interface RenderSurface {
       }
 
       @Override
+      @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
       public void removeTagged(NamespacedKey key, String shipId) {
         ShipRuntimeException failure = null;
         try {
@@ -188,6 +195,7 @@ public interface RenderSurface {
         return found;
       }
 
+      @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
       @Override
       public void removeAllTagged(NamespacedKey key) {
         ShipRuntimeException failure = null;

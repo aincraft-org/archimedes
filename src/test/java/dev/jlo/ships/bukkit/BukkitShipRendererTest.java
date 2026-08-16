@@ -21,6 +21,8 @@ import org.bukkit.entity.BlockDisplay;
 import org.junit.jupiter.api.Test;
 
 class BukkitShipRendererTest {
+  private static final String NAMESPACE = "ships";
+  private static final String KEY = "test";
   private static final UUID WORLD = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
   @Test
@@ -34,7 +36,7 @@ class BukkitShipRendererTest {
             ShipRuntimeException.class,
             () -> {
               Ship ship = ship();
-              new BukkitShipRenderer(surface, new NamespacedKey("ships", "test"))
+              new BukkitShipRenderer(surface, new NamespacedKey(NAMESPACE, KEY))
                   .render(
                       ship,
                       ignored -> {
@@ -51,7 +53,7 @@ class BukkitShipRendererTest {
     RuntimeException teleport = new IllegalStateException("teleport");
     RenderSurface surface = surfaceThatFails(new RuntimeException("unused"), teleport);
     BukkitShipRenderer renderer =
-        new BukkitShipRenderer(surface, new NamespacedKey("ships", "test"));
+        new BukkitShipRenderer(surface, new NamespacedKey(NAMESPACE, KEY));
     Ship ship = ship();
     renderer.render(ship, ignored -> {});
 
@@ -67,7 +69,7 @@ class BukkitShipRendererTest {
     BukkitShipRenderer renderer =
         new BukkitShipRenderer(
             surfaceThatFails(new RuntimeException("unused"), failure),
-            new NamespacedKey("ships", "test"));
+            new NamespacedKey(NAMESPACE, KEY));
     Ship ship = ship();
 
     ShipRuntimeException thrown =
@@ -82,7 +84,7 @@ class BukkitShipRendererTest {
     RuntimeException pairing = new IllegalStateException("pairing");
     RenderSurface surface = new PairingFailureSurface(pairing);
     BukkitShipRenderer renderer =
-        new BukkitShipRenderer(surface, new NamespacedKey("ships", "test"));
+        new BukkitShipRenderer(surface, new NamespacedKey(NAMESPACE, KEY));
 
     ShipRuntimeException thrown =
         assertThrows(ShipRuntimeException.class, () -> renderer.reposition(ship(), 0, 1));
@@ -93,7 +95,6 @@ class BukkitShipRendererTest {
 
   private static RenderSurface surfaceThatFails(RuntimeException... failures) {
     return new RenderSurface() {
-      private boolean first = true;
       private final BlockDisplay display =
           (BlockDisplay)
               Proxy.newProxyInstance(

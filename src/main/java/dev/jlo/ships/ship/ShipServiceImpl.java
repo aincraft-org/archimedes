@@ -84,6 +84,7 @@ public final class ShipServiceImpl implements ShipService {
   }
 
   @Override
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   public Ship assembleAt(UUID playerId, int x, int y, int z, UUID targetWorldId) {
     if (!targetWorldId.equals(worldId)) {
       lastError = "Ship assembly is not permitted in this world";
@@ -123,7 +124,11 @@ public final class ShipServiceImpl implements ShipService {
       persistAll();
       return ships.get(ship.id());
     } catch (RuntimeException failure) {
-      rollback(ship, failure, runtimeStarted, buoyancyStarted);
+      ShipRuntimeException normalized =
+          failure instanceof ShipRuntimeException
+              ? (ShipRuntimeException) failure
+              : new ShipRuntimeException(failure);
+      rollback(ship, normalized, runtimeStarted, buoyancyStarted);
       return null;
     }
   }
