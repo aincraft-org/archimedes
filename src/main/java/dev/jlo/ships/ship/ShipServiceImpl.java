@@ -305,6 +305,10 @@ public final class ShipServiceImpl implements ShipService {
 
   @Override
   public boolean sink(UUID requesterId, UUID targetWorldId, int blocks) {
+    if (blocks <= 0) {
+      lastError = "Block count must be positive";
+      return false;
+    }
     Ship ship = findOwnedInWorld(requesterId, targetWorldId);
     if (ship == null) {
       lastError = "No ship in this world";

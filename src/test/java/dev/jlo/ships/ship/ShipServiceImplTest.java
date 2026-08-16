@@ -1018,6 +1018,25 @@ class ShipServiceImplTest {
     assertEquals(1, store.saves);
   }
 
+  @Test
+  void sinkRejectsNonPositiveBlocksWithoutCallingBuoyancyOrPersistence() {
+    Fakes fakes = new Fakes();
+    Ship ship = ship(fakes);
+    fakes.persisted.put(ship.id(), ship);
+    RecordingBuoyancy buoyancy = new RecordingBuoyancy();
+    CountingStore store = new CountingStore(fakes);
+    ShipServiceImpl service =
+        new ShipServiceImpl(
+            store, (x, y, z) -> List.of(), runtime(fakes), fakes, buoyancy, true, true, WORLD);
+    service.loadAll();
+    store.saves = 0;
+
+    assertFalse(service.sink(OWNER, WORLD, 0));
+    assertFalse(service.sink(OWNER, WORLD, -1));
+    assertEquals(0, store.saves);
+    assertFalse(buoyancy.calls.contains("sink"));
+  }
+
   private static final class CountingStore implements ShipStoreLike {
     private final Fakes fakes;
     int saves;

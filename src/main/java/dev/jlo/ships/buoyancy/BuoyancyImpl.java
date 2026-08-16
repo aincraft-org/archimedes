@@ -100,7 +100,7 @@ public final class BuoyancyImpl implements Buoyancy {
 
   @Override
   public boolean sink(Ship ship, int blocks) {
-    if (!ship.buoyancyEnabled()) {
+    if (!ship.buoyancyEnabled() || blocks <= 0) {
       return false;
     }
     double target = ship.pose().y() - blocks;

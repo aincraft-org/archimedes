@@ -184,6 +184,19 @@ class BuoyancyEngineTest {
   }
 
   @Test
+  void sinkRejectsNonPositiveBlocks() {
+    FakeSurface surface = new FakeSurface();
+    Ship ship = shipAt(new ShipPose(0), new BlockPos(0, 0, 0));
+    BuoyancyImpl buoyancy =
+        new BuoyancyImpl(
+            surface, new BuoyancyEngine(0.05, 1.0, 0.5, 0.9, 1.0), runtime(), 10, 0.5);
+
+    assertFalse(buoyancy.sink(ship, 0));
+    assertFalse(buoyancy.sink(ship, -1));
+    assertEquals(0.0, ship.pose().y());
+  }
+
+  @Test
   void intermediateObstructionRejectsSinkAndKeepsPose() {
     FakeSurface surface = new FakeSurface();
     surface.solid.add("100,199,300");
