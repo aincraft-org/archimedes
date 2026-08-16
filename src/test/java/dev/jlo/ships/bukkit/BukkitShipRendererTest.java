@@ -58,6 +58,21 @@ class BukkitShipRendererTest {
   }
 
   @Test
+  void removeRuntimeNormalizesFailureWithShipContext() {
+    RuntimeException failure = new IllegalStateException("remove");
+    BukkitShipRenderer renderer =
+        new BukkitShipRenderer(surfaceThatFails(new RuntimeException("unused"), failure),
+            new NamespacedKey("ships", "test"));
+    Ship ship = ship();
+
+    ShipRuntimeException thrown =
+        assertThrows(ShipRuntimeException.class, () -> renderer.removeRuntime(ship));
+
+    assertSame(failure, thrown.getCause());
+    assertTrue(thrown.getMessage().contains(ship.id().toString()));
+  }
+
+  @Test
   void repositionNormalizesPairingRuntimeFailureWithShipContext() {
     RuntimeException pairing = new IllegalStateException("pairing");
     RenderSurface surface = new PairingFailureSurface(pairing);

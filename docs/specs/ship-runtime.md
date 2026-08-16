@@ -36,7 +36,7 @@ Success looks like: exact visual alignment to canonical block corners, player-so
   - upward: reposition displays → carry riders → move collisions
   - downward/equal: reposition displays → move collisions → carry riders
 - Renderer and collision adapter `RuntimeException` failures are normalized to `ShipRuntimeException` messages naming the operation and ship ID; existing `ShipRuntimeException` instances are preserved without double wrapping, while `Error` remains uncaught.
-- Collision spawn publishes per-ship volumes only after all entities are created. Partial spawn removes every locally created entity and suppresses cleanup failures on the primary failure.
+- Collision spawn publishes per-ship volumes only after all entities are created. Partial spawn removes every locally created entity and suppresses cleanup failures on the primary failure. Collision and renderer removal APIs also normalize adapter failures with operation/ship context; multi-entity removals continue attempting later entities and attach cleanup failures as suppressed.
 - Spawn and move rollback behavior uses the normalized exception boundary; rider transport remains best-effort and does not become a ship-transaction failure.
 - No barrier/deck blocks are placed by production code (deck package is legacy; see debt below).
 
@@ -54,11 +54,11 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 - [x] Canonical drift-free rendering (block-corner alignment; negative-pose coverage)
 - [x] Deterministic exposed hull (`CollisionHull.exposedBlocks`, lexicographic; `topExposedBlocks` for carrier)
 - [x] Production Shulker hull attached to spawn/move/remove lifecycle
-- [x] Transactional spawn with rollback (collisions → renderer; cleans both on `ShipRuntimeException`; unchecked failures may bypass cleanup)
+- [x] Transactional spawn with rollback (collisions → renderer; cleans both on `ShipRuntimeException`; adapter removal failures are normalized and multi-remove cleanup continues)
 - [x] Direction-ordered move transaction with rider reversal on rollback
 - [x] `ShipRuntime.move(oldY, newY)` multi-block and repeated-bob support
 - [x] Persistent rider tracking via Bukkit events (move/spawn/death/quit/teleport/world-change/vehicle; no disable/untrack hook wired — tracker registered after loadAll)
-- [x] Carry: Players get relative vertical velocity (momentum preserved), others teleport `(0,delta,0) PLUGIN` cause; rejected/failed teleports are swallowed (best-effort, no rollback)
+- [x] Carry: Players get relative vertical velocity (momentum preserved), others teleport `(0,delta,0) PLUGIN` cause; rejected/failed teleports are swallowed with ship/entity context (best-effort, no rollback)
 - [x] Restart reconciliation: stale tagged entities swept, models respawned; `IllegalStateException` disables plugin (sweep outside try; unchecked sweep failures unguarded — see Next)
 - [x] `removeAllRuntime()` + `removeAllTagged()` on disable (no save)
 
@@ -73,7 +73,7 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 - [ ] Remove dead `deck/` package (`DeckManager`, `DeckSurface`, `BukkitDeckSurface`) and its tests (compiled but unwired) once legacy helper references are dropped
 - [ ] Fix stale Javadocs/wording: `ShipService.removeAllRuntime` "entities and barriers"; `ShipServiceImplTest` unused `NoopDeck` helper; plugin.yml "walkable decks" description
 - [ ] Harden reconciliation failure paths: `loadAll` sweep outside try, unguarded disable cleanup (unchecked sweep failures escape without cleanup)
-- [ ] Harden spawn/move cleanup: catch unchecked adapter/entity failures and normalize them to `ShipRuntimeException`; guarantee spawn, move, and reconciliation restore pre-operation model/runtime/world state. Best-effort rider transport remains outside ship rollback. Tasks 4–6 promote this target into Current only after regression tests pass.
+- [ ] Harden spawn/move cleanup: Task 5 still must guarantee spawn, move, and reconciliation restore pre-operation model/runtime/world state. Best-effort rider transport remains outside ship rollback.
 - [ ] Guard collision `move` so volumes only teleport when the authoritative anchor changes (currently unconditional)
 - [ ] Add behavioral collision-manager tests (flags, anchors, PDC/scoreboard tags, rollback, tag cleanup) — `BukkitCollisionVolumeManagerTest` is compile-only
 - [ ] Document persistence coupling: `ShipServiceImpl.tick` persists once iff any ship moved, respecting only the global `buoyancy-enabled` scheduler gate

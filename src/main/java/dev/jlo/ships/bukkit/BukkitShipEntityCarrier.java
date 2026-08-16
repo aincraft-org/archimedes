@@ -120,10 +120,40 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
           TeleportFlag.Relative.VELOCITY_X,
           TeleportFlag.Relative.VELOCITY_Y,
           TeleportFlag.Relative.VELOCITY_Z)) {
-        Bukkit.getLogger().finest("Ship carry teleport rejected for " + entity.getUniqueId());
+        Bukkit.getLogger()
+            .finest(
+                "Ship carry teleport rejected for ship "
+                    + shipIdForLog(entity)
+                    + " and entity "
+                    + entity.getUniqueId());
       }
     } catch (IllegalArgumentException | IllegalStateException failure) {
-      Bukkit.getLogger().finest("Ship carry teleport failed for " + entity.getUniqueId());
+      Bukkit.getLogger()
+          .finest(
+              "Ship carry teleport failed for ship "
+                  + shipIdForLog(entity)
+                  + " and entity "
+                  + entity.getUniqueId());
+    }
+  }
+  private static String shipIdForLog(Entity entity) {
+    try {
+      String collision =
+          entity
+              .getPersistentDataContainer()
+              .get(
+                  new org.bukkit.NamespacedKey("ships", "collision-owner"),
+                  PersistentDataType.STRING);
+      if (collision != null) {
+        return collision;
+      }
+      String render =
+          entity
+              .getPersistentDataContainer()
+              .get(new org.bukkit.NamespacedKey("ships", "ship-id"), PersistentDataType.STRING);
+      return render == null ? "<unknown>" : render;
+    } catch (RuntimeException ignored) {
+      return "<unknown>";
     }
   }
 }

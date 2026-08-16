@@ -97,12 +97,27 @@ public final class BukkitShipRenderer implements ShipRendererLike {
    */
   @Override
   public void removeRuntime(Ship ship) {
-    surface.removeTagged(shipKey, ship.id().toString());
+    try {
+      surface.removeTagged(shipKey, ship.id().toString());
+    } catch (RuntimeException failure) {
+      if (failure instanceof ShipRuntimeException) {
+        throw (ShipRuntimeException) failure;
+      }
+      throw new ShipRuntimeException(
+          "Renderer removal failed for ship " + ship.id(), failure);
+    }
   }
 
   /** Removes all plugin-owned displays, including stale entities. */
   public void removeAllRuntime() {
-    surface.removeAllTagged(shipKey);
+    try {
+      surface.removeAllTagged(shipKey);
+    } catch (RuntimeException failure) {
+      if (failure instanceof ShipRuntimeException) {
+        throw (ShipRuntimeException) failure;
+      }
+      throw new ShipRuntimeException("Renderer tagged removal failed", failure);
+    }
   }
 
   /**
