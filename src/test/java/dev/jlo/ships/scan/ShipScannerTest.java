@@ -4,7 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import dev.jlo.ships.model.BlockPos;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -101,6 +104,18 @@ class ShipScannerTest {
     CoordKey colliding = new CoordKey(1, 65536, 0);
     assertNotEquals(origin, colliding);
     assertEquals(origin, new CoordKey(0, 0, 0));
+  }
+
+  @Test
+  void successfulCapturedPositionsAreImmutableAndDetached() {
+    TestWorld world = new TestWorld(1, 1, 1, STONE);
+    ScanResult result = ShipScanner.scan(world, new Seed(0, 0, 0), Integer.MAX_VALUE, Set.of());
+
+    assertThrows(
+        UnsupportedOperationException.class,
+        () -> result.captured().add(new BlockPos(1, 1, 1)));
+
+    assertEquals(1, result.captured().size());
   }
 
   @Test

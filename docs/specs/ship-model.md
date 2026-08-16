@@ -60,12 +60,12 @@ Success looks like: a `Ship` is a pure, unit-testable description of a build (or
 
 ### Current notes
 
-- `ShipScanner` returns `ScanResult` whose block list is not defensively copied; callers treat it read-only.
+- `ShipScanner` returns `ScanResult` with a single defensive copy of captured positions; the accessor returns that immutable stored list.
 - `config.yml` + loader defaults: max 2048 blocks, target distance 8, `buoyancy-enabled true`, `physics-ticks 1`, `bob-amplitude 0.5`, `max-rise 16`, `block-density 0.5`, `water-density 1.0`, `gravity 0.05`, `damping 0.9`.
 
 ## Next
 
-- [ ] Scan result defensively copied or documented as unmodifiable (contract hardening)
+- [x] Scan result defensively copied; `captured()` exposes the immutable stored list
 
 ## Future
 
