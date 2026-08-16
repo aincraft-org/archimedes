@@ -206,24 +206,16 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     ShipRuntimeException failure = null;
     try {
       for (Shulker shulker : java.util.List.copyOf(world.getEntitiesByClass(Shulker.class))) {
-        if (shulker.getPersistentDataContainer().has(ownerKey, PersistentDataType.STRING)) {
-          UUID shipId = parseShipId(shulker);
-          try {
+        try {
+          if (shulker.getPersistentDataContainer().has(ownerKey, PersistentDataType.STRING)) {
+            UUID shipId = parseShipId(shulker);
             removeOneTagged(
                 shulker,
                 "collision tagged removal failed"
                     + (shipId == null ? "" : " for ship " + shipId));
-          } catch (RuntimeException cleanup) {
-            ShipRuntimeException normalized =
-                cleanup instanceof ShipRuntimeException
-                    ? (ShipRuntimeException) cleanup
-                    : new ShipRuntimeException("collision tagged removal failed", cleanup);
-            if (failure == null) {
-              failure = normalized;
-            } else {
-              failure.addSuppressed(normalized);
-            }
           }
+        } catch (RuntimeException cleanup) {
+          failure = aggregateRemoval(failure, cleanup);
         }
       }
     } catch (RuntimeException current) {

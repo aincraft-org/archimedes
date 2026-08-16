@@ -22,6 +22,50 @@ import org.junit.jupiter.api.Test;
 
 class BukkitCollisionVolumeManagerTest {
   @Test
+  void removeAllContinuesAfterTaggedMetadataFailure() {
+    RuntimeException metadata = new IllegalStateException("metadata");
+    java.util.concurrent.atomic.AtomicInteger removals = new java.util.concurrent.atomic.AtomicInteger();
+    Shulker first =
+        proxy(
+            Shulker.class,
+            (ignored, method, args) -> {
+              if (method.getName().equals("getPersistentDataContainer")) throw metadata;
+              return defaultValue(method.getReturnType());
+            });
+    Shulker second =
+        proxy(
+            Shulker.class,
+            (ignored, method, args) -> {
+              if (method.getName().equals("remove")) {
+                removals.incrementAndGet();
+                return null;
+              }
+              if (method.getName().equals("getPersistentDataContainer")) {
+                return proxy(
+                    org.bukkit.persistence.PersistentDataContainer.class,
+                    (container, containerMethod, containerArgs) ->
+                        containerMethod.getName().equals("has")
+                            ? true
+                            : defaultValue(containerMethod.getReturnType()));
+              }
+              return defaultValue(method.getReturnType());
+            });
+    World world =
+        proxy(
+            World.class,
+            (ignored, method, args) ->
+                method.getName().equals("getEntitiesByClass")
+                    ? List.of(first, second)
+                    : defaultValue(method.getReturnType()));
+
+    BukkitCollisionVolumeManager manager =
+        new BukkitCollisionVolumeManager(world, new NamespacedKey("ships", "collision"));
+
+    ShipRuntimeException thrown = assertThrows(ShipRuntimeException.class, manager::removeAll);
+    assertSame(metadata, thrown.getCause());
+    assertEquals(1, removals.get());
+  }
+  @Test
   void spawnNormalizesGenericRuntimeAndCleansEveryLocal() {
     UUID shipId = UUID.randomUUID();
     RuntimeException failure = new IllegalStateException("spawn");
@@ -33,7 +77,6 @@ class BukkitCollisionVolumeManagerTest {
     ShipRuntimeException thrown =
         assertThrows(
             ShipRuntimeException.class, () -> manager.spawn(shipWithTwoBlocks(shipId)));
-
     assertSame(failure, thrown.getCause());
     assertTrue(thrown.getMessage().contains(shipId.toString()));
     assertTrue(thrown.getSuppressed().length > 0);
