@@ -22,18 +22,18 @@ Success looks like: every subcommand has a permission, explicit error messages f
 ### Out of scope / non-goals
 
 - Command implementation of ship logic (assembly, disassembly, buoyancy — delegate to `ShipService`)
-- Permissions beyond the six declared nodes (`ships.command` parent + five subnodes)
+- Permissions beyond the six declared nodes (`archimedes.command` parent + five subnodes)
 - Console execution (player-only by design)
 
 ## Commands
 
 | Command | Permission | Behavior |
 |---------|-----------|----------|
-| `/ship assemble` | `ships.assemble` | Target block → `service.assembleAt` |
-| `/ship inspect` | `ships.inspect` | `findOwnedInWorld`; reports ship ID prefix + block count |
-| `/ship disassemble` | `ships.disassemble` | Owner or operator only |
-| `/ship buoyancy` | `ships.buoyancy` | Toggle for the requester's owned ship in the current world (`toggleBuoyancy(requester, world)` — not line-of-sight-targeted) |
-| `/ship sink <n>` | `ships.sink` | Positive integer parse; extra args silently ignored (no arity validation); delegates to service |
+| `/ship assemble` | `archimedes.assemble` | Target block → `service.assembleAt` |
+| `/ship inspect` | `archimedes.inspect` | `findOwnedInWorld`; reports ship ID prefix + block count |
+| `/ship disassemble` | `archimedes.disassemble` | Owner or operator only |
+| `/ship buoyancy` | `archimedes.buoyancy` | Toggle for the requester's owned ship in the current world (`toggleBuoyancy(requester, world)` — not line-of-sight-targeted) |
+| `/ship sink <n>` | `archimedes.sink` | Positive integer parse; extra args silently ignored (no arity validation); delegates to service |
 
 - Assembly delegates only after service world policy: non-bound targets fail first with `Ship assembly is not permitted in this world`; the configured primary world then fails with `Ship assembly is disabled in this world` when disabled. Both failures occur before scanner or world mutation.
 - Player-facing assembly errors retain the service reason after the command's `Cannot assemble: ` prefix.
@@ -46,7 +46,7 @@ Success looks like: every subcommand has a permission, explicit error messages f
 
 ## Current
 
-- [x] Five subcommands routed with five per-subcommand checks, plus the Bukkit-enforced parent `ships.command` (`plugin.yml` `permission:` field) — six effective nodes, all `default: true`
+- [x] Five subcommands routed with five per-subcommand checks, plus the Bukkit-enforced parent `archimedes.command` (`plugin.yml` `permission:` field) — six effective nodes, all `default: true`
 - [x] Player-only enforcement: single entry check gates all subcommands with one generic message (`Only players can build ships.`)
 - [x] Line-of-sight targeting capped at `target-distance` — assemble only
 - [x] Tab completion of subcommands
@@ -59,7 +59,7 @@ Success looks like: every subcommand has a permission, explicit error messages f
 ## Next
 
  - [x] Inspect output decision: retain `Ship <8-char id> | blocks=<count>`; no owner/origin fields are required (2026-08-16).
- - [ ] Consider op-only default for `ships.command` if shared-server deployment needs it (currently `default: true`)
+ - [ ] Consider op-only default for `archimedes.command` if shared-server deployment needs it (currently `default: true`)
  - [ ] Add argument completion for `sink` (positive integer)
 
 ## Future

@@ -1,6 +1,6 @@
-# Ships Plugin — Specs Index
+# Archimedes Plugin — Specs Index
 
-Maintained living specs for the Ships Paper plugin (`dev.jlo.ships`, Paper 26.2, Java 25). Update these files when design intent, invariants, or feature progress changes. Dated one-shot design docs and plans live under `docs/superpowers/` and are historical; these specs are the current authority.
+Maintained living specs for the Archimedes Paper plugin (`dev.jlo.archimedes`, Paper 26.2, Java 25). Update these files when design intent, invariants, or feature progress changes. Dated one-shot design docs and plans live under `docs/superpowers/` and are historical; these specs are the current authority.
 
 ## Domains
 
@@ -13,9 +13,9 @@ Maintained living specs for the Ships Paper plugin (`dev.jlo.ships`, Paper 26.2,
 
 ## Cross-cutting facts (all domains)
 
-- Pattern: Gradle submodules `api` (public models and domain interfaces), `common` (`implementation` of `api`; Paper-free services/math/store), and `paper` (`implementation` of `common`; `JavaPlugin`, Bukkit adapters, commands, `plugin.yml`). Domain interfaces live in `dev.jlo.ships.{model,ship,collision,buoyancy,scan,config}`; Bukkit adapters live in `dev.jlo.ships.bukkit`. `paperweight` / `run-paper` apply only on `paper`. `TargetResolver` still mentions Bukkit `Player` and stays on `api` with `compileOnly` `paper-api`, not `paperweight`. `ShipRuntimeImpl.removeAllTagged()` delegates through domain interfaces rather than type-checking adapters.
+- Pattern: Gradle submodules `api` (public models and domain interfaces), `common` (`implementation` of `api`; Paper-free services/math/store), and `paper` (`implementation` of `common`; `JavaPlugin`, Bukkit adapters, commands, `plugin.yml`). Domain interfaces live in `dev.jlo.archimedes.{model,ship,collision,buoyancy,scan,config}`; Bukkit adapters live in `dev.jlo.archimedes.bukkit`. `paperweight` / `run-paper` apply only on `paper`. `TargetResolver` still mentions Bukkit `Player` and stays on `api` with `compileOnly` `paper-api`, not `paperweight`. `ShipRuntimeImpl.removeAllTagged()` delegates through domain interfaces rather than type-checking adapters.
 - Canonical transform is the canonical projection for rendering and hulls: visual = `origin + y + relative`; authoritative cell = `origin + floor(y) + relative`; collision anchor = visual `+ (0.5,0,0.5)`. World-boundary code may derive integer cells from `origin + floor(pose)` but must not duplicate visual/anchor arithmetic.
-- Entities are non-persistent; `ships.json` is the single persistence authority; restart reconstructs deterministically.
+- Entities are non-persistent; `archimedes.json` is the single persistence authority (`ships.json` is still read when the new file is absent); restart reconstructs deterministically.
 - Mutations are transactional: validate → mutate → persist on the happy path; rollback is scoped to `ShipRuntimeException` (spawn/move) with suppressed cleanup failures; `remove`/`removeAll`/collision removal propagate directly. Unchecked adapter/entity failures may bypass cleanup.
 - Current runtime is bound to the primary Bukkit world only. Command resolution may identify another world, but assembly there is rejected; cross-world runtime support remains Future. `disabled-worlds` rejects the bound world before scanning or mutation.
 - Ownership: ships are player-owned; disassembly requires owner or operator.
@@ -25,7 +25,7 @@ Maintained living specs for the Ships Paper plugin (`dev.jlo.ships`, Paper 26.2,
 ## Known debt & stale docs (tracked in per-domain specs)
 
 - `docs/superpowers/specs/2026-08-13-ship-building-design.md` is stale (immutable ships, barrier decks, capability checks, inspect reports owner+origin).
-- `ships.json` has no schema version; compatibility via optional fields only (see ship-model).
+- `archimedes.json` has no schema version; compatibility via optional fields only (see ship-model).
 
 ## How to update
 

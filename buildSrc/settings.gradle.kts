@@ -1,1 +1,1 @@
-rootProject.name = "ships-build-src"
+rootProject.name = "archimedes-build-src"

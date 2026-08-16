@@ -1,5 +1,5 @@
 plugins {
-    id("ships.java-conventions")
+    id("archimedes.java-conventions")
 }
 
 dependencies {

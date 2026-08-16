@@ -1,7 +1,7 @@
 import io.papermc.paperweight.userdev.ReobfArtifactConfiguration
 
 plugins {
-    id("ships.java-conventions")
+    id("archimedes.java-conventions")
     id("io.papermc.paperweight.userdev")
     id("xyz.jpenilla.run-paper")
 }
@@ -21,7 +21,7 @@ fun Project.mainOutput() =
 tasks.jar {
     from(project(":api").mainOutput())
     from(project(":common").mainOutput())
-    archiveFileName.set("ships-${project.version}.jar")
+    archiveFileName.set("archimedes-${project.version}.jar")
 }
 
 tasks {

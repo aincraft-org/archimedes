@@ -57,10 +57,10 @@ Success looks like: a ship floats at the shallowest water it sits in, bobs gentl
 - [x] Per-block waterline sampling, shallowest-surface rule, submerged-volume counting
 - [x] Manual `/ship sink N` (path-checked; may pass below waterline)
 - [x] Buoyancy toggle per ship (`/ship buoyancy`)
-- [x] Pose persisted in `ships.json`; legacy load `y=0`
+- [x] Pose persisted in `archimedes.json`; leftover `ships.json` still loads; missing pose → `y=0`
 - [x] Disassembly restores at `origin + anchorDy`
 - [x] Blocked-path rejection: tick resets velocity; rise/sink reject without clearing velocity (checked individually — see Next); runtime failure restores pose only
-- [x] Constants configurable via `ShipConfig`/loader + `ShipsPlugin` engine wiring: `physics-ticks`, `bob-amplitude`, `max-rise`, `gravity`, `water-density`, `block-density`, `damping`
+- [x] Constants configurable via `ShipConfig`/loader + `ArchimedesPlugin` engine wiring: `physics-ticks`, `bob-amplitude`, `max-rise`, `gravity`, `water-density`, `block-density`, `damping`
 
 ### Current notes
 
@@ -73,7 +73,7 @@ Success looks like: a ship floats at the shallowest water it sits in, bobs gentl
 - [ ] Verify footprint behavior: `Δdraft ≈ Δmass ÷ (waterDensity × footprint)` within the approved discrete tolerance
 - [x] Keep positive manual sink unbounded below the waterline with velocity untouched; command, service, and domain boundaries reject non-positive distances
 - [x] Decide rise/sink velocity semantics: currently only `tick` resets velocity on blocked path; `rise`/`sink` reject without clearing
-- [x] Approve material/rider equilibrium contract: config-only densities, runtime-only tracked-player mass, no `ships.json` schema change, separate validated `max-fall` default `16.0`, and deterministic overloaded descent/clamp
+- [x] Approve material/rider equilibrium contract: config-only densities, runtime-only tracked-player mass, no `archimedes.json` schema change, separate validated `max-fall` default `16.0`, and deterministic overloaded descent/clamp
 - [x] Document settling behavior: sub-0.001 move threshold stores velocity and returns false (no move, no path check)
 - [ ] Record live acceptance: assemble hull in water, observe rise/bob, restart reconstructs at floated position, disassemble restores at floated position
 
@@ -101,5 +101,5 @@ Success looks like: a ship floats at the shallowest water it sits in, bobs gentl
 - [x] Material model: validated namespaced per-material density table with positive finite default fallback
 - [x] Rider scope: tracked players only, fixed positive finite configured mass, runtime-only
 - [x] Equilibrium: bounded deterministic force-balance interpolation with immutable diagnostic result
-- [x] Persistence: configuration-only density and runtime-only rider state; no `ships.json` schema change
+- [x] Persistence: configuration-only density and runtime-only rider state; no `archimedes.json` schema change
 - [ ] Should equilibrium consider water *inside* the hull (columns over air pockets)? This is outside the approved first implementation.

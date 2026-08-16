@@ -12,6 +12,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ships"
+rootProject.name = "archimedes"
 
 include("api", "common", "paper")

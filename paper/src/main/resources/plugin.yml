@@ -1,6 +1,6 @@
-name: Ships
+name: Archimedes
 version: '${version}'
-main: dev.jlo.ships.ShipsPlugin
+main: dev.jlo.archimedes.ArchimedesPlugin
 description: Build persistent display-and-collision ships
 api-version: '26.2'
 author: jlo
@@ -8,23 +8,23 @@ commands:
   ship:
     description: Build and manage ships
     usage: /ship assemble|inspect|disassemble|buoyancy|sink
-    permission: ships.command
+    permission: archimedes.command
 permissions:
-  ships.command:
+  archimedes.command:
     description: Base ship command access
     default: true
-  ships.assemble:
+  archimedes.assemble:
     description: Assemble ships
     default: true
-  ships.inspect:
+  archimedes.inspect:
     description: Inspect ships
     default: true
-  ships.disassemble:
+  archimedes.disassemble:
     description: Disassemble ships
     default: true
-  ships.buoyancy:
+  archimedes.buoyancy:
     description: Toggle ship buoyancy
     default: true
-  ships.sink:
+  archimedes.sink:
     description: Lower a ship
     default: true
