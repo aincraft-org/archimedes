@@ -28,6 +28,9 @@ class ShipServiceImplTest {
   /** Tagged runtime sweep marker. */
   private static final String SWEEP = "sweep";
 
+  private static final String REMOVE_CALL = "remove";
+  private static final String RESTORE_CALL = "restore";
+
   /** Single-block origin key. */
   private static final String ORIGIN_KEY = "100,200,300";
 
@@ -96,7 +99,7 @@ class ShipServiceImplTest {
   }
 
   /** Buoyancy fake recording calls. */
-  private static final class RecordingBuoyancy implements dev.jlo.ships.buoyancy.Buoyancy {
+  private static class RecordingBuoyancy implements dev.jlo.ships.buoyancy.Buoyancy {
     final List<String> calls = new ArrayList<>();
     boolean riseFails;
 
@@ -315,6 +318,148 @@ class ShipServiceImplTest {
     assertTrue(failure.getMessage().contains(second.id().toString()));
     assertEquals(1, fakes.removedRuntime.size());
     assertEquals(first.id(), fakes.removedRuntime.get(0).id());
+    assertTrue(service.all().isEmpty());
+  }
+
+  @Test
+  void rollbackContinuesAfterPlainRuntimeCleanupFailures() {
+    ShipRuntime failingRuntime =
+        new ShipRuntime() {
+          @Override
+          public void spawn(Ship ship) {}
+
+          @Override
+          public void move(Ship ship, double oldY, double newY) {}
+
+          @Override
+          public void remove(Ship ship) {
+            throw new IllegalStateException(REMOVE_CALL);
+          }
+
+          @Override
+          public void removeAll(Collection<Ship> ships) {}
+        };
+    RecordingBuoyancy buoyancy =
+        new RecordingBuoyancy() {
+          @Override
+          public void clear(Ship ship) {
+            calls.add(CLEAR_CALL);
+            throw new IllegalStateException("clear");
+          }
+        };
+    WorldMutator mutator =
+        new WorldMutator() {
+          @Override
+          public String blockDataAt(int x, int y, int z) {
+            return STONE;
+          }
+
+          @Override
+          public boolean clearBlocks(Ship ship) {
+            return true;
+          }
+
+          @Override
+          public boolean restoreBlocks(Ship ship) {
+            throw new IllegalStateException(RESTORE_CALL);
+          }
+
+          @Override
+          public boolean validateRestore(Ship ship) {
+            return true;
+          }
+
+          @Override
+          public String lastError() {
+            return RESTORE_CALL;
+          }
+        };
+    ShipService service =
+        new ShipServiceImpl(
+            new ShipStoreLike() {
+              public Map<UUID, Ship> loadAll() {
+                return Map.of();
+              }
+
+              @Override
+              public void saveAll(Map<UUID, Ship> ships) {
+                throw new IllegalStateException("persist");
+              }
+            },
+            (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
+            failingRuntime,
+            mutator,
+            buoyancy,
+            true,
+            true,
+            WORLD);
+
+    assertThrows(ShipRuntimeException.class, () -> service.assembleAt(OWNER, 100, 200, 300, WORLD));
+    assertEquals(List.of("rise", CLEAR_CALL), buoyancy.calls);
+    assertEquals("Assembly failed: persist", service.lastError());
+  }
+
+  @Test
+  void loadAllContinuesAfterPlainRuntimeCleanupFailures() {
+    Fakes fakes = new Fakes();
+    Ship first = ship(fakes);
+    Ship second = ship(fakes);
+    Map<UUID, Ship> persisted = new java.util.LinkedHashMap<>();
+    persisted.put(first.id(), first);
+    persisted.put(second.id(), second);
+    List<String> calls = new ArrayList<>();
+    ShipRuntime runtime =
+        new ShipRuntime() {
+          @Override
+          public void spawn(Ship ship) {
+            calls.add("spawn-" + ship.id());
+            if (ship.id().equals(second.id())) {
+              throw new IllegalStateException("spawn");
+            }
+          }
+
+          @Override
+          public void move(Ship ship, double oldY, double newY) {}
+
+          @Override
+          public void remove(Ship ship) {
+            calls.add(REMOVE_CALL);
+            throw new IllegalStateException(REMOVE_CALL);
+          }
+
+          @Override
+          public void removeAll(Collection<Ship> ships) {}
+
+          @Override
+          public void removeAllTagged() {
+            calls.add(SWEEP);
+            if (calls.contains(REMOVE_CALL)) {
+              throw new IllegalStateException(SWEEP);
+            }
+          }
+        };
+    ShipService service =
+        new ShipServiceImpl(
+            new ShipStoreLike() {
+              @Override
+              public Map<UUID, Ship> loadAll() {
+                return persisted;
+              }
+
+              @Override
+              public void saveAll(Map<UUID, Ship> ships) {}
+            },
+            (x, y, z) -> List.of(),
+            runtime,
+            fakes,
+            new RecordingBuoyancy(),
+            false,
+            true,
+            WORLD);
+
+    assertThrows(IllegalStateException.class, service::loadAll);
+    assertEquals(
+        List.of(SWEEP, "spawn-" + first.id(), "spawn-" + second.id(), REMOVE_CALL, SWEEP), calls);
     assertTrue(service.all().isEmpty());
   }
 

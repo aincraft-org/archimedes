@@ -133,6 +133,7 @@ public final class ShipServiceImpl implements ShipService {
     }
   }
 
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   private void rollback(
       Ship ship, ShipRuntimeException failure, boolean runtimeStarted, boolean buoyancyStarted) {
     boolean restored = true;
@@ -141,32 +142,32 @@ public final class ShipServiceImpl implements ShipService {
         restored = false;
         failure.addSuppressed(new IllegalStateException(mutator.lastError()));
       }
-    } catch (ShipRuntimeException cleanup) {
+    } catch (RuntimeException cleanup) {
       restored = false;
-      failure.addSuppressed(cleanup);
+      failure.addSuppressed(normalizeCleanup(cleanup));
     }
     if (runtimeStarted) {
       try {
         runtime.remove(ship);
-      } catch (ShipRuntimeException cleanup) {
+      } catch (RuntimeException cleanup) {
         restored = false;
-        failure.addSuppressed(cleanup);
+        failure.addSuppressed(normalizeCleanup(cleanup));
       }
     }
     if (buoyancyStarted) {
       try {
         buoyancy.clear(ship);
-      } catch (ShipRuntimeException cleanup) {
+      } catch (RuntimeException cleanup) {
         restored = false;
-        failure.addSuppressed(cleanup);
+        failure.addSuppressed(normalizeCleanup(cleanup));
       }
     }
     ships.remove(ship.id());
     try {
       persistAll();
-    } catch (ShipRuntimeException cleanup) {
+    } catch (RuntimeException cleanup) {
       restored = false;
-      failure.addSuppressed(cleanup);
+      failure.addSuppressed(normalizeCleanup(cleanup));
     }
     Throwable cause = failure.getCause();
     String reason = cause == null ? failure.getMessage() : cause.getMessage();
@@ -174,6 +175,12 @@ public final class ShipServiceImpl implements ShipService {
     if (!restored) {
       throw failure;
     }
+  }
+
+  private static ShipRuntimeException normalizeCleanup(RuntimeException cleanup) {
+    return cleanup instanceof ShipRuntimeException
+        ? (ShipRuntimeException) cleanup
+        : new ShipRuntimeException(cleanup);
   }
 
   @Override
@@ -219,6 +226,7 @@ public final class ShipServiceImpl implements ShipService {
   }
 
   @Override
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   public Map<UUID, Ship> loadAll() {
     List<Ship> spawned = new ArrayList<>();
     Ship current = null;
@@ -237,20 +245,20 @@ public final class ShipServiceImpl implements ShipService {
         ships.put(ship.id(), ship);
       }
       return ships;
-    } catch (ShipRuntimeException failure) {
+    } catch (RuntimeException failure) {
       primary = failure;
     }
     for (Ship ship : spawned) {
       try {
         runtime.remove(ship);
-      } catch (ShipRuntimeException cleanup) {
-        primary.addSuppressed(cleanup);
+      } catch (RuntimeException cleanup) {
+        primary.addSuppressed(normalizeCleanup(cleanup));
       }
     }
     try {
       runtime.removeAllTagged();
-    } catch (ShipRuntimeException cleanup) {
-      primary.addSuppressed(cleanup);
+    } catch (RuntimeException cleanup) {
+      primary.addSuppressed(normalizeCleanup(cleanup));
     }
     ships.clear();
     String shipId = current == null ? "unknown" : current.id().toString();
