@@ -45,9 +45,57 @@ class TopSurfaceIndexTest {
 
     TopSurfaceIndex index = TopSurfaceIndex.build(List.of(new BlockPos(0, 0, 0)), ship);
 
-    // Entity floating well above the 2-block upper margin.
+    // Entity floating well above the small upper contact margin.
     BoundingBox floating = new BoundingBox(100.25, 204.0, 300.25, 100.75, 205.0, 300.75);
     assertFalse(index.overlaps(floating, 0.0));
+  }
+
+  @Test
+  void noOverlapWhenEntityIsAirborne() {
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            OWNER,
+            new ShipOrigin(WORLD, 100, 200, 300),
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
+
+    TopSurfaceIndex index = TopSurfaceIndex.build(List.of(new BlockPos(0, 0, 0)), ship);
+
+    // Player mid-jump, feet one block above the top surface.
+    BoundingBox jumping = new BoundingBox(100.25, 202.0, 300.25, 100.75, 203.8, 300.75);
+    assertFalse(index.overlaps(jumping, 0.0));
+  }
+
+  @Test
+  void overlapWhenEntityIsSlightlyAboveTheTopBlock() {
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            OWNER,
+            new ShipOrigin(WORLD, 100, 200, 300),
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
+
+    TopSurfaceIndex index = TopSurfaceIndex.build(List.of(new BlockPos(0, 0, 0)), ship);
+
+    // Player bobbing or stepping within the upper contact margin while walking on the ship.
+    BoundingBox walkingBob = new BoundingBox(100.25, 201.2, 300.25, 100.75, 203.0, 300.75);
+    assertTrue(index.overlaps(walkingBob, 0.0));
+  }
+
+  @Test
+  void noOverlapWhenEntityIsJumpingOffTheTopBlock() {
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            OWNER,
+            new ShipOrigin(WORLD, 100, 200, 300),
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
+
+    TopSurfaceIndex index = TopSurfaceIndex.build(List.of(new BlockPos(0, 0, 0)), ship);
+
+    // Player at the start of a jump; their feet are above the upper contact margin.
+    BoundingBox jumping = new BoundingBox(100.25, 201.4, 300.25, 100.75, 203.2, 300.75);
+    assertFalse(index.overlaps(jumping, 0.0));
   }
 
   @Test

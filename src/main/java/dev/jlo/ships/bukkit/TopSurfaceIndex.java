@@ -21,13 +21,17 @@ final class TopSurfaceIndex {
   private final BoundingBox bounds;
 
   /**
-   * Vertical margin below the top surface used to catch entities that have just dipped into the
-   * block during an upward move.
+   * Small contact margin below the top surface. Only a tiny amount is needed to tolerate rounding
+   * or being pushed down slightly by the ship; larger values make riders clip through the floor.
    */
-  private static final double LOWER_MARGIN = 0.5;
+  private static final double LOWER_MARGIN = 0.05;
 
-  /** Vertical space above the top surface used to catch jumping entities. */
-  private static final double UPPER_MARGIN = 2.0;
+  /**
+   * Small contact margin above the top surface. Must be enough to keep a walking player on a
+   * bobbing ship, but smaller than the ~0.42 blocks/tick of an initial jump so jumping entities are
+   * not carried.
+   */
+  private static final double UPPER_MARGIN = 0.35;
 
   /**
    * Tolerance used to avoid spuriously including an adjacent cell when an AABB max sits exactly on
@@ -123,12 +127,13 @@ final class TopSurfaceIndex {
   private static boolean overlapsYShifted(BoundingBox entityBox, TopSurface surface, double poseY) {
     double minY = surface.box.getMinY() + poseY;
     double maxY = surface.box.getMaxY() + poseY;
+    double footY = entityBox.getMinY();
     return entityBox.getMinX() < surface.box.getMaxX()
         && entityBox.getMaxX() > surface.box.getMinX()
         && entityBox.getMinZ() < surface.box.getMaxZ()
         && entityBox.getMaxZ() > surface.box.getMinZ()
-        && entityBox.getMinY() < maxY
-        && entityBox.getMaxY() > minY;
+        && footY >= minY
+        && footY <= maxY;
   }
 
   private static long pack(int x, int z) {
