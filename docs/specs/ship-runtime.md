@@ -60,6 +60,7 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 ## Next
 
 - [ ] Record live collision acceptance: stand on exposed tops, hull-side blocking, no pass-through, six-directional face checks
+- Live attempt on 2026-08-16 remained blocked by an occupied server port and no connected Minecraft client; observed startup evidence and the exact reproduction matrix are recorded in `docs/superpowers/results/2026-08-16-spec-alignment-acceptance.md`. Automated hull tests do not satisfy this item.
 - [ ] Remove dead `deck/` package and stale wording once legacy references are dropped
 - [x] Guard collision `move` so volumes only teleport when the authoritative anchor changes
 - [x] Add behavioral collision-manager tests for flags, anchors, PDC/scoreboard tags, rollback, and tag cleanup
