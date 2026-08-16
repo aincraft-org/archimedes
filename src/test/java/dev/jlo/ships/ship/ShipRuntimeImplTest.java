@@ -157,6 +157,29 @@ class ShipRuntimeImplTest {
     assertEquals(0.0, carrier.carriedNewY, 0.0001);
   }
 
+  @Test
+  void spawnTracksAtCommittedPoseAndRemoveUntracks() {
+    RecordingCarrier carrier = new RecordingCarrier();
+    Ship ship = ship();
+    ship.setPose(new dev.jlo.ships.model.ShipPose(9));
+    ShipRuntime runtime =
+        new ShipRuntimeImpl(new RecordingRenderer(), new RecordingCollision(), carrier);
+    runtime.spawn(ship);
+    runtime.remove(ship);
+    assertEquals(1, carrier.tracked);
+    assertEquals(1, carrier.untracked);
+  }
+
+  @Test
+  void removeAllClearsCarrierEvenWhenRegisteredRemovalFails() {
+    RecordingCarrier carrier = new RecordingCarrier();
+    RecordingRenderer renderer = new RecordingRenderer();
+    renderer.removeFailure = true;
+    ShipRuntime runtime = new ShipRuntimeImpl(renderer, new RecordingCollision(), carrier);
+    assertThrows(RuntimeException.class, () -> runtime.removeAll(List.of(ship())));
+    assertEquals(1, carrier.cleared);
+  }
+
   private static Ship ship() {
     return new Ship(
         UUID.randomUUID(),
@@ -253,6 +276,9 @@ class ShipRuntimeImplTest {
 
   private static final class RecordingCarrier implements ShipEntityCarrier {
     int carryCount;
+    int tracked;
+    int untracked;
+    int cleared;
     double carriedOldY;
     double carriedNewY;
     private final List<String> operations;
@@ -263,6 +289,22 @@ class ShipRuntimeImplTest {
 
     RecordingCarrier(List<String> operations) {
       this.operations = operations;
+    }
+
+    @Override
+    public void track(Ship ship, double poseY) {
+      tracked++;
+      operations.add("track:" + poseY);
+    }
+
+    @Override
+    public void untrack(Ship ship) {
+      untracked++;
+    }
+
+    @Override
+    public void clear() {
+      cleared++;
     }
 
     @Override

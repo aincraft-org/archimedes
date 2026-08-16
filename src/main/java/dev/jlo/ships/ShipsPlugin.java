@@ -83,8 +83,15 @@ public final class ShipsPlugin extends JavaPlugin {
               config.buoyancyEnabled(),
               config.worldEnabled(world.getUID()),
               world.getUID());
-      registerAfterLoad(
-          service::loadAll, () -> getServer().getPluginManager().registerEvents(tracker, this));
+      try {
+        registerAfterLoad(
+            () -> service.loadAll(),
+            () -> getServer().getPluginManager().registerEvents(tracker, this));
+      } finally {
+        if (service == null) {
+          tracker.clear();
+        }
+      }
     } catch (RuntimeException failure) {
       CleanupCoordinator.handleLoadFailure(
           failure,

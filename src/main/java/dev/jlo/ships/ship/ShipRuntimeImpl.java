@@ -46,6 +46,7 @@ public final class ShipRuntimeImpl implements ShipRuntime {
       collisions.spawn(ship);
       rendererStarted = true;
       renderer.render(ship, ignored -> {});
+      carrier.track(ship, ship.pose().y());
     } catch (ShipRuntimeException failure) {
       if (rendererStarted) {
         try {
@@ -59,6 +60,7 @@ public final class ShipRuntimeImpl implements ShipRuntime {
       } catch (ShipRuntimeException cleanup) {
         failure.addSuppressed(cleanup);
       }
+      carrier.untrack(ship);
       throw failure;
     }
   }
@@ -113,23 +115,32 @@ public final class ShipRuntimeImpl implements ShipRuntime {
   public void remove(Ship ship) {
     renderer.removeRuntime(ship);
     collisions.remove(ship.id());
+    carrier.untrack(ship);
   }
 
   @Override
   public void removeAll(Collection<Ship> ships) {
-    for (Ship ship : ships) {
-      remove(ship);
+    try {
+      for (Ship ship : ships) {
+        remove(ship);
+      }
+      collisions.removeAll();
+    } finally {
+      carrier.clear();
     }
-    collisions.removeAll();
   }
 
-  /** Removes stale plugin-owned runtimes before reconstruction. */
   public void removeAllTagged() {
-    if (renderer instanceof dev.jlo.ships.bukkit.BukkitShipRenderer bukkitRenderer) {
-      bukkitRenderer.removeAllRuntime();
-    }
-    if (collisions instanceof dev.jlo.ships.bukkit.BukkitCollisionVolumeManager bukkitCollisions) {
-      bukkitCollisions.removeAllTagged();
+    try {
+      if (renderer instanceof dev.jlo.ships.bukkit.BukkitShipRenderer bukkitRenderer) {
+        bukkitRenderer.removeAllRuntime();
+      }
+      if (collisions
+          instanceof dev.jlo.ships.bukkit.BukkitCollisionVolumeManager bukkitCollisions) {
+        bukkitCollisions.removeAllTagged();
+      }
+    } finally {
+      carrier.clear();
     }
   }
 }

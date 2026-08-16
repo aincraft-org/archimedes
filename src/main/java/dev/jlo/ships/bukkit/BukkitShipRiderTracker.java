@@ -95,9 +95,15 @@ public final class BukkitShipRiderTracker implements Listener {
     }
   }
 
+  /** Clears every index and rider association. */
+  public void clear() {
+    indices.clear();
+    ridersByShip.clear();
+    shipByEntity.clear();
+  }
+
   /**
-   * Returns the set of entity ids currently on board the ship. The returned set is owned by the
-   * tracker and must not be modified by callers.
+   * Returns the set of entity ids currently on board the ship.
    *
    * @param ship the ship to query
    * @return the current riders of the ship

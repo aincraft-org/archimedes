@@ -10,11 +10,29 @@ import dev.jlo.ships.model.Ship;
  */
 public interface ShipEntityCarrier {
   /**
+   * Starts tracking a ship and seeds riders using the supplied committed pose.
+   *
+   * @param ship ship to track
+   * @param poseY committed pose used for initial overlap checks
+   */
+  default void track(Ship ship, double poseY) {}
+
+  /**
+   * Stops tracking a ship and drops its rider state.
+   *
+   * @param ship ship to untrack
+   */
+  default void untrack(Ship ship) {}
+
+  /** Clears all tracked ships and riders. */
+  default void clear() {}
+
+  /**
    * Carries eligible entities on the ship by the same vertical delta.
    *
    * @param ship ship being moved
-   * @param oldY previous pose y
-   * @param newY new pose y
+   * @param oldY old pose
+   * @param newY new pose
    */
   void carry(Ship ship, double oldY, double newY);
 }

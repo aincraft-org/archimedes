@@ -35,7 +35,8 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 - Hulls spawn at `collisionAnchor` (visual corner + 0.5 on X/Z). `move` teleports every volume on every move; rollback moves all volumes back to the old anchor.
 - `ShipRuntimeImpl` field order is renderer, collisions, carrier; **spawn order is collisions first, then renderer**. Operation order on move: upward repositions displays, carries riders, then moves collisions; downward/equal repositions displays, moves collisions, then carries riders.
 - Adapter failures in renderer and collision operations are normalized to `ShipRuntimeException` with operation and ship context where available; existing `ShipRuntimeException` instances are preserved. Only `RuntimeException` is normalized; `Error` remains uncaught.
-- Runtime spawn and move are transactional with started-step rollback; partial collision spawns remove every locally created entity and suppress cleanup failures on the primary failure. Rider transport is best-effort and does not become a ship transaction failure.
+- Carrier tracking is explicit: successful spawn tracks at the committed pose, remove untracks, and every runtime cleanup path clears tracker state.
+- Rider seed and overlap checks use the move transaction's supplied pose basis; tracker updates do not read a concurrently changing pose for that transaction.
 - No barrier/deck blocks are placed by production code (deck package is legacy).
 
 ## Implementation guidance
