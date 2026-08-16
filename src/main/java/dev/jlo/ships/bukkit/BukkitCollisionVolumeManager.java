@@ -73,14 +73,13 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
         spawned.put(relative, new BukkitShulkerCollisionVolume(ship.id(), shulker));
       }
       volumes.put(ship.id(), spawned);
-    } catch (RuntimeException failure) {
-      ShipRuntimeException normalized =
-          failure instanceof ShipRuntimeException
-              ? (ShipRuntimeException) failure
-              : new ShipRuntimeException(
-                  "Bukkit collision spawn failed for ship " + ship.id(), failure);
-      cleanupSpawned(spawned, normalized);
-      throw normalized;
+    } catch (ShipRuntimeException failure) {
+      cleanupSpawned(spawned, failure);
+      throw failure;
+    } catch (IllegalArgumentException failure) {
+      ShipRuntimeException wrapped = new ShipRuntimeException(failure);
+      cleanupSpawned(spawned, wrapped);
+      throw wrapped;
     }
   }
 
@@ -90,10 +89,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
       try {
         volume.remove();
       } catch (RuntimeException cleanup) {
-        failure.addSuppressed(
-            cleanup instanceof ShipRuntimeException
-                ? cleanup
-                : new ShipRuntimeException("Bukkit collision cleanup failed", cleanup));
+        failure.addSuppressed(cleanup);
       }
     }
   }
@@ -132,7 +128,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
       ShipTransform.CollisionAnchor anchor = entry.getValue();
       try {
         entry.getKey().move(anchor.x(), anchor.y(), anchor.z());
-      } catch (ShipRuntimeException cleanup) {
+      } catch (RuntimeException cleanup) {
         failure.addSuppressed(cleanup);
       }
     }
@@ -210,8 +206,9 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
         }
       } catch (ShipRuntimeException failure) {
         throw failure;
-      } catch (IllegalArgumentException failure) {
-        throw new ShipRuntimeException(failure);
+      } catch (RuntimeException failure) {
+        throw new ShipRuntimeException(
+            new IllegalStateException("Collision move teleport failed for ship " + shipId, failure));
       }
     }
 

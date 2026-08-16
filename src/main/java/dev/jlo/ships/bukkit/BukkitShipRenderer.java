@@ -84,7 +84,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
   private void cleanupRender(Ship ship, ShipRuntimeException failure) {
     try {
       surface.removeTagged(shipKey, ship.id().toString());
-    } catch (ShipRuntimeException cleanup) {
+    } catch (RuntimeException cleanup) {
       failure.addSuppressed(cleanup);
     }
     throw failure;
@@ -116,9 +116,17 @@ public final class BukkitShipRenderer implements ShipRendererLike {
   public void reposition(Ship ship, double oldY, double newY) {
     Map<BlockDisplay, ShipBlock> blocksByDisplay = pairDisplays(ship);
     for (Map.Entry<BlockDisplay, ShipBlock> entry : blocksByDisplay.entrySet()) {
-      surface.teleport(entry.getKey(), location(ship, entry.getValue()));
+      try {
+        surface.teleport(entry.getKey(), location(ship, entry.getValue()));
+      } catch (ShipRuntimeException failure) {
+        throw failure;
+      } catch (RuntimeException failure) {
+        throw new ShipRuntimeException(
+            new IllegalStateException("Renderer reposition teleport failed for ship " + ship.id(), failure));
+      }
     }
   }
+
 
   private org.bukkit.Location location(Ship ship, ShipBlock block) {
     ShipTransform.VisualPosition position = ShipTransform.visual(ship, block.pos());
