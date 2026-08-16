@@ -102,6 +102,8 @@ class ShipServiceImplTest {
   private static class RecordingBuoyancy implements dev.jlo.ships.buoyancy.Buoyancy {
     final List<String> calls = new ArrayList<>();
     boolean riseFails;
+    boolean tickResult;
+    boolean sinkResult = true;
 
     @Override
     public boolean rise(Ship ship) {
@@ -112,13 +114,13 @@ class ShipServiceImplTest {
     @Override
     public boolean tick(Ship ship) {
       calls.add("tick");
-      return false;
+      return tickResult;
     }
 
     @Override
     public boolean sink(Ship ship, int blocks) {
       calls.add("sink");
-      return true;
+      return sinkResult;
     }
 
     @Override
@@ -960,6 +962,79 @@ class ShipServiceImplTest {
     service.loadAll();
     service.disassemble(ship.id(), OWNER, false);
     assertTrue(buoyancy.calls.contains(CLEAR_CALL));
+  }
+  @Test
+  void tickPersistsExactlyOnceOnlyWhenAnyShipMoves() {
+    Fakes fakes = new Fakes();
+    Ship first = ship(fakes);
+    Ship second = ship(fakes);
+    fakes.persisted.put(first.id(), first);
+    fakes.persisted.put(second.id(), second);
+    RecordingBuoyancy buoyancy = new RecordingBuoyancy();
+    CountingStore store = new CountingStore(fakes);
+    ShipServiceImpl service =
+        new ShipServiceImpl(
+            store, (x, y, z) -> List.of(), runtime(fakes), fakes, buoyancy, true, true, WORLD);
+    service.loadAll();
+    store.saves = 0;
+    service.tick();
+    assertEquals(0, store.saves);
+    buoyancy.tickResult = true;
+    service.tick();
+    assertEquals(1, store.saves);
+  }
+
+  @Test
+  void togglePersistsOnce() {
+    Fakes fakes = new Fakes();
+    Ship ship = ship(fakes);
+    fakes.persisted.put(ship.id(), ship);
+    CountingStore store = new CountingStore(fakes);
+    ShipServiceImpl service =
+        new ShipServiceImpl(
+            store, (x, y, z) -> List.of(), runtime(fakes), fakes, new RecordingBuoyancy(), false, true, WORLD);
+    service.loadAll();
+    store.saves = 0;
+    assertTrue(service.toggleBuoyancy(OWNER, WORLD));
+    assertEquals(1, store.saves);
+  }
+
+  @Test
+  void sinkPersistsOnceOnSuccessAndNotOnFailure() {
+    Fakes fakes = new Fakes();
+    Ship ship = ship(fakes);
+    fakes.persisted.put(ship.id(), ship);
+    RecordingBuoyancy buoyancy = new RecordingBuoyancy();
+    CountingStore store = new CountingStore(fakes);
+    ShipServiceImpl service =
+        new ShipServiceImpl(
+            store, (x, y, z) -> List.of(), runtime(fakes), fakes, buoyancy, true, true, WORLD);
+    service.loadAll();
+    store.saves = 0;
+    assertTrue(service.sink(OWNER, WORLD, 1));
+    assertEquals(1, store.saves);
+    buoyancy.sinkResult = false;
+    assertFalse(service.sink(OWNER, WORLD, 1));
+    assertEquals(1, store.saves);
+  }
+
+  private static final class CountingStore implements ShipStoreLike {
+    private final Fakes fakes;
+    int saves;
+
+    CountingStore(Fakes fakes) {
+      this.fakes = fakes;
+    }
+
+    public Map<UUID, Ship> loadAll() {
+      return fakes.persisted;
+    }
+
+    public void saveAll(Map<UUID, Ship> ships) {
+      saves++;
+      fakes.persisted.clear();
+      fakes.persisted.putAll(ships);
+    }
   }
 
   private record MemoryStore(Fakes fakes) implements ShipStoreLike {

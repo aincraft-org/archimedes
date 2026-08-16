@@ -71,9 +71,9 @@ Success looks like: a ship floats at the shallowest water it sits in, bobs gentl
 
 - [ ] Aggregate per-material mass plus rider load, with equilibrium solved from displaced water. This replaces the current geometry-based waterline equilibrium; boarding should change draft.
 - [ ] Verify surface-area behavior from the displacement model: `Δdraft ≈ Δmass ÷ (waterDensity × footprint)` in tests
-- [ ] Decide whether to keep free `sink` (already implemented; negative allowed, velocity untouched) or clamp at the waterline per the old dated contract, and add missing velocity-clear/negative-input coverage
-- [ ] Decide rise/sink velocity semantics: currently only `tick` resets velocity on blocked path; `rise`/`sink` reject without clearing
-- [ ] Document settling behavior: sub-0.001 move threshold stores velocity and returns false (no move, no path check)
+- [x] Decide whether to keep free `sink` (already implemented; negative allowed, velocity untouched) or clamp at the waterline per the old dated contract, and add missing velocity-clear/negative-input coverage — Current contract keeps free sink; public command accepts positive integers and service validation remains defensive.
+- [x] Decide rise/sink velocity semantics: currently only `tick` resets velocity on blocked path; `rise`/`sink` reject without clearing
+- [x] Document settling behavior: sub-0.001 move threshold stores velocity and returns false (no move, no path check)
 - [ ] Record live acceptance: assemble hull in water, observe rise/bob, restart reconstructs at floated position, disassemble restores at floated position
 
 ## Future

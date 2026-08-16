@@ -113,4 +113,29 @@ class BuoyancyResolverTest {
     Ship ship = shipAt(new ShipPose(0), new BlockPos(0, 0, 0), new BlockPos(1, 0, 0));
     assertEquals(203, BuoyancyResolver.waterSurfaceY(ship, surface));
   }
+  @Test
+  void fractionalNegativeAnchorDyShiftsSamplingWindow() {
+    FakeSurface surface = new FakeSurface();
+    surface.water.add("100,204,300");
+    Ship ship = shipAt(new ShipPose(-0.5), new BlockPos(0, 0, 0));
+
+    assertEquals(204, BuoyancyResolver.waterSurfaceY(ship, surface));
+  }
+
+  @Test
+  void sealedColumnIgnoresWaterBelowSolid() {
+    FakeSurface surface = new FakeSurface();
+    surface.solid.add("100,205,300");
+    surface.water.add("100,204,300");
+    Ship ship = shipAt(new ShipPose(0), new BlockPos(0, 0, 0));
+
+    assertEquals(BuoyancyResolver.NO_WATER, BuoyancyResolver.waterSurfaceY(ship, surface));
+  }
+
+  @Test
+  void noWaterEquilibriumIsZero() {
+    Ship ship = shipAt(new ShipPose(7), new BlockPos(0, 0, 0));
+
+    assertEquals(0.0, BuoyancyResolver.equilibriumY(ship, new FakeSurface()));
+  }
 }
