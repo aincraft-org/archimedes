@@ -1,6 +1,7 @@
 package dev.jlo.ships.ship;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -37,6 +38,34 @@ class ShipRuntimeImplTest {
     ShipRuntime runtime = new ShipRuntimeImpl(renderer, collision);
     assertThrows(RuntimeException.class, () -> runtime.spawn(ship()));
     assertEquals(1, collision.removed);
+  }
+
+  @Test
+  void spawnCollisionFailureAttemptsOnlyCollisionCleanup() {
+    RecordingRenderer renderer = new RecordingRenderer();
+    RecordingCollision collision = new RecordingCollision();
+    collision.spawnFailure = true;
+    ShipRuntimeException failure =
+        assertThrows(
+            ShipRuntimeException.class,
+            () -> new ShipRuntimeImpl(renderer, collision).spawn(ship()));
+    assertEquals(0, renderer.rendered);
+    assertEquals(1, collision.removed);
+    assertEquals(0, failure.getSuppressed().length);
+  }
+
+  @Test
+  void spawnCleanupFailuresAreSuppressedOnPrimaryFailure() {
+    RecordingRenderer renderer = new RecordingRenderer();
+    renderer.renderFailure = true;
+    renderer.removeFailure = true;
+    RecordingCollision collision = new RecordingCollision();
+    collision.removeFailure = true;
+    ShipRuntimeException failure =
+        assertThrows(
+            ShipRuntimeException.class,
+            () -> new ShipRuntimeImpl(renderer, collision).spawn(ship()));
+    assertEquals(2, failure.getSuppressed().length);
   }
 
   @Test
@@ -124,6 +153,7 @@ class ShipRuntimeImplTest {
   private static final class RecordingRenderer implements ShipRendererLike {
     int rendered;
     boolean renderFailure;
+    boolean removeFailure;
     private final List<String> operations;
 
     RecordingRenderer() {
@@ -144,16 +174,20 @@ class ShipRuntimeImplTest {
     }
 
     @Override
-    public void removeRuntime(Ship ship) {}
+    public void removeRuntime(Ship ship) {
+      if (removeFailure) {
+        throw new ShipRuntimeException(new IllegalStateException("renderer cleanup"));
+      }
+    }
 
     @Override
     public void reposition(Ship ship, double oldY, double newY) {
       operations.add("renderer:" + oldY + "->" + newY);
     }
   }
-
   private static final class RecordingCollision implements CollisionVolumeManager {
     int removed;
+    boolean removeFailure;
     boolean spawnFailure;
     boolean moveFailure;
     boolean rolledBack;
@@ -170,6 +204,7 @@ class ShipRuntimeImplTest {
     @Override
     public void spawn(Ship ship) {
       if (spawnFailure) {
+
         throw new ShipRuntimeException(new IllegalStateException(COLLISION_MOVE));
       }
     }
@@ -187,12 +222,13 @@ class ShipRuntimeImplTest {
       rolledBack = true;
       operations.add(COLLISION_ROLLBACK);
     }
-
     @Override
     public void remove(UUID shipId) {
       removed++;
+      if (removeFailure) {
+        throw new ShipRuntimeException(new IllegalStateException("collision cleanup"));
+      }
     }
-
     @Override
     public void removeAll() {}
   }

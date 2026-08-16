@@ -108,29 +108,67 @@ public final class ShipServiceImpl implements ShipService {
       lastError = mutator.lastError();
       return null;
     }
+    boolean runtimeStarted = false;
+    boolean buoyancyStarted = false;
     try {
+      runtimeStarted = true;
       runtime.spawn(ship);
       ships.put(ship.id(), ship);
-      if (buoyancyEnabled && !buoyancy.rise(ship)) {
-        rollback(ship, "Buoyancy path blocked");
-        return null;
+      if (buoyancyEnabled) {
+        buoyancyStarted = true;
+        if (!buoyancy.rise(ship)) {
+          throw new ShipRuntimeException(new IllegalStateException("Buoyancy path blocked"));
+        }
       }
       persistAll();
       return ships.get(ship.id());
     } catch (ShipRuntimeException failure) {
-      rollback(ship, failure.getMessage());
+      rollback(ship, failure, runtimeStarted, buoyancyStarted);
       return null;
     }
   }
 
-  private void rollback(Ship ship, String message) {
-    mutator.restoreBlocks(ship);
-    runtime.remove(ship);
-    buoyancy.clear(ship);
+  private void rollback(
+      Ship ship, ShipRuntimeException failure, boolean runtimeStarted, boolean buoyancyStarted) {
+    boolean restored = true;
+    try {
+      if (!mutator.restoreBlocks(ship)) {
+        restored = false;
+        failure.addSuppressed(new IllegalStateException(mutator.lastError()));
+      }
+    } catch (RuntimeException cleanup) {
+      restored = false;
+      failure.addSuppressed(cleanup);
+    }
+    if (runtimeStarted) {
+      try {
+        runtime.remove(ship);
+      } catch (RuntimeException cleanup) {
+        restored = false;
+        failure.addSuppressed(cleanup);
+      }
+    }
+    if (buoyancyStarted) {
+      try {
+        buoyancy.clear(ship);
+      } catch (RuntimeException cleanup) {
+        restored = false;
+        failure.addSuppressed(cleanup);
+      }
+    }
     ships.remove(ship.id());
-    persistAll();
-    lastError = "Assembly failed: " + message;
+    try {
+      persistAll();
+    } catch (RuntimeException cleanup) {
+      restored = false;
+      failure.addSuppressed(cleanup);
+    }
+    lastError = "Assembly failed: " + failure.getCause().getMessage();
+    if (!restored) {
+      throw failure;
+    }
   }
+
 
   @Override
   public Ship findOwnedInWorld(UUID playerId, UUID targetWorldId) {

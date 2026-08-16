@@ -37,7 +37,7 @@ Success looks like: exact visual alignment to canonical block corners, player-so
   - downward/equal: reposition displays → move collisions → carry riders
 - Renderer and collision adapter `RuntimeException` failures are normalized to `ShipRuntimeException` messages naming the operation and ship ID; existing `ShipRuntimeException` instances are preserved without double wrapping, while `Error` remains uncaught.
 - Collision spawn publishes per-ship volumes only after all entities are created. Partial spawn removes every locally created entity and suppresses cleanup failures on the primary failure. Collision and renderer removal APIs also normalize adapter failures with operation/ship context; multi-entity removals continue attempting later entities and attach cleanup failures as suppressed.
-- Spawn and move rollback behavior uses the normalized exception boundary; rider transport remains best-effort and does not become a ship-transaction failure.
+- Spawn and move rollback uses the normalized exception boundary and undoes only started steps, preserving the primary failure while suppressing cleanup failures; service assembly cleanup restores world/model/runtime/buoyancy/persistence and escalates `ShipRuntimeException` when restoration is incomplete. Rider transport remains best-effort and does not become a ship-transaction failure.
 - No barrier/deck blocks are placed by production code (deck package is legacy; see debt below).
 
 ## Implementation guidance
@@ -54,8 +54,8 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 - [x] Canonical drift-free rendering (block-corner alignment; negative-pose coverage)
 - [x] Deterministic exposed hull (`CollisionHull.exposedBlocks`, lexicographic; `topExposedBlocks` for carrier)
 - [x] Production Shulker hull attached to spawn/move/remove lifecycle
-- [x] Transactional spawn with rollback (collisions → renderer; cleans both on `ShipRuntimeException`; adapter removal failures are normalized and multi-remove cleanup continues)
-- [x] Direction-ordered move transaction with rider reversal on rollback
+- [x] Transactional spawn with started-step rollback (collisions → renderer; cleanup failures suppressed)
+- [x] Direction-ordered move transaction with started-step rollback and rider reversal on rising rollback
 - [x] `ShipRuntime.move(oldY, newY)` multi-block and repeated-bob support
 - [x] Persistent rider tracking via Bukkit events (move/spawn/death/quit/teleport/world-change/vehicle; no disable/untrack hook wired — tracker registered after loadAll)
 - [x] Carry: Players get relative vertical velocity (momentum preserved), others teleport `(0,delta,0) PLUGIN` cause; rejected/failed teleports are swallowed with ship/entity context (best-effort, no rollback)
