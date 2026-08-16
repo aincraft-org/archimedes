@@ -46,9 +46,10 @@ class BukkitShipEntityCarrierTest {
                 });
 
     Method carryEntity =
-        BukkitShipEntityCarrier.class.getDeclaredMethod("carryEntity", Entity.class, double.class);
+        BukkitShipEntityCarrier.class.getDeclaredMethod(
+            "carryEntity", Entity.class, double.class, java.util.UUID.class);
     carryEntity.setAccessible(true);
-    carryEntity.invoke(null, entity, 0.125);
+    carryEntity.invoke(null, entity, 0.125, java.util.UUID.randomUUID());
 
     Location moved = destination.get();
     assertNotNull(moved);
@@ -138,9 +139,10 @@ class BukkitShipEntityCarrierTest {
                 });
 
     Method carryEntity =
-        BukkitShipEntityCarrier.class.getDeclaredMethod("carryEntity", Entity.class, double.class);
+        BukkitShipEntityCarrier.class.getDeclaredMethod(
+            "carryEntity", Entity.class, double.class, java.util.UUID.class);
     carryEntity.setAccessible(true);
-    carryEntity.invoke(null, player, 0.125);
+    carryEntity.invoke(null, player, 0.125, java.util.UUID.randomUUID());
 
     assertNull(destination.get());
     assertEquals(new org.bukkit.util.Vector(0.2, 0.545, -0.1), velocity.get());

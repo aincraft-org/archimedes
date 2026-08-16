@@ -84,7 +84,7 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
       if (isShipOwned(entity, shipId)) {
         continue;
       }
-      carryEntity(entity, delta);
+      carryEntity(entity, delta, ship.id());
     }
   }
 
@@ -99,7 +99,7 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
     return shipId.equals(render);
   }
 
-  private static void carryEntity(Entity entity, double delta) {
+  private static void carryEntity(Entity entity, double delta, UUID shipId) {
     if (entity instanceof Player) {
       entity.setVelocity(entity.getVelocity().add(new org.bukkit.util.Vector(0, delta, 0)));
       return;
@@ -121,39 +121,11 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
           TeleportFlag.Relative.VELOCITY_Y,
           TeleportFlag.Relative.VELOCITY_Z)) {
         Bukkit.getLogger()
-            .finest(
-                "Ship carry teleport rejected for ship "
-                    + shipIdForLog(entity)
-                    + " and entity "
-                    + entity.getUniqueId());
+            .finest("Ship " + shipId + " carry teleport rejected for " + entity.getUniqueId());
       }
     } catch (IllegalArgumentException | IllegalStateException failure) {
       Bukkit.getLogger()
-          .finest(
-              "Ship carry teleport failed for ship "
-                  + shipIdForLog(entity)
-                  + " and entity "
-                  + entity.getUniqueId());
-    }
-  }
-  private static String shipIdForLog(Entity entity) {
-    try {
-      String collision =
-          entity
-              .getPersistentDataContainer()
-              .get(
-                  new org.bukkit.NamespacedKey("ships", "collision-owner"),
-                  PersistentDataType.STRING);
-      if (collision != null) {
-        return collision;
-      }
-      String render =
-          entity
-              .getPersistentDataContainer()
-              .get(new org.bukkit.NamespacedKey("ships", "ship-id"), PersistentDataType.STRING);
-      return render == null ? "<unknown>" : render;
-    } catch (RuntimeException ignored) {
-      return "<unknown>";
+          .finest("Ship " + shipId + " carry teleport failed for " + entity.getUniqueId());
     }
   }
 }
