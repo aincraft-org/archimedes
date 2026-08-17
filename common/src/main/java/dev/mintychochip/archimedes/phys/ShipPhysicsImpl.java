@@ -5,7 +5,9 @@ import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipPose;
 import dev.mintychochip.archimedes.ship.ShipRuntime;
 import dev.mintychochip.phys.Body;
+import dev.mintychochip.phys.GravityForce;
 import dev.mintychochip.phys.Physics;
+import dev.mintychochip.phys.Transform;
 import dev.mintychochip.phys.World;
 import java.util.HashMap;
 import java.util.List;
@@ -13,6 +15,12 @@ import java.util.Map;
 import java.util.UUID;
 import org.joml.Vector3d;
 
+/**
+ * Default buoyancy controller that combines force integration with runtime movement.
+ *
+ * <p>Movement is path-checked and rolled back when the runtime cannot apply it. Vertical velocity
+ * is retained per ship between ticks and cleared when movement is explicitly reset.
+ */
 public final class ShipPhysicsImpl implements ShipPhysics {
   /** Generic stateless integrator. */
   private final Physics physics;
@@ -60,27 +68,40 @@ public final class ShipPhysicsImpl implements ShipPhysics {
     this.riderCount = riderCount;
   }
 
+  /**
+   * Advances one buoyancy tick by stepping the attached gravity and buoyancy forces.
+   *
+   * @param ship ship to update
+   * @return whether a meaningful movement was committed
+   */
   @Override
   public boolean tick(Ship ship) {
     if (!ship.buoyancyEnabled()) return false;
-    EquilibriumResult equilibrium = computeTarget(ship);
-    double oldY = ship.pose().y();
-    double targetY =
-        equilibrium.equilibrium() ? Math.min(config.maxRise(), oldY + equilibrium.targetY()) : oldY;
-    return step(ship, oldY, targetY);
+    return integrate(ship, 1);
   }
 
+  /**
+   * Steps the engine until vertical motion settles, then commits the pose.
+   *
+   * @param ship ship to raise
+   * @return whether the move was committed; no water or disabled buoyancy is handled explicitly
+   */
   @Override
   public boolean rise(Ship ship) {
     if (!ship.buoyancyEnabled()) return true;
-    EquilibriumResult equilibrium = computeTarget(ship);
-    if (!equilibrium.equilibrium()) return false;
-    double oldY = ship.pose().y();
-    double targetY = Math.min(config.maxRise(), oldY + equilibrium.targetY());
+    Body probe = body(ship);
+    if (WaterlineResolver.submergedVolume(probe, world) == 0) return false;
     velocities.put(ship.id(), 0.0);
-    return moveDirect(ship, oldY, targetY);
+    return integrate(ship, 80);
   }
 
+  /**
+   * Moves directly downward by the requested number of blocks, clamped to the fall limit.
+   *
+   * @param ship ship to sink
+   * @param blocks positive requested distance
+   * @return whether movement was committed
+   */
   @Override
   public boolean sink(Ship ship, int blocks) {
     if (!ship.buoyancyEnabled() || blocks <= 0) return false;
@@ -89,42 +110,58 @@ public final class ShipPhysicsImpl implements ShipPhysics {
     return moveDirect(ship, oldY, targetY);
   }
 
+  /**
+   * Removes the ship's retained vertical velocity.
+   *
+   * @param ship ship whose transient state is cleared
+   */
   @Override
   public void clear(Ship ship) {
     velocities.remove(ship.id());
   }
 
-  private EquilibriumResult computeTarget(Ship ship) {
-    Body body =
-        ShipBody.from(ship, resolver, config, riderCount.count(ship), new ShipBuoyancyForce());
-    return new EquilibriumSolver().solve(body, world, config);
+  private Body body(Ship ship) {
+    return ShipBody.from(
+        ship,
+        resolver,
+        config,
+        riderCount.count(ship),
+        new GravityForce(),
+        new ShipBuoyancyForce());
   }
 
-  private boolean step(Ship ship, double oldY, double targetY) {
-    Body body =
-        ShipBody.from(ship, resolver, config, riderCount.count(ship), new ShipBuoyancyForce());
-    double velocity = velocities.getOrDefault(ship.id(), 0.0);
-    body.setLinearVelocity(new Vector3d(0, velocity, 0));
-    physics.step(world, List.of(body));
-    double rawY = body.transform().position().y() - ship.origin().y();
-    double newY = clampAndDamp(ship, oldY, targetY, rawY, body);
+  private boolean integrate(Ship ship, int steps) {
+    double oldY = ship.pose().y();
+    Body body = body(ship);
+    body.setLinearVelocity(new Vector3d(0, velocities.getOrDefault(ship.id(), 0.0), 0));
+    double newY = oldY;
+    for (int i = 0; i < steps; i++) {
+      physics.step(world, List.of(body));
+      newY = clamp(ship, oldY, body);
+      if (Math.abs(body.linearVelocity().y()) < config.draftTolerance()) {
+        break;
+      }
+    }
+    velocities.put(ship.id(), body.linearVelocity().y() * config.damping());
     if (Math.abs(newY - oldY) < config.draftTolerance()) return false;
     return moveDirect(ship, oldY, newY);
   }
 
-  private double clampAndDamp(Ship ship, double oldY, double targetY, double rawY, Body body) {
-    double low = Math.max(oldY - config.maxFall(), targetY - config.bobAmplitude());
-    double high = Math.min(oldY + config.maxRise(), targetY + config.bobAmplitude());
-    double clampedY = rawY;
-    if (clampedY < low) {
-      clampedY = low;
+  private double clamp(Ship ship, double oldY, Body body) {
+    double rawY = body.transform().position().y() - ship.origin().y();
+    double low = oldY - config.maxFall();
+    double high = oldY + config.maxRise();
+    double clampedY = Math.min(high, Math.max(low, rawY));
+    if (clampedY != rawY) {
       body.setLinearVelocity(new Vector3d());
+      body.setTransform(
+          new Transform(
+              new Vector3d(
+                  body.transform().position().x(),
+                  ship.origin().y() + clampedY,
+                  body.transform().position().z()),
+              body.transform().orientation()));
     }
-    if (clampedY > high) {
-      clampedY = high;
-      body.setLinearVelocity(new Vector3d());
-    }
-    velocities.put(ship.id(), body.linearVelocity().y() * config.damping());
     return clampedY;
   }
 

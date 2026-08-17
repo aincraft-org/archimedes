@@ -16,11 +16,27 @@ import java.util.List;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
 
+/**
+ * Builds a physics body from a ship's blocks and runtime rider count.
+ *
+ * <p>Each block becomes a unit AABB collider at its local block-center position. Unknown material
+ * keys use the configured default density.
+ */
 public final class ShipBody {
   private ShipBody() {}
 
+  /**
+   * Converts a ship into a world-positioned rigid body.
+   *
+   * @param ship source ship
+   * @param resolver material-key resolver
+   * @param config density and mass configuration
+   * @param riderCount number of riders contributing player mass
+   * @param forces attached force laws (typically gravity plus ship buoyancy)
+   * @return a body positioned at the ship origin and pose
+   */
   public static Body from(
-      Ship ship, MaterialKeyResolver resolver, ShipConfig config, int riderCount, Force buoyancy) {
+      Ship ship, MaterialKeyResolver resolver, ShipConfig config, int riderCount, Force... forces) {
     List<Collider> colliders = new ArrayList<>();
     for (ShipBlock block : ship.blocks()) {
       String key = resolver.key(block);
@@ -36,8 +52,7 @@ public final class ShipBody {
     Vector3d world =
         new Vector3d(ship.origin().x(), ship.origin().y() + ship.pose().y(), ship.origin().z());
     double mass = ShipMassModel.mass(ship, resolver, config, riderCount);
-    return new BodyImpl(
-        new Transform(world, new Quaterniond()), mass, colliders, List.of(buoyancy));
+    return new BodyImpl(new Transform(world, new Quaterniond()), mass, colliders, List.of(forces));
   }
 
   private record SimpleCollider(Shape shape, Material material, Transform localTransform)

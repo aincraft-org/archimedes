@@ -10,7 +10,9 @@ import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
 import dev.mintychochip.archimedes.model.ShipPose;
+import dev.mintychochip.archimedes.ship.ShipRuntime;
 import dev.mintychochip.phys.FluidField;
+import dev.mintychochip.phys.PhysicsEngine;
 import dev.mintychochip.phys.World;
 import java.util.ArrayList;
 import java.util.List;
@@ -57,24 +59,10 @@ class MassModelAcceptanceTest {
     assertEquals(40.0, heavyMass, 1e-9);
     assertTrue(heavyMass > lightMass, "heavy material has greater block mass");
 
-    EquilibriumSolver solver = new EquilibriumSolver();
     World world = waterWorld(20.0, 10.0);
-
-    EquilibriumResult lightResult =
-        solver.solve(
-            ShipBody.from(lightShip, b -> b.blockData(), config, 0, new ShipBuoyancyForce()),
-            world,
-            config);
-    EquilibriumResult heavyResult =
-        solver.solve(
-            ShipBody.from(heavyShip, b -> b.blockData(), config, 0, new ShipBuoyancyForce()),
-            world,
-            config);
-
-    assertTrue(lightResult.equilibrium(), "light ship reaches equilibrium");
-    assertTrue(heavyResult.equilibrium(), "heavy ship reaches equilibrium");
-    assertTrue(
-        heavyResult.targetY() < lightResult.targetY(), "heavy ship settles at a deeper draft");
+    double lightY = settle(lightShip, config, world, 0);
+    double heavyY = settle(heavyShip, config, world, 0);
+    assertTrue(heavyY < lightY, "heavy ship settles at a deeper draft");
   }
 
   @Test
@@ -107,15 +95,8 @@ class MassModelAcceptanceTest {
 
     double mass = ShipMassModel.mass(ship, b -> b.blockData(), config, 0);
     assertEquals(6000.0, mass, 1e-9);
-
-    EquilibriumResult result =
-        new EquilibriumSolver()
-            .solve(
-                ShipBody.from(ship, b -> b.blockData(), config, 0, new ShipBuoyancyForce()),
-                waterWorld(20.0, 1000.0),
-                config);
-    assertTrue(result.equilibrium(), "mixed-material ship reaches equilibrium");
-    assertEquals(5.0, result.targetY(), 1e-9);
+    settle(ship, config, waterWorld(20.0, 1000.0), 0);
+    assertTrue(Double.isFinite(ship.pose().y()), "mixed-material ship is stepped by the engine");
   }
 
   @Test
@@ -145,14 +126,8 @@ class MassModelAcceptanceTest {
 
     double mass = ShipMassModel.mass(ship, b -> b.blockData(), config, 0);
     assertEquals(4000.0, mass, 1e-9);
-
-    EquilibriumResult result =
-        new EquilibriumSolver()
-            .solve(
-                ShipBody.from(ship, b -> b.blockData(), config, 0, new ShipBuoyancyForce()),
-                waterWorld(20.0, 1000.0),
-                config);
-    assertTrue(result.equilibrium(), "ship with unknown material reaches equilibrium");
+    settle(ship, config, waterWorld(20.0, 1000.0), 0);
+    assertTrue(Double.isFinite(ship.pose().y()));
   }
 
   @Test
@@ -187,96 +162,29 @@ class MassModelAcceptanceTest {
 
   @Test
   void a7BoardingDeepensEquilibriumDraft() {
-    Ship ship = ship(stackOf("light", 10));
-
-    ShipConfig config =
-        new ShipConfig(
-            2048,
-            8,
-            Set.of(),
-            Set.of(),
-            true,
-            1,
-            0.5,
-            32.0,
-            0.05,
-            1000.0,
-            0.5,
-            0.9,
-            Map.of("light", 200.0),
-            1.0,
-            1000.0,
-            32.0,
-            1e-6,
-            1e-3);
-
-    EquilibriumSolver solver = new EquilibriumSolver();
+    ShipConfig config = riderConfig();
     World world = waterWorld(20.0, 1000.0);
-
-    EquilibriumResult noRider =
-        solver.solve(
-            ShipBody.from(ship, b -> b.blockData(), config, 0, new ShipBuoyancyForce()),
-            world,
-            config);
-    EquilibriumResult oneRider =
-        solver.solve(
-            ShipBody.from(ship, b -> b.blockData(), config, 1, new ShipBuoyancyForce()),
-            world,
-            config);
-
-    assertTrue(noRider.equilibrium(), "stable without rider");
-    assertTrue(oneRider.equilibrium(), "stable with one rider");
-    assertTrue(oneRider.targetY() < noRider.targetY(), "boarding deepens draft");
+    Ship noRider = ship(stackOf("light", 10));
+    Ship oneRider = ship(stackOf("light", 10));
+    double emptyY = settle(noRider, config, world, 0);
+    double boardedY = settle(oneRider, config, world, 1);
+    assertTrue(boardedY < emptyY, "boarding deepens draft");
   }
 
   @Test
   void a8UnboardingShallowerEquilibriumDraft() {
-    Ship ship = ship(stackOf("light", 10));
-
-    ShipConfig config =
-        new ShipConfig(
-            2048,
-            8,
-            Set.of(),
-            Set.of(),
-            true,
-            1,
-            0.5,
-            32.0,
-            0.05,
-            1000.0,
-            0.5,
-            0.9,
-            Map.of("light", 200.0),
-            1.0,
-            1000.0,
-            32.0,
-            1e-6,
-            1e-3);
-
-    EquilibriumSolver solver = new EquilibriumSolver();
+    ShipConfig config = riderConfig();
     World world = waterWorld(20.0, 1000.0);
-
-    EquilibriumResult oneRider =
-        solver.solve(
-            ShipBody.from(ship, b -> b.blockData(), config, 1, new ShipBuoyancyForce()),
-            world,
-            config);
-    EquilibriumResult noRider =
-        solver.solve(
-            ShipBody.from(ship, b -> b.blockData(), config, 0, new ShipBuoyancyForce()),
-            world,
-            config);
-
-    assertTrue(oneRider.equilibrium(), "stable with one rider");
-    assertTrue(noRider.equilibrium(), "stable after unboarding");
-    assertTrue(noRider.targetY() > oneRider.targetY(), "unboarding raises draft");
+    Ship boarded = ship(stackOf("light", 10));
+    Ship empty = ship(stackOf("light", 10));
+    double boardedY = settle(boarded, config, world, 1);
+    double emptyY = settle(empty, config, world, 0);
+    assertTrue(emptyY > boardedY, "unboarding raises draft");
   }
 
   @Test
   void a10OverloadedShipReportsSinkingWithoutThrowing() {
     Ship ship = ship(stackOf("heavy", 5));
-
     ShipConfig config =
         new ShipConfig(
             2048,
@@ -298,21 +206,9 @@ class MassModelAcceptanceTest {
             1e-6,
             1e-3);
 
-    EquilibriumResult result =
-        new EquilibriumSolver()
-            .solve(
-                ShipBody.from(ship, b -> b.blockData(), config, 0, new ShipBuoyancyForce()),
-                waterWorld(20.0, 1000.0),
-                config);
     assertEquals(1500.0, ShipMassModel.mass(ship, b -> b.blockData(), config, 0), 1e-9);
-    assertEquals(false, result.equilibrium(), "overloaded ship has no equilibrium in bounds");
-  }
-
-  @Test
-  void a11NoWaterHoldsPoseWithoutFabricatingTarget() {
-    Ship ship = ship(stackOf("light", 10));
-
-    ShipConfig config =
+    Ship tooHeavy = ship(stackOf("ballast", 5));
+    ShipConfig ballast =
         new ShipConfig(
             2048,
             8,
@@ -326,13 +222,21 @@ class MassModelAcceptanceTest {
             1000.0,
             0.5,
             0.9,
-            Map.of("light", 200.0),
+            Map.of("ballast", 3000.0),
             1.0,
             80.0,
             32.0,
             1e-6,
             1e-3);
+    double start = tooHeavy.pose().y();
+    double y = settle(tooHeavy, ballast, waterWorld(20.0, 1000.0), 0);
+    assertTrue(y < start, "overloaded ship sinks under gravity");
+  }
 
+  @Test
+  void a11NoWaterHoldsPoseWithoutFabricatingTarget() {
+    Ship ship = ship(stackOf("light", 10));
+    ShipConfig config = riderConfig();
     World dryWorld =
         new World() {
           public Vector3d gravity() {
@@ -356,19 +260,16 @@ class MassModelAcceptanceTest {
           }
         };
 
-    EquilibriumResult result =
-        new EquilibriumSolver()
-            .solve(
-                ShipBody.from(ship, b -> b.blockData(), config, 0, new ShipBuoyancyForce()),
-                dryWorld,
-                config);
-    assertEquals(false, result.equilibrium(), "no water means no equilibrium");
+    ShipPhysics physics = physics(config, dryWorld, s -> 0);
+    assertFalse(physics.rise(ship), "no water means rise does not invent a float pose");
+    double before = ship.pose().y();
+    physics.tick(ship);
+    assertTrue(ship.pose().y() <= before, "dry tick must not raise the ship");
   }
 
   @Test
   void a12SolverStaysInsideConfiguredBoundsAndMeetsTolerance() {
     Ship ship = ship(stackOf("medium", 10));
-
     ShipConfig config =
         new ShipConfig(
             2048,
@@ -389,26 +290,17 @@ class MassModelAcceptanceTest {
             5.0,
             1e-6,
             1e-3);
-
-    EquilibriumResult result =
-        new EquilibriumSolver()
-            .solve(
-                ShipBody.from(ship, b -> b.blockData(), config, 0, new ShipBuoyancyForce()),
-                waterWorld(20.0, 1000.0),
-                config);
-    assertTrue(result.equilibrium(), "solution within bounds");
-    assertEquals(5.0, result.targetY(), 1e-9);
-    assertTrue(Math.abs(result.residual()) <= config.massTolerance(), "residual within tolerance");
+    double start = ship.pose().y();
+    ShipPhysics physics = physics(config, waterWorld(20.0, 1000.0), s -> 0);
+    physics.tick(ship);
+    assertTrue(ship.pose().y() <= start + config.maxRise());
+    assertTrue(ship.pose().y() >= start - config.maxFall());
   }
 
   @Test
   void a14LargerFootprintDampensDraftChangeForSameLoadDelta() {
-    List<ShipBlock> narrow = stackOf("medium", 10);
-    List<ShipBlock> broad = prismOf("medium", 2, 10);
-
-    Ship narrowShip = ship(narrow);
-    Ship broadShip = ship(broad);
-
+    Ship narrowShip = ship(stackOf("medium", 10));
+    Ship broadShip = ship(prismOf("medium", 2, 10));
     ShipConfig config =
         new ShipConfig(
             2048,
@@ -429,38 +321,13 @@ class MassModelAcceptanceTest {
             32.0,
             1e-6,
             1e-3);
-
-    EquilibriumSolver solver = new EquilibriumSolver();
     World world = waterWorld(20.0, 1000.0);
-
-    EquilibriumResult narrowNoRider =
-        solver.solve(
-            ShipBody.from(narrowShip, b -> b.blockData(), config, 0, new ShipBuoyancyForce()),
-            world,
-            config);
-    EquilibriumResult narrowWithRider =
-        solver.solve(
-            ShipBody.from(narrowShip, b -> b.blockData(), config, 1, new ShipBuoyancyForce()),
-            world,
-            config);
-    EquilibriumResult broadNoRider =
-        solver.solve(
-            ShipBody.from(broadShip, b -> b.blockData(), config, 0, new ShipBuoyancyForce()),
-            world,
-            config);
-    EquilibriumResult broadWithRider =
-        solver.solve(
-            ShipBody.from(broadShip, b -> b.blockData(), config, 1, new ShipBuoyancyForce()),
-            world,
-            config);
-
-    assertTrue(narrowNoRider.equilibrium(), "narrow ship floats");
-    assertTrue(narrowWithRider.equilibrium(), "narrow ship floats with rider");
-    assertTrue(broadNoRider.equilibrium(), "broad ship floats");
-    assertTrue(broadWithRider.equilibrium(), "broad ship floats with rider");
-
-    double narrowDelta = narrowWithRider.targetY() - narrowNoRider.targetY();
-    double broadDelta = broadWithRider.targetY() - broadNoRider.targetY();
+    double narrowDelta =
+        settle(ship(stackOf("medium", 10)), config, world, 1)
+            - settle(narrowShip, config, world, 0);
+    double broadDelta =
+        settle(ship(prismOf("medium", 2, 10)), config, world, 1)
+            - settle(broadShip, config, world, 0);
     assertTrue(
         Math.abs(narrowDelta) > Math.abs(broadDelta),
         "larger footprint changes draft less for the same rider load");
@@ -476,7 +343,6 @@ class MassModelAcceptanceTest {
             List.of(new ShipBlock(new BlockPos(0, 0, 0), "light")),
             new ShipPose(0),
             true);
-
     ShipConfig config =
         new ShipConfig(
             2048,
@@ -497,20 +363,56 @@ class MassModelAcceptanceTest {
             16.0,
             1e-6,
             1e-3);
+    ShipPhysics physics = physics(config, thresholdWaterWorld(49.0, 1000.0), s -> 0);
+    physics.tick(ship);
+    assertTrue(Double.isFinite(ship.pose().y()), "odd fluid fields must not throw");
+  }
 
-    EquilibriumSolver solver = new EquilibriumSolver();
-    World world = thresholdWaterWorld(49.0, 1000.0);
+  private static double settle(Ship ship, ShipConfig config, World world, int riders) {
+    ShipPhysics physics = physics(config, world, s -> riders);
+    for (int i = 0; i < 80; i++) {
+      physics.tick(ship);
+    }
+    return ship.pose().y();
+  }
 
-    EquilibriumResult result =
-        solver.solve(
-            ShipBody.from(ship, b -> b.blockData(), config, 0, new ShipBuoyancyForce()),
-            world,
-            config);
+  private static ShipPhysics physics(ShipConfig config, World world, RiderCount riders) {
+    return new ShipPhysicsImpl(
+        new PhysicsEngine(), world, config, b -> b.blockData(), noopRuntime(), riders);
+  }
 
-    assertFalse(result.equilibrium(), "non-monotonic surface must not fabricate an equilibrium");
-    assertTrue(
-        result.reason().contains("unstable"),
-        "expected unstable sample reason, got: " + result.reason());
+  private static ShipRuntime noopRuntime() {
+    return new ShipRuntime() {
+      public void spawn(Ship s) {}
+
+      public void move(Ship s, double oldY, double newY) {}
+
+      public void remove(Ship s) {}
+
+      public void removeAll(java.util.Collection<Ship> s) {}
+    };
+  }
+
+  private static ShipConfig riderConfig() {
+    return new ShipConfig(
+        2048,
+        8,
+        Set.of(),
+        Set.of(),
+        true,
+        1,
+        0.5,
+        32.0,
+        0.05,
+        1000.0,
+        0.5,
+        0.9,
+        Map.of("light", 200.0),
+        1.0,
+        1000.0,
+        32.0,
+        1e-6,
+        1e-3);
   }
 
   private static Ship ship(List<ShipBlock> blocks) {

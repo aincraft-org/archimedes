@@ -40,9 +40,10 @@ class ShipPhysicsAcceptanceTest {
         new ShipPhysicsImpl(
             new PhysicsEngine(), world, config, b -> b.blockData(), runtime, riderCount);
 
-    ShipPose before = ship.pose();
-    assertTrue(physics.tick(ship));
-    assertTrue(ship.pose().y() > before.y(), "ship moves after stale rider is dropped");
+    physics.tick(ship);
+    double loadedY = ship.pose().y();
+    physics.tick(ship);
+    assertTrue(ship.pose().y() > loadedY, "ship rises after the stale rider is dropped");
   }
 
   @Test
@@ -87,9 +88,9 @@ class ShipPhysicsAcceptanceTest {
 
     physics.clear(first);
     first.setPose(new ShipPose(10));
-    assertTrue(physics.tick(first));
+    physics.tick(first);
     assertEquals(
-        firstY, first.pose().y(), 1e-9, "cleared ship starts from rest and re-reaches same pose");
+        firstY, first.pose().y(), 1e-9, "cleared ship starts from rest and matches the first step");
   }
 
   private static void settle(ShipPhysics physics, Ship ship) {

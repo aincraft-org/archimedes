@@ -2,6 +2,7 @@ package dev.mintychochip.archimedes.phys;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.mintychochip.archimedes.config.ShipConfig;
 import dev.mintychochip.archimedes.model.BlockPos;
@@ -92,6 +93,76 @@ class ShipPhysicsTest {
     ShipPose old = ship.pose();
     assertFalse(physics.tick(ship));
     assertEquals(old.y(), ship.pose().y(), 1e-9);
+  }
+
+  @Test
+  void tickFallsUnderGravityWhenThereIsNoWaterInsteadOfHoldingAnEquilibrium() {
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(UUID.randomUUID(), 0, 10, 0),
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), "minecraft:oak_planks")),
+            new ShipPose(0),
+            true);
+    ShipConfig config =
+        new ShipConfig(
+            2048,
+            8,
+            Set.of(),
+            Set.of(),
+            true,
+            1,
+            0.01,
+            16.0,
+            0.05,
+            1.0,
+            0.5,
+            0.9,
+            Map.of("minecraft:oak_planks", 600.0),
+            1000.0,
+            80.0,
+            16.0,
+            0.0,
+            1e-3);
+    World dry =
+        new World() {
+          public Vector3d gravity() {
+            return new Vector3d(0, -10, 0);
+          }
+
+          public FluidField fluidField() {
+            return new FluidField() {
+              public boolean isFluid(Vector3dc p) {
+                return false;
+              }
+
+              public double density(Vector3dc p) {
+                return 1000;
+              }
+            };
+          }
+
+          public double timeStep() {
+            return 0.05;
+          }
+        };
+    ShipRuntime runtime =
+        new ShipRuntime() {
+          public void spawn(Ship s) {}
+
+          public void move(Ship s, double oldY, double newY) {}
+
+          public void remove(Ship s) {}
+
+          public void removeAll(java.util.Collection<Ship> s) {}
+        };
+    ShipPhysics physics =
+        new ShipPhysicsImpl(
+            new PhysicsEngine(), dry, config, new BukkitLikeResolver(), runtime, s -> 0);
+
+    assertTrue(physics.tick(ship));
+    assertTrue(ship.pose().y() < -0.01, "gravity must be able to drop more than bob-amplitude");
   }
 
   static final class BukkitLikeResolver implements MaterialKeyResolver {
