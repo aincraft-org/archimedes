@@ -25,13 +25,13 @@ Success looks like: a `Ship` is a pure, unit-testable description of a build (or
 
 - Entity rendering, collision volumes, buoyancy physics, entity carry (own specs)
 - Command parsing and permissions (see `commands`)
-- Horizontal movement, rotation, propulsion, seats, damage, docking
+- Rotation, seats, damage, docking
 
 ## Invariants
 
 - `ShipBlock` snapshots pair a relative position with the exact `BlockData` string captured from the world at assembly (`ShipServiceImpl` via `WorldMutator.blockDataAt`); restoration must reproduce the original block. The scanner itself captures positions only.
 - `Ship.blocks` is immutable after construction; `pose` and `buoyancyEnabled` are the only mutable state.
-- `ShipPose.anchorDy() = floor(y)`; the integer anchor drives collision, clearance, restoration, and persistence semantics. Fractional `y` drives visuals only.
+- `ShipPose` is `(x, y, z)` offsets from origin. `anchorD*() = floor` of each axis. Missing persisted `x`/`z` load as `0`. Fractional components drive visuals; integer anchors drive collision, clearance, and restoration.
 - `ShipTransform` is the canonical projection for rendering and hulls (visual / cell / collision anchor). World-boundary code may derive integer cells from `origin + floor(pose)` (e.g. `BukkitWorldMutator.baseY`, `BuoyancyImpl.pathClear`) but must never duplicate the visual/anchor arithmetic or add offsets.
 - `archimedes.json` is the single persistence authority; leftover `ships.json` is read when the new file is absent; entities are never persisted (non-persistent at Bukkit level).
 - Persistence must stay backward compatible: missing `pose` → `y=0`; missing `buoyancy` → enabled.
@@ -53,7 +53,7 @@ Success looks like: a `Ship` is a pure, unit-testable description of a build (or
 - [x] Six-directional bounded BFS scan: aborts (incomplete result) on size-limit exceed or forbidden seed/current block; forbidden neighbors are skipped as boundaries
 - [x] Per-block snapshots: scanner yields relative positions; `ShipServiceImpl` snapshots exact `BlockData` strings into immutable `ShipBlock`s
 - [x] Canonical transform: `visual` (corner), `cell` (floor anchor), `collisionAnchor` (visual X/Z +0.5, Y unchanged), `visual(ship, rel, y)` overload for old-pose queries
-- [x] `archimedes.json` schema: root array; per ship `id`, `owner`, `origin{world,x,y,z}`, `blocks[{pos{x,y,z}, data}]`, optional `pose{y}`, optional `buoyancy:false`
+- [x] `archimedes.json` schema: root array; per ship `id`, `owner`, `origin{world,x,y,z}`, `blocks[{pos{x,y,z}, data}]`, optional `pose{x,y,z}` (`x`/`z` omitted → 0), optional `buoyancy:false`
 - [x] Atomic save (tmp + ATOMIC_MOVE with fallback)
 - [x] Legacy file load (`y=0`, buoyancy enabled)
 - [x] Config: `maximum-blocks`, `target-distance`, `forbidden-materials`, `disabled-worlds`, buoyancy/physics constants; strict validation of supplied values, code defaults for missing keys
