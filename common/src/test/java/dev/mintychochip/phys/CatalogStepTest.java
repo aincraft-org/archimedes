@@ -198,4 +198,40 @@ class CatalogStepTest {
     assertTrue(withFriction.linearVelocity().x() < withoutFriction.linearVelocity().x());
     assertTrue(spinner.angularVelocity().length() < omega0);
   }
+
+  @Test
+  void pressureSailMovesAtRestInABreezeAndNotInStillAir() {
+    PressureSailForce breeze =
+        new PressureSailForce(
+            new Vector3d(),
+            new Vector3d(1, 0, 0),
+            2,
+            DensityField.uniform(1.2),
+            FlowField.uniform(new Vector3d(10, 0, 0)));
+    PressureSailForce calm =
+        new PressureSailForce(
+            new Vector3d(), new Vector3d(1, 0, 0), 2, DensityField.uniform(1.2), FlowField.still());
+    PressureSailForce edgeOn =
+        new PressureSailForce(
+            new Vector3d(),
+            new Vector3d(0, 1, 0),
+            2,
+            DensityField.uniform(1.2),
+            FlowField.uniform(new Vector3d(10, 0, 0)));
+    BodyImpl driven =
+        new BodyImpl(
+            new Transform(new Vector3d(), new Quaterniond()), 2, List.of(), List.of(breeze));
+    BodyImpl idle =
+        new BodyImpl(new Transform(new Vector3d(), new Quaterniond()), 2, List.of(), List.of(calm));
+    BodyImpl sheeted =
+        new BodyImpl(
+            new Transform(new Vector3d(), new Quaterniond()), 2, List.of(), List.of(edgeOn));
+    World world = PhysFixtures.world(0.1, new Vector3d(0, -10, 0), PhysFixtures.vacuum());
+
+    new PhysicsEngine().step(world, List.of(driven, idle, sheeted));
+
+    assertTrue(driven.linearVelocity().x() > 0);
+    assertEquals(0.0, idle.linearVelocity().length(), 0.0);
+    assertEquals(0.0, sheeted.linearVelocity().length(), 0.0);
+  }
 }
