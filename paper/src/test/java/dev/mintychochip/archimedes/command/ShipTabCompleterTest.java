@@ -33,7 +33,7 @@ class ShipTabCompleterTest {
   @Test
   void returnsAllSubcommandsForEmptyPrefix() {
     assertEquals(
-        List.of("assemble", "inspect", "disassemble", "buoyancy", "sink"),
+        List.of("assemble", "inspect", "disassemble", "buoyancy", "sink", "sail"),
         new ShipTabCompleter().onTabComplete(SENDER, COMMAND, SHIP_COMMAND, new String[] {""}));
   }
 

@@ -4,6 +4,7 @@ import dev.mintychochip.archimedes.model.BlockPos;
 import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
+import dev.mintychochip.archimedes.sail.SailShipTemplate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -141,6 +142,86 @@ public final class ShipServiceImpl implements ShipService {
       rollback(ship, normalized, runtimeStarted, buoyancyStarted);
       return null;
     }
+  }
+
+  /**
+   * Spawns the predetermined sail template at an origin. World blocks are not scanned or cleared;
+   * disassembly later restores the template into empty space.
+   *
+   * @param playerId requesting owner
+   * @param targetWorldId requested world
+   * @param x origin x
+   * @param y origin y
+   * @param z origin z
+   * @return the created ship, or {@code null} when validation or startup fails
+   */
+  @Override
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
+  public Ship spawnSail(UUID playerId, UUID targetWorldId, int x, int y, int z) {
+    if (!targetWorldId.equals(worldId)) {
+      lastError = "Ship assembly is not permitted in this world";
+      return null;
+    }
+    if (!worldEnabled) {
+      lastError = "Ship assembly is disabled in this world";
+      return null;
+    }
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            playerId,
+            new ShipOrigin(targetWorldId, x, y, z),
+            SailShipTemplate.blocks());
+    boolean runtimeStarted = false;
+    boolean buoyancyStarted = false;
+    try {
+      runtimeStarted = true;
+      runtime.spawn(ship);
+      ships.put(ship.id(), ship);
+      if (buoyancyEnabled) {
+        buoyancyStarted = true;
+        if (!shipPhysics.rise(ship)) {
+          throw new ShipRuntimeException(new IllegalStateException("Buoyancy path blocked"));
+        }
+      }
+      persistAll();
+      return ships.get(ship.id());
+    } catch (RuntimeException failure) {
+      ShipRuntimeException normalized =
+          failure instanceof ShipRuntimeException
+              ? (ShipRuntimeException) failure
+              : new ShipRuntimeException(failure);
+      rollbackSpawn(ship, normalized, runtimeStarted, buoyancyStarted);
+      return null;
+    }
+  }
+
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
+  private void rollbackSpawn(
+      Ship ship, ShipRuntimeException failure, boolean runtimeStarted, boolean buoyancyStarted) {
+    if (runtimeStarted) {
+      try {
+        runtime.remove(ship);
+      } catch (RuntimeException cleanup) {
+        failure.addSuppressed(normalizeCleanup(cleanup));
+      }
+    }
+    if (buoyancyStarted) {
+      try {
+        shipPhysics.clear(ship);
+      } catch (RuntimeException cleanup) {
+        failure.addSuppressed(normalizeCleanup(cleanup));
+      }
+    }
+    ships.remove(ship.id());
+    try {
+      persistAll();
+    } catch (RuntimeException cleanup) {
+      failure.addSuppressed(normalizeCleanup(cleanup));
+    }
+    Throwable cause = failure.getCause();
+    String reason = cause == null ? failure.getMessage() : cause.getMessage();
+    lastError = reason == null ? "unknown failure" : reason;
   }
 
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})

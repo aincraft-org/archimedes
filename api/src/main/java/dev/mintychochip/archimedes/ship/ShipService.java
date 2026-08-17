@@ -23,6 +23,18 @@ public interface ShipService {
   Ship assembleAt(UUID playerId, int x, int y, int z, UUID worldId);
 
   /**
+   * Spawns a predetermined sail ship at the given origin without scanning or clearing world blocks.
+   *
+   * @param playerId the owning player
+   * @param worldId the world identifier
+   * @param x origin x
+   * @param y origin y
+   * @param z origin z
+   * @return the spawned ship, or null on failure
+   */
+  Ship spawnSail(UUID playerId, UUID worldId, int x, int y, int z);
+
+  /**
    * Returns the ship owned by a player in their current world, or null.
    *
    * @param playerId the owning player

@@ -7,7 +7,7 @@ author: jlo
 commands:
   ship:
     description: Build and manage ships
-    usage: /ship assemble|inspect|disassemble|buoyancy|sink
+    usage: /ship assemble|inspect|disassemble|buoyancy|sink|sail
     permission: archimedes.command
 permissions:
   archimedes.command:
@@ -27,4 +27,7 @@ permissions:
     default: true
   archimedes.sink:
     description: Lower a ship
+    default: true
+  archimedes.sail:
+    description: Spawn a predetermined sail ship
     default: true

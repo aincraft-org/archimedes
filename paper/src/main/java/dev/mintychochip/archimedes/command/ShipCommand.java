@@ -56,7 +56,8 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
       return true;
     }
     if (args.length == 0) {
-      player.sendMessage(ChatColor.RED + "Usage: /ship assemble|inspect|disassemble|buoyancy|sink");
+      player.sendMessage(
+          ChatColor.RED + "Usage: /ship assemble|inspect|disassemble|buoyancy|sink|sail");
       return true;
     }
     switch (args[0].toLowerCase(java.util.Locale.ROOT)) {
@@ -70,6 +71,8 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
         return permitted(player, "archimedes.buoyancy") && buoyancy(player);
       case "sink":
         return permitted(player, "archimedes.sink") && sink(player, args);
+      case "sail":
+        return permitted(player, "archimedes.sail") && sail(player);
       default:
         player.sendMessage(ChatColor.RED + "Unknown subcommand: " + args[0]);
         return true;
@@ -167,6 +170,21 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
     } else {
       player.sendMessage(ChatColor.RED + "Cannot lower ship: " + service.lastError());
     }
+    return true;
+  }
+
+  private boolean sail(Player player) {
+    org.bukkit.block.BlockFace facing = player.getFacing();
+    int x = player.getLocation().getBlockX() + facing.getModX() * 3;
+    int y = player.getLocation().getBlockY();
+    int z = player.getLocation().getBlockZ() + facing.getModZ() * 3;
+    Ship ship = service.spawnSail(player.getUniqueId(), player.getWorld().getUID(), x, y, z);
+    if (ship == null) {
+      player.sendMessage(ChatColor.RED + "Cannot spawn sail: " + service.lastError());
+      return true;
+    }
+    player.sendMessage(
+        ChatColor.GREEN + "Spawned sail ship " + ship.id().toString().substring(0, 8) + ".");
     return true;
   }
 }

@@ -41,6 +41,9 @@ class ShipCommandTest {
   /** Buoyancy subcommand label. */
   private static final String SUB_BUOYANCY = "buoyancy";
 
+  /** Sail spawn subcommand label. */
+  private static final String SUB_SAIL = "sail";
+
   /** Common world identifier. */
   private static final UUID WORLD_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
@@ -56,6 +59,7 @@ class ShipCommandTest {
     int targetX;
     int targetY;
     int targetZ;
+    UUID lastWorld;
     UUID lastRequester;
     boolean lastOperator;
     boolean disassembleFails;
@@ -63,6 +67,17 @@ class ShipCommandTest {
     @Override
     public Ship assembleAt(UUID playerId, int x, int y, int z, UUID worldId) {
       calls.add(SUB_ASSEMBLE);
+      targetX = x;
+      targetY = y;
+      targetZ = z;
+      return assembled;
+    }
+
+    @Override
+    public Ship spawnSail(UUID playerId, UUID worldId, int x, int y, int z) {
+      calls.add(SUB_SAIL);
+      lastRequester = playerId;
+      lastWorld = worldId;
       targetX = x;
       targetY = y;
       targetZ = z;
@@ -162,6 +177,10 @@ class ShipCommandTest {
                   return service.opUser;
                 case "getWorld":
                   return WORLD_PROXY;
+                case "getLocation":
+                  return new org.bukkit.Location(WORLD_PROXY, 10, 64, 20);
+                case "getFacing":
+                  return org.bukkit.block.BlockFace.SOUTH;
                 case "sendMessage":
                   service.messages.add(String.valueOf(args[0]));
                   return null;
@@ -268,7 +287,7 @@ class ShipCommandTest {
   void rejectsUnknownSubcommand() {
     RecordingService service = new RecordingService();
     Player player = player(service, true);
-    commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {"sail"});
+    commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {"nope"});
     assertTrue(service.messages.get(0).contains("Unknown subcommand"));
     assertTrue(service.calls.isEmpty());
   }
@@ -433,5 +452,37 @@ class ShipCommandTest {
     Player player = player(service, true);
     commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {SUB_SINK, "3"});
     assertTrue(service.messages.get(0).contains("Cannot lower ship: path blocked"));
+  }
+
+  @Test
+  void sailSpawnsPredeterminedShipInFrontOfPlayer() {
+    RecordingService service = new RecordingService();
+    service.assembled = ship();
+    Player player = player(service, true);
+    commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {SUB_SAIL});
+    assertEquals(List.of(SUB_SAIL), service.calls);
+    assertEquals(service.owner, service.lastRequester);
+    assertEquals(WORLD_ID, service.lastWorld);
+    assertEquals(10, service.targetX);
+    assertEquals(64, service.targetY);
+    assertEquals(23, service.targetZ);
+    assertTrue(service.messages.get(0).contains("Spawned sail ship"));
+  }
+
+  @Test
+  void sailRejectsWithoutPermission() {
+    RecordingService service = new RecordingService();
+    commandNoTarget(service).onCommand(player(service, false), CMD, SHIP, new String[] {SUB_SAIL});
+    assertTrue(service.calls.isEmpty());
+  }
+
+  @Test
+  void sailReportsServiceFailure() {
+    RecordingService service = new RecordingService();
+    service.assembled = null;
+    service.error = "Ship assembly is disabled in this world";
+    commandNoTarget(service).onCommand(player(service, true), CMD, SHIP, new String[] {SUB_SAIL});
+    assertEquals(List.of(SUB_SAIL), service.calls);
+    assertTrue(service.messages.get(0).contains("Cannot spawn sail: Ship assembly is disabled"));
   }
 }

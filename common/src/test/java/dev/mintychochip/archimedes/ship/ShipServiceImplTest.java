@@ -12,6 +12,7 @@ import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
 import dev.mintychochip.archimedes.model.ShipPose;
+import dev.mintychochip.archimedes.sail.SailShipTemplate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -1043,6 +1044,68 @@ class ShipServiceImplTest {
     assertFalse(service.sink(OWNER, WORLD, -1));
     assertEquals(0, store.saves);
     assertFalse(buoyancy.calls.contains("sink"));
+  }
+
+  @Test
+  void spawnSailRegistersTemplateWithoutClearingWorldBlocks() {
+    Fakes fakes = new Fakes();
+    fakes.blocks.put("5,64,8", STONE);
+    ShipService service =
+        new ShipServiceImpl(
+            new MemoryStore(fakes),
+            (x, y, z) -> List.of(),
+            runtime(fakes),
+            fakes,
+            new RecordingBuoyancy(),
+            false,
+            true,
+            WORLD);
+
+    Ship ship = service.spawnSail(OWNER, WORLD, 5, 64, 8);
+
+    assertNotNull(ship);
+    assertEquals(SailShipTemplate.blocks().size(), ship.blockCount());
+    assertEquals(5, ship.origin().x());
+    assertEquals(64, ship.origin().y());
+    assertEquals(8, ship.origin().z());
+    assertEquals(OWNER, ship.ownerId());
+    assertEquals(1, fakes.rendered.size());
+    assertEquals(STONE, fakes.blocks.get("5,64,8"));
+    assertEquals(1, service.all().size());
+    long wool =
+        ship.blocks().stream().filter(block -> block.blockData().endsWith("_wool")).count();
+    assertEquals(9, wool);
+  }
+
+  @Test
+  void spawnSailRejectsForeignAndDisabledWorlds() {
+    Fakes fakes = new Fakes();
+    ShipService disabled =
+        new ShipServiceImpl(
+            new MemoryStore(fakes),
+            (x, y, z) -> List.of(),
+            runtime(fakes),
+            fakes,
+            new RecordingBuoyancy(),
+            false,
+            false,
+            WORLD);
+    assertNull(disabled.spawnSail(OWNER, WORLD, 0, 64, 0));
+    assertTrue(disabled.lastError().contains("disabled"));
+
+    ShipService foreign =
+        new ShipServiceImpl(
+            new MemoryStore(fakes),
+            (x, y, z) -> List.of(),
+            runtime(fakes),
+            fakes,
+            new RecordingBuoyancy(),
+            false,
+            true,
+            WORLD);
+    assertNull(foreign.spawnSail(OWNER, UUID.randomUUID(), 0, 64, 0));
+    assertTrue(foreign.lastError().contains("not permitted"));
+    assertTrue(fakes.rendered.isEmpty());
   }
 
   private static final class CountingStore implements ShipStoreLike {

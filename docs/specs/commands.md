@@ -1,7 +1,7 @@
 # Commands & Permissions — Living Spec
 
 > Status: active
-> Last updated: 2026-08-16
+> Last updated: 2026-08-17
 > Owners: jlo
 
 ## Intent
@@ -22,7 +22,7 @@ Success looks like: every subcommand has a permission, explicit error messages f
 ### Out of scope / non-goals
 
 - Command implementation of ship logic (assembly, disassembly, buoyancy — delegate to `ShipService`)
-- Permissions beyond the six declared nodes (`archimedes.command` parent + five subnodes)
+- Permissions beyond the seven declared nodes (`archimedes.command` parent + six subnodes)
 - Console execution (player-only by design)
 
 ## Commands
@@ -34,6 +34,7 @@ Success looks like: every subcommand has a permission, explicit error messages f
 | `/ship disassemble` | `archimedes.disassemble` | Owner or operator only |
 | `/ship buoyancy` | `archimedes.buoyancy` | Toggle for the requester's owned ship in the current world (`toggleBuoyancy(requester, world)` — not line-of-sight-targeted) |
 | `/ship sink <n>` | `archimedes.sink` | Positive integer parse; extra args silently ignored (no arity validation); delegates to service |
+| `/ship sail` | `archimedes.sail` | Spawns a predetermined 3×3 deck / 4-high mast / 3×3 wool sail 3 blocks in front of the player via `service.spawnSail`. No scan, no world-block clear. |
 
 - Assembly delegates only after service world policy: non-bound targets fail first with `Ship assembly is not permitted in this world`; the configured primary world then fails with `Ship assembly is disabled in this world` when disabled. Both failures occur before scanner or world mutation.
 - Player-facing assembly errors retain the service reason after the command's `Cannot assemble: ` prefix.
@@ -46,7 +47,8 @@ Success looks like: every subcommand has a permission, explicit error messages f
 
 ## Current
 
-- [x] Five subcommands routed with five per-subcommand checks, plus the Bukkit-enforced parent `archimedes.command` (`plugin.yml` `permission:` field) — six effective nodes, all `default: true`
+- [x] Six subcommands routed with six per-subcommand checks, plus the Bukkit-enforced parent `archimedes.command` (`plugin.yml` `permission:` field) — seven effective nodes, all `default: true`
+- [x] `/ship sail` spawns a fixed-size demo sail ship in front of the player (`SailShipTemplate`: 3×3 oak deck, 4-high mast, 3×3 white wool)
 - [x] Player-only enforcement: single entry check gates all subcommands with one generic message (`Only players can build ships.`)
 - [x] Line-of-sight targeting capped at `target-distance` — assemble only
 - [x] Tab completion of subcommands
@@ -75,6 +77,7 @@ Success looks like: every subcommand has a permission, explicit error messages f
 | 2026-08-16 | Services return reason-only failures; commands own exactly one operation prefix | Prevent duplicated user-facing error text and keep service reasons reusable |
 | 2026-08-16 | Runtime is bound to the primary Bukkit world; cross-world support remains Future | Current assembly/runtime wiring uses the primary world |
 | 2026-08-14 | `/ship collision-test` debug fixture added behind op permission; kept isolated from production persistence | Spike acceptance; fixture since removed from code (verified 2026-08-16) |
+| 2026-08-17 | `/ship sail` spawns a predetermined template via `spawnSail` | User asked for one command that drops a fixed-size sail without building |
 
 ## Open questions
 
