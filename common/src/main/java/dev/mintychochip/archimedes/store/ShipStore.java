@@ -109,9 +109,15 @@ public final class ShipStore {
     origin.addProperty("y", ship.origin().y());
     origin.addProperty("z", ship.origin().z());
     object.add("origin", origin);
-    if (ship.pose().y() != 0) {
+    if (ship.pose().x() != 0 || ship.pose().y() != 0 || ship.pose().z() != 0) {
       JsonObject pose = new JsonObject();
+      if (ship.pose().x() != 0) {
+        pose.addProperty("x", ship.pose().x());
+      }
       pose.addProperty("y", ship.pose().y());
+      if (ship.pose().z() != 0) {
+        pose.addProperty("z", ship.pose().z());
+      }
       object.add("pose", pose);
     }
     if (!ship.buoyancyEnabled()) {
@@ -152,13 +158,29 @@ public final class ShipStore {
                   posJson.get("z").getAsInt()),
               requireString(blockJson, "data")));
     }
+    double poseX = 0;
     double poseY = 0;
+    double poseZ = 0;
     if (object.has("pose")) {
-      poseY = object.getAsJsonObject("pose").get("y").getAsDouble();
+      JsonObject pose = object.getAsJsonObject("pose");
+      if (pose.has("x")) {
+        poseX = pose.get("x").getAsDouble();
+      }
+      if (pose.has("y")) {
+        poseY = pose.get("y").getAsDouble();
+      }
+      if (pose.has("z")) {
+        poseZ = pose.get("z").getAsDouble();
+      }
     }
     boolean buoyancyEnabled = !object.has("buoyancy") || object.get("buoyancy").getAsBoolean();
     return new Ship(
-        id, owner, new ShipOrigin(world, x, y, z), blocks, new ShipPose(poseY), buoyancyEnabled);
+        id,
+        owner,
+        new ShipOrigin(world, x, y, z),
+        blocks,
+        new ShipPose(poseX, poseY, poseZ),
+        buoyancyEnabled);
   }
 
   private static String requireString(JsonObject object, String key) {
