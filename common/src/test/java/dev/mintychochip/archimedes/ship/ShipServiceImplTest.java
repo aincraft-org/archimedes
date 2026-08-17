@@ -1108,6 +1108,30 @@ class ShipServiceImplTest {
     assertTrue(fakes.rendered.isEmpty());
   }
 
+  @Test
+  void spawnSailKeepsTheShipWhenRiseDoesNotMoveIt() {
+    Fakes fakes = new Fakes();
+    RecordingBuoyancy buoyancy = new RecordingBuoyancy();
+    buoyancy.riseFails = true;
+    ShipService service =
+        new ShipServiceImpl(
+            new MemoryStore(fakes),
+            (x, y, z) -> List.of(),
+            runtime(fakes),
+            fakes,
+            buoyancy,
+            true,
+            true,
+            WORLD);
+
+    Ship ship = service.spawnSail(OWNER, WORLD, 5, 64, 8);
+
+    assertNotNull(ship);
+    assertEquals(1, service.all().size());
+    assertEquals(List.of("rise"), buoyancy.calls);
+    assertEquals(1, fakes.rendered.size());
+  }
+
   private static final class CountingStore implements ShipStoreLike {
     private final Fakes fakes;
     int saves;

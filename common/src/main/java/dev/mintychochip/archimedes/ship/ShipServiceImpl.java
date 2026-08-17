@@ -180,9 +180,8 @@ public final class ShipServiceImpl implements ShipService {
       ships.put(ship.id(), ship);
       if (buoyancyEnabled) {
         buoyancyStarted = true;
-        if (!shipPhysics.rise(ship)) {
-          throw new ShipRuntimeException(new IllegalStateException("Buoyancy path blocked"));
-        }
+        // Dry land and already-settled poses return false; that is not a spawn failure.
+        shipPhysics.rise(ship);
       }
       persistAll();
       return ships.get(ship.id());

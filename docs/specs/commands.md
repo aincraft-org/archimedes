@@ -34,7 +34,7 @@ Success looks like: every subcommand has a permission, explicit error messages f
 | `/ship disassemble` | `archimedes.disassemble` | Owner or operator only |
 | `/ship buoyancy` | `archimedes.buoyancy` | Toggle for the requester's owned ship in the current world (`toggleBuoyancy(requester, world)` — not line-of-sight-targeted) |
 | `/ship sink <n>` | `archimedes.sink` | Positive integer parse; extra args silently ignored (no arity validation); delegates to service |
-| `/ship sail` | `archimedes.sail` | Spawns a predetermined 3×3 deck / 4-high mast / 3×3 wool sail 3 blocks in front of the player via `service.spawnSail`. No scan, no world-block clear. |
+| `/ship sail` | `archimedes.sail` | Spawns a predetermined 3×3 deck / 4-high mast / 3×3 wool sail 3 blocks in front of the player via `service.spawnSail`. No scan, no world-block clear. A dry or blocked `rise` is ignored so land spawns stay in the world. |
 
 - Assembly delegates only after service world policy: non-bound targets fail first with `Ship assembly is not permitted in this world`; the configured primary world then fails with `Ship assembly is disabled in this world` when disabled. Both failures occur before scanner or world mutation.
 - Player-facing assembly errors retain the service reason after the command's `Cannot assemble: ` prefix.
