@@ -62,7 +62,8 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - Put Bukkit-specific material/world parsing behind interfaces and implement them only in `:paper`.
 - The ship client is responsible for turning a `Ship` into a `Body` and for driving `ShipRuntime` after integration.
 - Reuse existing `ShipRuntime` transaction semantics; do not re-implement rollback in physics.
-- Write tests for the generic core first, then the ship client. Composition tests must call real `Force.apply` and `Physics.step`.
+- Write tests for the generic core first, then the ship client. Composition tests must call real `Force.apply` and `Physics.step`. Every shipped catalog force must also have a real-step assertion, not `apply` alone.
+- `Physics.step` is the only integrator. It sums attached results, skips inactive bodies, and does not inject gravity. Coulomb friction may re-invoke sibling `apply` to read tangent load; those sibling results are still summed once by the step.
 
 ## Current
 
@@ -80,6 +81,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - [x] `ContactPlane` + `SupportForce` (gravity-derived normal load; no through-plane acceleration when composed with gravity).
 - [x] Coulomb friction (kinetic opposes slip, zero with no load, static hold vs slip).
 - [x] Viscous linear drag and angular drag (rest ≈ 0; `|v|` / `|ω|` decrease after `step`).
+- [x] Every catalog force has a defining post-step signature through the real `Physics.step`, including a mixed collection (vehicles + floor contact + spin).
 
 ### Current notes
 
@@ -118,6 +120,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 | 2026-08-17 | Vehicle types are force lists, not `Body` subclasses | Same integrator; water/air/airplane differ only by attached forces |
 | 2026-08-17 | `Quaterniond.integrate(dt, ωx, ωy, ωz)` (JOML argument order) | Swapped args left yaw-only torque with unchanged orientation |
 | 2026-08-17 | Promote attachable support, Coulomb friction, and viscous/angular drag into the generic library | User asked for a complete attachable force catalog; not a contact/LCP solver |
+| 2026-08-17 | Catalog forces are proven through `Physics.step`, not `apply` alone | Isolated apply tests can pass while the integrator never sees the force |
 
 ## Open questions
 
