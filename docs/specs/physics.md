@@ -20,9 +20,8 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
   - `ShipBody` construction from `Ship` blocks.
   - `MaterialKeyResolver` for mapping `ShipBlock.blockData()` to canonical material keys.
   - `ShipMassModel` with per-material density table and tracked-player rider mass.
-  - `ShipBuoyancyForce` using a `FluidField` (vertical net force; unchanged by generic compositions).
-  - `EquilibriumSolver` (bounded, monotonicity-guarded, force-balance).
-  - `ShipPhysics` facade that drives `ShipRuntime`.
+  - `ShipBuoyancyForce` (waterline lift only) plus `GravityForce` on the generic step.
+  - `ShipPhysics` facade that steps the engine and drives `ShipRuntime`.
 
 ### Out of scope / non-goals
 
@@ -45,7 +44,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - `FluidField.isFluid` means ship-submerging liquid only. Atmosphere is queried through `DensityField`, never by setting `isFluid` true for air.
 - `ShipPose.anchorDy() = floor(y)` remains authoritative for block restoration, collision, and persistence.
 - No `ships.json` schema changes.
-- No-equilibrium is a diagnostic, not an exception.
+- Ships do not run a parallel equilibrium search. Pose changes come from `Physics.step`.
 - All-or-nothing moves and `ShipRuntime` rollback are preserved.
 - Configuration for material densities and tolerances is validated at plugin enable; unknown runtime materials fall back to a configured default.
 
@@ -55,7 +54,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - Keep `PhysicsEngine` deterministic and unit-testable without a server. Orientation integration uses JOML `Quaterniond.integrate(dt, ωx, ωy, ωz)`.
 - Put reusable vehicle laws in standalone `Force` units the caller attaches. Do not add watercraft/airship/airplane subclasses of `Body`.
 - Parameterize hydrostatic buoyancy by `DensityField` so water and air share `F = −ρV g`. Watercraft uses `DensityField.liquid(FluidField)` (gated on `isFluid`). Airships use `DensityField.uniform(ρ_air)`.
-- Keep `ShipBuoyancyForce` as the ship client's vertical net force so existing equilibrium/bobbing does not depend on the new compositions.
+- `ShipBuoyancyForce` is waterline lift only. `ShipPhysics` attaches `GravityForce` + `ShipBuoyancyForce` and steps `Physics`. Do not add a second integrator or Y-search solver.
 - Lift is `c · |v × n|²` along the body-local lift axis: ~0 at rest, grows with airspeed, ignores purely vertical motion.
 - Support and Coulomb friction share a `ContactPlane`. Support cancels the compressive gravity load along the normal when the body is in contact; it is not a penetration constraint. Friction uses that same gravity-derived `N`: kinetic is `−μ_k N v̂_t`; static cancels sibling tangent load when `|T| ≤ μ_s N` at rest. `N = 0` off the plane.
 - Viscous linear drag is `F = −c v`, distinct from quadratic `−c |v| v`. Angular drag is `τ = −c ω`. Neither is applied to Archimedes ships.
@@ -71,7 +70,8 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - [x] Generic core API (`Body`, `Collider`, `Shape`, `Material`, `Force`, `World`, `FluidField`, `Physics`).
 - [x] Default `BodyImpl` and `Aabb` shape.
 - [x] `PhysicsEngine` with semi-implicit Euler 6DOF integration (no gravity injection).
-- [x] Ship client: `ShipBody`, `MaterialKeyResolver`, `ShipMassModel`, `ShipBuoyancyForce`, `EquilibriumSolver`, `ShipPhysics`.
+- [x] Ship client: `ShipBody`, `MaterialKeyResolver`, `ShipMassModel`, `ShipBuoyancyForce`, `ShipPhysics` on `Physics.step`.
+- [x] Removed `EquilibriumSolver` / `EquilibriumResult`; mass/draft acceptance is asserted via the real step.
 - [x] `:paper` adapters (`BukkitFluidField`, `BukkitMaterialKeyResolver`, config loading).
 - [x] Migrate existing `dev.mintychochip.phys.Buoyancy*` into `dev.mintychochip.archimedes.phys`.
 - [x] Acceptance A1–A20 from the approved mass model.
@@ -113,7 +113,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 | 2026-08-16 | Material/world parsing stays in `:paper`; core is Bukkit-free | Reusability and testability |
 | 2026-08-16 | `Physics` is stateless: `step(World, Collection<Body>)`; body lists are unmodifiable | Deterministic, testable, no hidden ownership |
 | 2026-08-16 | `Force.apply` uses `World.timeStep()`; no extra `dt` parameter | Avoids redundant timestep arguments |
-| 2026-08-16 | `EquilibriumSolver` returns a target pose `y`; integration chases it with damping/clamps | Matches existing damped bobbing contract |
+| 2026-08-16 | `EquilibriumSolver` returns a target pose `y`; integration chases it with damping/clamps | Later reversed — see 2026-08-17 |
 | 2026-08-16 | New density/tolerance keys live under the existing `buoyancy:` section | Keeps related buoyancy config together |
 | 2026-08-16 | Custom `Vector3`/`Quaternion`/`Matrix3x3` records replaced by JOML | One vector/quat type; less conversion |
 | 2026-08-17 | `DensityField` is independent of `FluidField.isFluid` | Air density for lift/airships must not make empty air count as ship water |
@@ -121,6 +121,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 | 2026-08-17 | `Quaterniond.integrate(dt, ωx, ωy, ωz)` (JOML argument order) | Swapped args left yaw-only torque with unchanged orientation |
 | 2026-08-17 | Promote attachable support, Coulomb friction, and viscous/angular drag into the generic library | User asked for a complete attachable force catalog; not a contact/LCP solver |
 | 2026-08-17 | Catalog forces are proven through `Physics.step`, not `apply` alone | Isolated apply tests can pass while the integrator never sees the force |
+| 2026-08-17 | Remove ship `EquilibriumSolver`; ships only step gravity + waterline buoyancy | Duplicate Y-search fought the engine and is not needed for draft |
 
 ## Open questions
 

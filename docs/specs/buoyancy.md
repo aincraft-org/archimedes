@@ -4,7 +4,7 @@
 > Last updated: 2026-08-16
 > Owners: jlo
 
-Give assembled ships rigid-body vertical buoyancy with a geometry-based waterline equilibrium and damped bobbing. No horizontal movement, steering, or rotation.
+Give assembled ships rigid-body vertical buoyancy by attaching gravity and waterline lift to the generic physics engine. No horizontal movement, steering, or rotation.
 
 A ship is one rigid body: a single pose moves the whole hull. Current buoyancy uses uniform block density for integration and no rider mass; the waterline/equilibrium behavior is geometry-based rather than a force-balance solve. Aggregate per-material mass and rider load are intended under Next.
 
@@ -14,10 +14,9 @@ Success looks like: a ship floats at the shallowest water it sits in, bobs gentl
 
 ### In scope
 
-- `Buoyancy` / `BuoyancyImpl` — rise/tick/sink/clear lifecycle
-- `BuoyancyEngine` — fixed-timestep vertical integration
-- `BuoyancyResolver` — per-block waterline sampling, submerged volume, equilibrium
-- `BuoyancySurface` / `BukkitBuoyancySurface` — water/air/world access
+- `ShipPhysics` / `ShipPhysicsImpl` — rise/tick/sink/clear lifecycle
+- `Physics.step` — the only integrator
+- `WaterlineResolver` — per-block waterline sampling, submerged volume, path clearance
 - Pose persistence and anchor-based restoration coupling
 
 ### Out of scope / non-goals
@@ -43,7 +42,7 @@ Success looks like: a ship floats at the shallowest water it sits in, bobs gentl
 
 ## Implementation guidance
 
-- Physics is unit-testable without Bukkit and lives in `dev.mintychochip.phys`: `Buoyancy` / `BuoyancySurface` live in `:api`; engine/resolver/`BuoyancyImpl` live in `:common`; `BukkitBuoyancySurface` lives in `:paper` and adapts `World` (`isWater` = exact `Material.WATER`; `isClear` = air or water). Archimedes constructs and drives that physics; it does not own a second copy.
+- The generic engine lives in `dev.mintychochip.phys`. The ship client builds a `Body` with `GravityForce` + `ShipBuoyancyForce` and calls `Physics.step`. There is no `EquilibriumSolver`.
 - Per-ship state (velocity, equilibrium) lives in `BuoyancyImpl` maps keyed by ship UUID; cleared on disassembly/rollback (`clear(Ship)`).
 - `ShipService.tick` drives `buoyancy.tick` per ship and persists once iff any ship moved; the scheduler only runs when the **global** `config.buoyancy-enabled` is true (per-ship toggles cannot re-enable physics when the scheduler is off).
 - Path clearance: `BuoyancyImpl.pathClear` hand-rolls integer cells from `floor(min/max y)` spans over `origin + y + rel` (no `ShipTransform.cell` call today); allowed when air or water. Prefer centralizing this with the transform in future.
@@ -62,6 +61,7 @@ Success looks like: a ship floats at the shallowest water it sits in, bobs gentl
 - [x] Blocked-path rejection: tick resets velocity; rise/sink reject without clearing velocity (checked individually — see Next); runtime failure restores pose only
 - [x] Constants configurable via `ShipConfig`/loader + `ArchimedesPlugin` engine wiring: `physics-ticks`, `bob-amplitude`, `max-rise`, `gravity`, `water-density`, `block-density`, `damping`
 - [x] Buoyancy types and tests live in `dev.mintychochip.phys`; Archimedes only constructs and ticks them
+- [x] Ship tick/rise step the generic engine; `EquilibriumSolver` is gone
 
 ### Current notes
 
