@@ -1,5 +1,6 @@
 package dev.mintychochip.archimedes.config;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -39,7 +40,15 @@ public final class ShipConfig {
   private final double blockDensity;
 
   /** Velocity damping factor. */
+  /** Velocity damping factor. */
   private final double damping;
+
+  private final Map<String, Double> materialDensities;
+  private final double defaultMaterialDensity;
+  private final double playerMass;
+  private final double maxFall;
+  private final double massTolerance;
+  private final double draftTolerance;
 
   /**
    * Creates the configuration.
@@ -56,6 +65,12 @@ public final class ShipConfig {
    * @param waterDensity water density constant
    * @param blockDensity block density constant
    * @param damping velocity damping factor
+   * @param materialDensities per-material densities
+   * @param defaultMaterialDensity default material density
+   * @param playerMass mass of a rider
+   * @param maxFall maximum fall distance
+   * @param massTolerance mass equilibrium tolerance
+   * @param draftTolerance waterline tolerance
    */
   public ShipConfig(
       int maximumBlocks,
@@ -70,6 +85,30 @@ public final class ShipConfig {
       double waterDensity,
       double blockDensity,
       double damping) {
+    this(maximumBlocks, targetDistance, forbiddenMaterials, disabledWorlds, buoyancyEnabled,
+        physicsTicks, bobAmplitude, maxRise, gravity, waterDensity, blockDensity, damping,
+        Map.of(), 1.0, 80.0, 16.0, 1e-6, 1e-3);
+  }
+
+  public ShipConfig(
+      int maximumBlocks,
+      int targetDistance,
+      Set<String> forbiddenMaterials,
+      Set<UUID> disabledWorlds,
+      boolean buoyancyEnabled,
+      int physicsTicks,
+      double bobAmplitude,
+      double maxRise,
+      double gravity,
+      double waterDensity,
+      double blockDensity,
+      double damping,
+      Map<String, Double> materialDensities,
+      double defaultMaterialDensity,
+      double playerMass,
+      double maxFall,
+      double massTolerance,
+      double draftTolerance) {
     this.maximumBlocks = maximumBlocks;
     this.targetDistance = targetDistance;
     this.forbiddenMaterials = Set.copyOf(forbiddenMaterials);
@@ -82,6 +121,12 @@ public final class ShipConfig {
     this.waterDensity = waterDensity;
     this.blockDensity = blockDensity;
     this.damping = damping;
+    this.materialDensities = Map.copyOf(materialDensities);
+    this.defaultMaterialDensity = defaultMaterialDensity;
+    this.playerMass = playerMass;
+    this.maxFall = maxFall;
+    this.massTolerance = massTolerance;
+    this.draftTolerance = draftTolerance;
   }
 
   /**
@@ -175,4 +220,11 @@ public final class ShipConfig {
   public double damping() {
     return damping;
   }
+
+  public Map<String, Double> materialDensities() { return materialDensities; }
+  public double defaultMaterialDensity() { return defaultMaterialDensity; }
+  public double playerMass() { return playerMass; }
+  public double maxFall() { return maxFall; }
+  public double massTolerance() { return massTolerance; }
+  public double draftTolerance() { return draftTolerance; }
 }

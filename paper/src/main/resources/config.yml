@@ -45,4 +45,11 @@ max-rise: 16.0
 gravity: 0.05
 water-density: 1.0
 block-density: 0.5
-damping: 0.9
+buoyancy:
+  material-densities:
+    minecraft:oak_planks: 0.6
+  default-material-density: 1.0
+  player-mass: 80.0
+  max-fall: 16.0
+  mass-tolerance: 1.0e-6
+  draft-tolerance: 1.0e-3

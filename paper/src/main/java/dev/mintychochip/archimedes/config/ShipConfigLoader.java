@@ -1,9 +1,12 @@
 package dev.mintychochip.archimedes.config;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 
 /** Builds a validated {@link ShipConfig} from Bukkit configuration values. */
@@ -105,6 +108,22 @@ public final class ShipConfigLoader {
     if (!Double.isFinite(damping) || damping < 0 || damping > 1) {
       throw new IllegalArgumentException("damping must be a finite number between 0 and 1");
     }
+    ConfigurationSection buoyancy = configuration.getConfigurationSection("buoyancy");
+    if (buoyancy == null) buoyancy = configuration.createSection("buoyancy");
+    Map<String, Double> materialDensities = new HashMap<>();
+    ConfigurationSection densities = buoyancy.getConfigurationSection("material-densities");
+    if (densities != null) {
+      for (String key : densities.getKeys(false)) {
+        double value = densities.getDouble(key);
+        if (!Double.isFinite(value) || value <= 0) throw new IllegalArgumentException("bad density: " + key);
+        materialDensities.put(key.toLowerCase(Locale.ROOT), value);
+      }
+    }
+    double defaultMaterialDensity = positiveFinite(buoyancy.getDouble("default-material-density", 1.0), "default-material-density");
+    double playerMass = positiveFinite(buoyancy.getDouble("player-mass", 80.0), "player-mass");
+    double maxFall = positiveFinite(buoyancy.getDouble("max-fall", 16.0), "max-fall");
+    double massTolerance = positiveFinite(buoyancy.getDouble("mass-tolerance", 1e-6), "mass-tolerance");
+    double draftTolerance = positiveFinite(buoyancy.getDouble("draft-tolerance", 1e-3), "draft-tolerance");
     return new ShipConfig(
         maximumBlocks,
         targetDistance,
@@ -117,6 +136,17 @@ public final class ShipConfigLoader {
         gravity,
         waterDensity,
         blockDensity,
-        damping);
+        damping,
+        materialDensities,
+        defaultMaterialDensity,
+        playerMass,
+        maxFall,
+        massTolerance,
+        draftTolerance);
+  }
+
+  private static double positiveFinite(double value, String name) {
+    if (!Double.isFinite(value) || value <= 0) throw new IllegalArgumentException(name + " must be positive and finite");
+    return value;
   }
 }
