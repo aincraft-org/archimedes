@@ -51,6 +51,27 @@ class PhysicsEngineTest {
   }
 
   @Test
+  void skipsInactiveBodiesWithoutChangingState() {
+    BodyImpl inactive =
+        new BodyImpl(
+            new Transform(new Vector3d(), new Quaterniond()),
+            1,
+            List.of(),
+            List.of((b, w) -> new Force.Result(new Vector3d(10, 10, 10), new Vector3d(4, 0, 0))));
+    inactive.setActive(false);
+    inactive.setLinearVelocity(new Vector3d(1, 0, 0));
+    inactive.setAngularVelocity(new Vector3d(0, 2, 0));
+    Transform start = inactive.transform();
+    World world = world(0.5);
+
+    new PhysicsEngine().step(world, List.of(inactive));
+
+    assertEquals(new Vector3d(1, 0, 0), inactive.linearVelocity());
+    assertEquals(new Vector3d(0, 2, 0), inactive.angularVelocity());
+    assertEquals(start, inactive.transform());
+  }
+
+  @Test
   void integratesTorqueIntoAngularVelocityAndOrientation() {
     BodyImpl body =
         new BodyImpl(
