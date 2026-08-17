@@ -1,10 +1,10 @@
 package dev.mintychochip.archimedes.phys.bukkit;
 
 import dev.mintychochip.phys.FluidField;
-import dev.mintychochip.phys.Vector3;
 import java.util.Set;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.joml.Vector3dc;
 
 /** Bukkit-backed fluid field. */
 public final class BukkitFluidField implements FluidField {
@@ -24,7 +24,7 @@ public final class BukkitFluidField implements FluidField {
   }
 
   @Override
-  public boolean isFluid(Vector3 point) {
+  public boolean isFluid(Vector3dc point) {
     int x = (int) Math.floor(point.x());
     int y = (int) Math.floor(point.y());
     int z = (int) Math.floor(point.z());
@@ -32,7 +32,7 @@ public final class BukkitFluidField implements FluidField {
   }
 
   @Override
-  public double density(Vector3 point) {
+  public double density(Vector3dc point) {
     return isFluid(point) ? fluidDensity : 0.0;
   }
 }

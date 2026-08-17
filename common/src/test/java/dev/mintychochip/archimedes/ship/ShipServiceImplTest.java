@@ -746,7 +746,7 @@ class ShipServiceImplTest {
   }
 
   @Test
-  void disassembleRestoresAtPoseAnchor() {
+  void a18DisassemblyAtAuthoritativeAnchor() {
     Fakes fakes = new Fakes();
     Ship ship =
         new Ship(

@@ -2,8 +2,8 @@ package dev.mintychochip.archimedes.phys;
 
 import dev.mintychochip.phys.Body;
 import dev.mintychochip.phys.Force;
-import dev.mintychochip.phys.Vector3;
 import dev.mintychochip.phys.World;
+import org.joml.Vector3d;
 
 public final class ShipBuoyancyForce implements Force {
   @Override
@@ -13,6 +13,6 @@ public final class ShipBuoyancyForce implements Force {
     double buoyancy = submerged * world.fluidField().density(body.transform().position()) * gMag;
     double weight = body.mass() * gMag;
     double net = buoyancy - weight;
-    return new Result(new Vector3(0, net, 0), Vector3.ZERO);
+    return new Result(new Vector3d(0, net, 0), new Vector3d());
   }
 }

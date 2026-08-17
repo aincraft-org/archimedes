@@ -1,11 +1,13 @@
 package dev.mintychochip.phys;
 
-public interface Bounds {
-  Vector3 min();
+import org.joml.Vector3dc;
 
-  Vector3 max();
+public interface Bounds {
+  Vector3dc min();
+
+  Vector3dc max();
 
   double volume();
 
-  boolean contains(Vector3 point);
+  boolean contains(Vector3dc point);
 }

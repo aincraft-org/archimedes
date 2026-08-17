@@ -9,14 +9,15 @@ import dev.mintychochip.phys.BodyImpl;
 import dev.mintychochip.phys.Collider;
 import dev.mintychochip.phys.FluidField;
 import dev.mintychochip.phys.Material;
-import dev.mintychochip.phys.Quaternion;
 import dev.mintychochip.phys.Shape;
 import dev.mintychochip.phys.Transform;
-import dev.mintychochip.phys.Vector3;
 import dev.mintychochip.phys.World;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.joml.Quaterniond;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 import org.junit.jupiter.api.Test;
 
 class EquilibriumSolverTest {
@@ -25,7 +26,7 @@ class EquilibriumSolverTest {
     Collider collider =
         new Collider() {
           public Shape shape() {
-            return new Aabb(Vector3.ZERO, new Vector3(0.5, 0.5, 0.5));
+            return new Aabb(new Vector3d(), new Vector3d(0.5, 0.5, 0.5));
           }
 
           public Material material() {
@@ -33,28 +34,28 @@ class EquilibriumSolverTest {
           }
 
           public Transform localTransform() {
-            return new Transform(Vector3.ZERO, new Quaternion(0, 0, 0, 1));
+            return new Transform(new Vector3d(), new Quaterniond());
           }
         };
     Body body =
         new BodyImpl(
-            new Transform(new Vector3(0, 0, 0), new Quaternion(0, 0, 0, 1)),
+            new Transform(new Vector3d(0, 0, 0), new Quaterniond()),
             1000,
             List.of(collider),
             List.of());
     World world =
         new World() {
-          public Vector3 gravity() {
-            return new Vector3(0, -10, 0);
+          public Vector3d gravity() {
+            return new Vector3d(0, -10, 0);
           }
 
           public FluidField fluidField() {
             return new FluidField() {
-              public boolean isFluid(Vector3 p) {
+              public boolean isFluid(Vector3dc p) {
                 return p.y() <= 10.5;
               }
 
-              public double density(Vector3 p) {
+              public double density(Vector3dc p) {
                 return 1000;
               }
             };

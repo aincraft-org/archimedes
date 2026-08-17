@@ -1,7 +1,9 @@
 package dev.mintychochip.phys;
 
-public interface FluidField {
-  boolean isFluid(Vector3 point);
+import org.joml.Vector3dc;
 
-  double density(Vector3 point);
+public interface FluidField {
+  boolean isFluid(Vector3dc point);
+
+  double density(Vector3dc point);
 }

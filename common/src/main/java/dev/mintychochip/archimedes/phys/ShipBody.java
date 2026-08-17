@@ -9,12 +9,12 @@ import dev.mintychochip.phys.BodyImpl;
 import dev.mintychochip.phys.Collider;
 import dev.mintychochip.phys.Force;
 import dev.mintychochip.phys.Material;
-import dev.mintychochip.phys.Quaternion;
 import dev.mintychochip.phys.Shape;
 import dev.mintychochip.phys.Transform;
-import dev.mintychochip.phys.Vector3;
 import java.util.ArrayList;
 import java.util.List;
+import org.joml.Quaterniond;
+import org.joml.Vector3d;
 
 public final class ShipBody {
   private ShipBody() {}
@@ -26,18 +26,18 @@ public final class ShipBody {
       String key = resolver.key(block);
       double density =
           config.materialDensities().getOrDefault(key, config.defaultMaterialDensity());
-      Aabb box = new Aabb(Vector3.ZERO, new Vector3(0.5, 0.5, 0.5));
+      Aabb box = new Aabb(new Vector3d(), new Vector3d(0.5, 0.5, 0.5));
       Transform local =
           new Transform(
-              new Vector3(block.pos().x() + 0.5, block.pos().y() + 0.5, block.pos().z() + 0.5),
-              new Quaternion(0, 0, 0, 1));
+              new Vector3d(block.pos().x() + 0.5, block.pos().y() + 0.5, block.pos().z() + 0.5),
+              new Quaterniond());
       colliders.add(new SimpleCollider(box, new Material(density), local));
     }
-    Vector3 world =
-        new Vector3(ship.origin().x(), ship.origin().y() + ship.pose().y(), ship.origin().z());
+    Vector3d world =
+        new Vector3d(ship.origin().x(), ship.origin().y() + ship.pose().y(), ship.origin().z());
     double mass = ShipMassModel.mass(ship, resolver, config, riderCount);
     return new BodyImpl(
-        new Transform(world, new Quaternion(0, 0, 0, 1)), mass, colliders, List.of(buoyancy));
+        new Transform(world, new Quaterniond()), mass, colliders, List.of(buoyancy));
   }
 
   private record SimpleCollider(Shape shape, Material material, Transform localTransform)

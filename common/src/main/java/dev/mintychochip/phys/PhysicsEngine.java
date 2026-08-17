@@ -2,6 +2,8 @@ package dev.mintychochip.phys;
 
 import java.util.Collection;
 import java.util.Objects;
+import org.joml.Quaterniond;
+import org.joml.Vector3d;
 
 public final class PhysicsEngine implements Physics {
   public void step(World world, Collection<Body> bodies) {
@@ -11,43 +13,27 @@ public final class PhysicsEngine implements Physics {
     if (!Double.isFinite(dt) || dt < 0) throw new IllegalArgumentException("bad timestep");
     for (Body body : bodies) {
       if (!body.active()) continue;
-      Vector3 totalForce = Vector3.ZERO;
-      Vector3 totalTorque = Vector3.ZERO;
+      Vector3d totalForce = new Vector3d();
+      Vector3d totalTorque = new Vector3d();
       for (Force force : body.forces()) {
         Force.Result r = force.apply(body, world);
-        totalForce = totalForce.add(r.force());
-        totalTorque = totalTorque.add(r.torque());
+        totalForce.add(r.force());
+        totalTorque.add(r.torque());
       }
-      Vector3 acc = totalForce.scale(body.inverseMass());
-      Vector3 v = body.linearVelocity();
-      Vector3 newV = v.add(acc.scale(dt));
+      Vector3d acc = totalForce.mul(body.inverseMass(), new Vector3d());
+      Vector3d v = new Vector3d(body.linearVelocity());
+      Vector3d newV = v.add(acc.mul(dt, new Vector3d()), new Vector3d());
       body.setLinearVelocity(newV);
 
-      Vector3 angularAcc = body.inverseInertia().multiply(totalTorque);
-      Vector3 omega = body.angularVelocity();
-      Vector3 newOmega = omega.add(angularAcc.scale(dt));
+      Vector3d angularAcc = body.inverseInertia().transform(totalTorque, new Vector3d());
+      Vector3d omega = new Vector3d(body.angularVelocity());
+      Vector3d newOmega = omega.add(angularAcc.mul(dt, new Vector3d()), new Vector3d());
       body.setAngularVelocity(newOmega);
 
-      Vector3 p = body.transform().position();
-      Quaternion q = body.transform().orientation();
-      Quaternion newQ = integrateOrientation(q, newOmega, dt);
-      body.setTransform(new Transform(p.add(newV.scale(dt)), newQ));
+      Vector3d p = new Vector3d(body.transform().position());
+      Quaterniond q = new Quaterniond(body.transform().orientation());
+      Quaterniond newQ = q.integrate(newOmega.x(), newOmega.y(), newOmega.z(), dt);
+      body.setTransform(new Transform(p.add(newV.mul(dt, new Vector3d()), new Vector3d()), newQ));
     }
-  }
-
-  private static Quaternion integrateOrientation(Quaternion q, Vector3 omega, double dt) {
-    if (omega.x() == 0 && omega.y() == 0 && omega.z() == 0) return q;
-    double ox = omega.x(), oy = omega.y(), oz = omega.z();
-    double rx = q.w() * ox + q.y() * oz - q.z() * oy;
-    double ry = q.w() * oy - q.x() * oz + q.z() * ox;
-    double rz = q.w() * oz + q.x() * oy - q.y() * ox;
-    double rw = -q.x() * ox - q.y() * oy - q.z() * oz;
-    double k = 0.5 * dt;
-    double nx = q.x() + k * rx;
-    double ny = q.y() + k * ry;
-    double nz = q.z() + k * rz;
-    double nw = q.w() + k * rw;
-    double norm = Math.sqrt(nx * nx + ny * ny + nz * nz + nw * nw);
-    return new Quaternion(nx / norm, ny / norm, nz / norm, nw / norm);
   }
 }

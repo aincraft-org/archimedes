@@ -23,7 +23,6 @@ import dev.mintychochip.archimedes.ship.ShipServiceImpl;
 import dev.mintychochip.archimedes.store.ShipStore;
 import dev.mintychochip.phys.FluidField;
 import dev.mintychochip.phys.PhysicsEngine;
-import dev.mintychochip.phys.Vector3;
 import dev.mintychochip.phys.World;
 import java.util.Collection;
 import java.util.Map;
@@ -73,8 +72,8 @@ public final class ArchimedesPlugin extends JavaPlugin {
       BukkitMaterialKeyResolver materialResolver = new BukkitMaterialKeyResolver();
       World physicsWorld =
           new World() {
-            public Vector3 gravity() {
-              return new Vector3(0, -config.gravity(), 0);
+            public org.joml.Vector3dc gravity() {
+              return new org.joml.Vector3d(0, -config.gravity(), 0);
             }
 
             public FluidField fluidField() {
@@ -85,7 +84,7 @@ public final class ArchimedesPlugin extends JavaPlugin {
               return config.physicsTicks() * 0.05;
             }
 
-            public boolean isObstacle(Vector3 point) {
+            public boolean isObstacle(org.joml.Vector3dc point) {
               int x = (int) Math.floor(point.x());
               int y = (int) Math.floor(point.y());
               int z = (int) Math.floor(point.z());

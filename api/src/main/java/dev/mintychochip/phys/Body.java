@@ -1,27 +1,29 @@
 package dev.mintychochip.phys;
 
 import java.util.List;
+import org.joml.Matrix3dc;
+import org.joml.Vector3dc;
 
 public interface Body {
   Transform transform();
 
   void setTransform(Transform t);
 
-  Vector3 linearVelocity();
+  Vector3dc linearVelocity();
 
-  void setLinearVelocity(Vector3 v);
+  void setLinearVelocity(Vector3dc v);
 
-  Vector3 angularVelocity();
+  Vector3dc angularVelocity();
 
-  void setAngularVelocity(Vector3 v);
+  void setAngularVelocity(Vector3dc v);
 
   double mass();
 
   double inverseMass();
 
-  Matrix3x3 inertia();
+  Matrix3dc inertia();
 
-  Matrix3x3 inverseInertia();
+  Matrix3dc inverseInertia();
 
   List<Collider> colliders();
 

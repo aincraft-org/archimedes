@@ -2,6 +2,10 @@ package dev.mintychochip.phys;
 
 import java.util.List;
 import java.util.Objects;
+import org.joml.Matrix3d;
+import org.joml.Matrix3dc;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 /** Mutable implementation of a rigid body. */
 public final class BodyImpl implements Body {
@@ -9,10 +13,10 @@ public final class BodyImpl implements Body {
   private Transform transform;
 
   /** Linear velocity. */
-  private Vector3 linearVelocity = Vector3.ZERO;
+  private Vector3d linearVelocity = new Vector3d();
 
   /** Angular velocity. */
-  private Vector3 angularVelocity = Vector3.ZERO;
+  private Vector3d angularVelocity = new Vector3d();
 
   /** Constant mass. */
   private final double mass;
@@ -42,20 +46,20 @@ public final class BodyImpl implements Body {
     transform = Objects.requireNonNull(t);
   }
 
-  public Vector3 linearVelocity() {
+  public Vector3dc linearVelocity() {
     return linearVelocity;
   }
 
-  public void setLinearVelocity(Vector3 v) {
-    linearVelocity = Objects.requireNonNull(v);
+  public void setLinearVelocity(Vector3dc v) {
+    linearVelocity.set(Objects.requireNonNull(v));
   }
 
-  public Vector3 angularVelocity() {
+  public Vector3dc angularVelocity() {
     return angularVelocity;
   }
 
-  public void setAngularVelocity(Vector3 v) {
-    angularVelocity = Objects.requireNonNull(v);
+  public void setAngularVelocity(Vector3dc v) {
+    angularVelocity.set(Objects.requireNonNull(v));
   }
 
   public double mass() {
@@ -66,14 +70,14 @@ public final class BodyImpl implements Body {
     return 1.0 / mass;
   }
 
-  public Matrix3x3 inertia() {
+  public Matrix3dc inertia() {
     double i = mass;
-    return new Matrix3x3(i, 0, 0, 0, i, 0, 0, 0, i);
+    return new Matrix3d().set(i, 0, 0, 0, i, 0, 0, 0, i);
   }
 
-  public Matrix3x3 inverseInertia() {
+  public Matrix3dc inverseInertia() {
     double i = 1.0 / mass;
-    return new Matrix3x3(i, 0, 0, 0, i, 0, 0, 0, i);
+    return new Matrix3d().set(i, 0, 0, 0, i, 0, 0, 0, i);
   }
 
   public List<Collider> colliders() {

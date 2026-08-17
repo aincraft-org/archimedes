@@ -117,7 +117,12 @@ public final class ShipConfigLoader {
         double value = densities.getDouble(key);
         if (!Double.isFinite(value) || value <= 0)
           throw new IllegalArgumentException("bad density: " + key);
-        materialDensities.put(key.toLowerCase(Locale.ROOT), value);
+        String normalized = key.trim().toLowerCase(Locale.ROOT);
+        if (!isNamespacedMaterialKey(normalized))
+          throw new IllegalArgumentException("invalid material key: " + key);
+        if (materialDensities.containsKey(normalized))
+          throw new IllegalArgumentException("duplicate material density: " + normalized);
+        materialDensities.put(normalized, value);
       }
     }
     double defaultMaterialDensity =
@@ -154,5 +159,13 @@ public final class ShipConfigLoader {
     if (!Double.isFinite(value) || value <= 0)
       throw new IllegalArgumentException(name + " must be positive and finite");
     return value;
+  }
+
+  private static boolean isNamespacedMaterialKey(String key) {
+    int colon = key.indexOf(':');
+    if (colon <= 0 || colon == key.length() - 1 || colon != key.lastIndexOf(':')) return false;
+    String namespace = key.substring(0, colon);
+    String path = key.substring(colon + 1);
+    return namespace.matches("[a-z0-9._-]+") && path.matches("[a-z0-9._/-]+");
   }
 }

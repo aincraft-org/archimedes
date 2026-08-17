@@ -3,8 +3,8 @@ package dev.mintychochip.archimedes.phys;
 import dev.mintychochip.archimedes.config.ShipConfig;
 import dev.mintychochip.phys.Body;
 import dev.mintychochip.phys.Transform;
-import dev.mintychochip.phys.Vector3;
 import dev.mintychochip.phys.World;
+import org.joml.Vector3d;
 
 public final class EquilibriumSolver {
   public EquilibriumResult solve(Body body, World world, ShipConfig config) {
@@ -17,14 +17,22 @@ public final class EquilibriumSolver {
     double bestError = Double.MAX_VALUE;
     double low = originY - config.maxFall();
     double high = originY + config.maxRise();
+    double previousDisplacedMass = Double.NaN;
+    String unstableReason = null;
     try {
       for (double y = low; y <= high; y += 1.0) {
         body.setTransform(
             new Transform(
-                new Vector3(original.position().x(), y, original.position().z()),
+                new Vector3d(original.position().x(), y, original.position().z()),
                 original.orientation()));
         int submerged = WaterlineResolver.submergedVolume(body, world);
         double displacedMass = submerged * world.fluidField().density(body.transform().position());
+        if (!Double.isNaN(previousDisplacedMass)
+            && displacedMass > previousDisplacedMass + config.massTolerance()) {
+          unstableReason = "unstable sample";
+          break;
+        }
+        previousDisplacedMass = displacedMass;
         double error = Math.abs(displacedMass - targetMass);
         if (error < bestError) {
           bestError = error;
@@ -37,6 +45,7 @@ public final class EquilibriumSolver {
     } finally {
       body.setTransform(original);
     }
+    if (unstableReason != null) return EquilibriumResult.none(unstableReason);
     return EquilibriumResult.none("no equilibrium in range");
   }
 }

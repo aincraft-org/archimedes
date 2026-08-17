@@ -6,12 +6,12 @@ import dev.mintychochip.archimedes.model.ShipPose;
 import dev.mintychochip.archimedes.ship.ShipRuntime;
 import dev.mintychochip.phys.Body;
 import dev.mintychochip.phys.Physics;
-import dev.mintychochip.phys.Vector3;
 import dev.mintychochip.phys.World;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.joml.Vector3d;
 
 public final class ShipPhysicsImpl implements ShipPhysics {
   /** Generic stateless integrator. */
@@ -104,7 +104,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
     Body body =
         ShipBody.from(ship, resolver, config, riderCount.count(ship), new ShipBuoyancyForce());
     double velocity = velocities.getOrDefault(ship.id(), 0.0);
-    body.setLinearVelocity(new Vector3(0, velocity, 0));
+    body.setLinearVelocity(new Vector3d(0, velocity, 0));
     physics.step(world, List.of(body));
     double rawY = body.transform().position().y() - ship.origin().y();
     double newY = clampAndDamp(ship, oldY, targetY, rawY, body);
@@ -118,11 +118,11 @@ public final class ShipPhysicsImpl implements ShipPhysics {
     double clampedY = rawY;
     if (clampedY < low) {
       clampedY = low;
-      body.setLinearVelocity(Vector3.ZERO);
+      body.setLinearVelocity(new Vector3d());
     }
     if (clampedY > high) {
       clampedY = high;
-      body.setLinearVelocity(Vector3.ZERO);
+      body.setLinearVelocity(new Vector3d());
     }
     velocities.put(ship.id(), body.linearVelocity().y() * config.damping());
     return clampedY;

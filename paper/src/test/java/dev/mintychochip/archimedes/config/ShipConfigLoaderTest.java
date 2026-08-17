@@ -9,6 +9,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 
 /** Validation tests for the ship configuration loader. */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class ShipConfigLoaderTest {
   @Test
   void loadsValidConfiguration() {
@@ -113,5 +114,73 @@ class ShipConfigLoaderTest {
     assertEquals(1.0, loaded.waterDensity());
     assertEquals(0.5, loaded.blockDensity());
     assertEquals(0.9, loaded.damping());
+  }
+
+  @Test
+  void rejectsDuplicateMaterialDensitiesAfterNormalization() {
+    YamlConfiguration config = new YamlConfiguration();
+    config.set(ShipConfigLoader.MAXIMUM_BLOCKS_KEY, 100);
+    config.set(ShipConfigLoader.TARGET_DISTANCE_KEY, 8);
+    config.set("buoyancy.material-densities.Minecraft:oak_planks", 0.6);
+    config.set("buoyancy.material-densities.minecraft:OAK_PLANKS", 0.7);
+    IllegalArgumentException thrown =
+        assertThrows(IllegalArgumentException.class, () -> ShipConfigLoader.load(config));
+    assertTrue(thrown.getMessage().toLowerCase().contains("minecraft:oak_planks"));
+  }
+
+  @Test
+  void a4NormalizesMixedCaseAndPaddedMaterialKeys() {
+    YamlConfiguration config = new YamlConfiguration();
+    config.set(ShipConfigLoader.MAXIMUM_BLOCKS_KEY, 100);
+    config.set(ShipConfigLoader.TARGET_DISTANCE_KEY, 8);
+    config.set("buoyancy.material-densities.  minecraft:Oak_Planks  ", 0.6);
+    ShipConfig loaded = ShipConfigLoader.load(config);
+    assertEquals(0.6, loaded.materialDensities().get("minecraft:oak_planks"), 1e-9);
+  }
+
+  @Test
+  void a5RejectsZeroDensity() {
+    YamlConfiguration config = new YamlConfiguration();
+    config.set(ShipConfigLoader.MAXIMUM_BLOCKS_KEY, 100);
+    config.set(ShipConfigLoader.TARGET_DISTANCE_KEY, 8);
+    config.set("buoyancy.material-densities.minecraft:oak_planks", 0.0);
+    assertThrows(IllegalArgumentException.class, () -> ShipConfigLoader.load(config));
+  }
+
+  @Test
+  void a5RejectsNegativeDensity() {
+    YamlConfiguration config = new YamlConfiguration();
+    config.set(ShipConfigLoader.MAXIMUM_BLOCKS_KEY, 100);
+    config.set(ShipConfigLoader.TARGET_DISTANCE_KEY, 8);
+    config.set("buoyancy.material-densities.minecraft:oak_planks", -1.0);
+    assertThrows(IllegalArgumentException.class, () -> ShipConfigLoader.load(config));
+  }
+
+  @Test
+  void a5RejectsMalformedMaterialKey() {
+    YamlConfiguration config = new YamlConfiguration();
+    config.set(ShipConfigLoader.MAXIMUM_BLOCKS_KEY, 100);
+    config.set(ShipConfigLoader.TARGET_DISTANCE_KEY, 8);
+    config.set("buoyancy.material-densities.not_a_key", 0.6);
+    IllegalArgumentException thrown =
+        assertThrows(IllegalArgumentException.class, () -> ShipConfigLoader.load(config));
+    assertTrue(thrown.getMessage().contains("not_a_key"));
+  }
+
+  @Test
+  void a17InvalidReloadLeavesPriorConfigActive() {
+    YamlConfiguration prior = new YamlConfiguration();
+    prior.set(ShipConfigLoader.MAXIMUM_BLOCKS_KEY, 100);
+    prior.set(ShipConfigLoader.TARGET_DISTANCE_KEY, 8);
+    prior.set("buoyancy.material-densities.minecraft:oak_planks", 0.6);
+    ShipConfig valid = ShipConfigLoader.load(prior);
+
+    YamlConfiguration broken = new YamlConfiguration();
+    broken.set(ShipConfigLoader.MAXIMUM_BLOCKS_KEY, 100);
+    broken.set(ShipConfigLoader.TARGET_DISTANCE_KEY, 8);
+    broken.set("buoyancy.material-densities.minecraft:oak_planks", -0.6);
+    assertThrows(IllegalArgumentException.class, () -> ShipConfigLoader.load(broken));
+
+    assertEquals(0.6, valid.materialDensities().get("minecraft:oak_planks"), 1e-9);
   }
 }

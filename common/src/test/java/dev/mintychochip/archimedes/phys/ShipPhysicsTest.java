@@ -12,12 +12,13 @@ import dev.mintychochip.archimedes.model.ShipPose;
 import dev.mintychochip.archimedes.ship.ShipRuntime;
 import dev.mintychochip.phys.FluidField;
 import dev.mintychochip.phys.PhysicsEngine;
-import dev.mintychochip.phys.Vector3;
 import dev.mintychochip.phys.World;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 import org.junit.jupiter.api.Test;
 
 class ShipPhysicsTest {
@@ -53,17 +54,17 @@ class ShipPhysicsTest {
             1e-3);
     World world =
         new World() {
-          public Vector3 gravity() {
-            return new Vector3(0, -10, 0);
+          public Vector3d gravity() {
+            return new Vector3d(0, -10, 0);
           }
 
           public FluidField fluidField() {
             return new FluidField() {
-              public boolean isFluid(Vector3 p) {
+              public boolean isFluid(Vector3dc p) {
                 return true;
               }
 
-              public double density(Vector3 p) {
+              public double density(Vector3dc p) {
                 return 1000;
               }
             };

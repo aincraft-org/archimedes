@@ -14,11 +14,12 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-/** Persistence round-trip tests for the JSON ship store. */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class ShipStoreTest {
   @TempDir Path tempDir;
 
@@ -148,7 +149,7 @@ class ShipStoreTest {
   }
 
   @Test
-  void loadsLegacyFileWithoutPose() throws Exception {
+  void a19LegacyFileWithoutPoseDefaultsToZeroAndEnabled() throws Exception {
     Path file = tempDir.resolve("ships.json");
     Files.writeString(
         file,
@@ -160,5 +161,51 @@ class ShipStoreTest {
     Ship restored = store.loadAll().values().iterator().next();
     assertEquals(0.0, restored.pose().y());
     assertTrue(restored.buoyancyEnabled());
+  }
+
+  @Test
+  void a15RestartRestoresFloatedPoseAndRecomputesMassWithZeroRiders() throws Exception {
+    UUID shipId = UUID.randomUUID();
+    Ship ship =
+        new Ship(
+            shipId,
+            UUID.randomUUID(),
+            new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), "minecraft:stone")),
+            new ShipPose(7.5),
+            true);
+    Map<UUID, Ship> ships = new LinkedHashMap<>();
+    ships.put(shipId, ship);
+
+    ShipStore store = new ShipStore(tempDir);
+    store.saveAll(ships);
+    Ship restored = store.loadAll().get(shipId);
+
+    assertEquals(7.5, restored.pose().y(), 1e-9);
+
+    dev.mintychochip.archimedes.config.ShipConfig config =
+        new dev.mintychochip.archimedes.config.ShipConfig(
+            2048,
+            8,
+            Set.of(),
+            Set.of(),
+            true,
+            1,
+            0.5,
+            32.0,
+            0.05,
+            1000.0,
+            0.5,
+            0.9,
+            Map.of("minecraft:stone", 2.0),
+            1.0,
+            80.0,
+            32.0,
+            1e-6,
+            1e-3);
+    double mass =
+        dev.mintychochip.archimedes.phys.ShipMassModel.mass(
+            restored, b -> b.blockData(), config, 0);
+    assertEquals(2.0, mass, 1e-9);
   }
 }

@@ -7,8 +7,8 @@ import dev.mintychochip.phys.Body;
 import dev.mintychochip.phys.Bounds;
 import dev.mintychochip.phys.Collider;
 import dev.mintychochip.phys.Transform;
-import dev.mintychochip.phys.Vector3;
 import dev.mintychochip.phys.World;
+import org.joml.Vector3d;
 
 /** Resolves submerged unit volumes and collision-safe vertical paths. */
 public final class WaterlineResolver {
@@ -22,8 +22,8 @@ public final class WaterlineResolver {
     for (Collider c : body.colliders()) {
       Bounds b = c.shape().bounds(transform(body, c));
       int bottom = (int) Math.floor(b.min().y());
-      Vector3 center =
-          new Vector3(
+      Vector3d center =
+          new Vector3d(
               (b.min().x() + b.max().x()) / 2.0,
               (b.min().y() + b.max().y()) / 2.0,
               (b.min().z() + b.max().z()) / 2.0);
@@ -43,7 +43,7 @@ public final class WaterlineResolver {
         int wx = ship.origin().x() + block.pos().x();
         int wy = ship.origin().y() + y + block.pos().y();
         int wz = ship.origin().z() + block.pos().z();
-        Vector3 center = new Vector3(wx + 0.5, wy + 0.5, wz + 0.5);
+        Vector3d center = new Vector3d(wx + 0.5, wy + 0.5, wz + 0.5);
         if (world.isObstacle(center) && !world.fluidField().isFluid(center)) return false;
       }
     }
@@ -52,7 +52,7 @@ public final class WaterlineResolver {
 
   private static Transform transform(Body body, Collider c) {
     return new Transform(
-        body.transform().position().add(c.localTransform().position()),
+        body.transform().position().add(c.localTransform().position(), new Vector3d()),
         c.localTransform().orientation());
   }
 
@@ -60,7 +60,7 @@ public final class WaterlineResolver {
     boolean sealed = false;
     int highest = NO_WATER;
     for (int y = bottom + 64; y >= bottom - 64; y--) {
-      Vector3 p = new Vector3(x + 0.5, y + 0.5, z + 0.5);
+      Vector3d p = new Vector3d(x + 0.5, y + 0.5, z + 0.5);
       if (world.fluidField().isFluid(p)) {
         if (!sealed && highest == NO_WATER) highest = y;
       } else if (world.isObstacle(p)) {

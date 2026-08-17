@@ -3,11 +3,11 @@ package dev.mintychochip.archimedes.phys.bukkit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import dev.mintychochip.phys.Vector3;
 import java.lang.reflect.Proxy;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.joml.Vector3d;
 import org.junit.jupiter.api.Test;
 
 class BukkitFluidFieldTest {
@@ -39,7 +39,7 @@ class BukkitFluidFieldTest {
                   return null;
                 });
     BukkitFluidField field = new BukkitFluidField(world, 1000.0);
-    assertTrue(field.isFluid(new Vector3(0.5, 10.5, 0.5)));
-    assertEquals(1000.0, field.density(new Vector3(0.5, 10.5, 0.5)), 1e-9);
+    assertTrue(field.isFluid(new Vector3d(0.5, 10.5, 0.5)));
+    assertEquals(1000.0, field.density(new Vector3d(0.5, 10.5, 0.5)), 1e-9);
   }
 }
