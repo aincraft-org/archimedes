@@ -25,8 +25,8 @@ public final class ShipServiceImpl implements ShipService {
   /** World block mutator. */
   private final WorldMutator mutator;
 
-  /** Buoyancy controller. */
-  private final dev.mintychochip.phys.Buoyancy buoyancy;
+  /** Ship physics controller. */
+  private final dev.mintychochip.archimedes.phys.ShipPhysics shipPhysics;
 
   /** Whether buoyancy is enabled globally. */
   private final boolean buoyancyEnabled;
@@ -57,9 +57,7 @@ public final class ShipServiceImpl implements ShipService {
    *
    * @param store persistence backend
    * @param scanner component scanner
-   * @param runtime runtime composition
-   * @param mutator world block mutator
-   * @param buoyancy buoyancy controller
+   * @param shipPhysics ship physics controller
    * @param buoyancyEnabled whether buoyancy is enabled globally
    * @param worldEnabled whether assembly is enabled in the bound world
    * @param worldId operating world identifier
@@ -69,7 +67,7 @@ public final class ShipServiceImpl implements ShipService {
       ComponentScanner scanner,
       ShipRuntime runtime,
       WorldMutator mutator,
-      dev.mintychochip.phys.Buoyancy buoyancy,
+      dev.mintychochip.archimedes.phys.ShipPhysics shipPhysics,
       boolean buoyancyEnabled,
       boolean worldEnabled,
       UUID worldId) {
@@ -77,7 +75,7 @@ public final class ShipServiceImpl implements ShipService {
     this.scanner = scanner;
     this.runtime = runtime;
     this.mutator = mutator;
-    this.buoyancy = buoyancy;
+    this.shipPhysics = shipPhysics;
     this.buoyancyEnabled = buoyancyEnabled;
     this.worldEnabled = worldEnabled;
     this.worldId = worldId;
@@ -117,7 +115,7 @@ public final class ShipServiceImpl implements ShipService {
       ships.put(ship.id(), ship);
       if (buoyancyEnabled) {
         buoyancyStarted = true;
-        if (!buoyancy.rise(ship)) {
+        if (!shipPhysics.rise(ship)) {
           throw new ShipRuntimeException(new IllegalStateException("Buoyancy path blocked"));
         }
       }
@@ -156,7 +154,7 @@ public final class ShipServiceImpl implements ShipService {
     }
     if (buoyancyStarted) {
       try {
-        buoyancy.clear(ship);
+        shipPhysics.clear(ship);
       } catch (RuntimeException cleanup) {
         restored = false;
         failure.addSuppressed(normalizeCleanup(cleanup));
@@ -214,7 +212,7 @@ public final class ShipServiceImpl implements ShipService {
       return false;
     }
     runtime.remove(ship);
-    buoyancy.clear(ship);
+    shipPhysics.clear(ship);
     ships.remove(shipId);
     persistAll();
     return true;
@@ -284,7 +282,7 @@ public final class ShipServiceImpl implements ShipService {
   public void tick() {
     boolean moved = false;
     for (Ship ship : ships.values()) {
-      moved |= buoyancy.tick(ship);
+      moved |= shipPhysics.tick(ship);
     }
     if (moved) {
       persistAll();
@@ -314,7 +312,7 @@ public final class ShipServiceImpl implements ShipService {
       lastError = "No ship in this world";
       return false;
     }
-    if (!buoyancy.sink(ship, blocks)) {
+    if (!shipPhysics.sink(ship, blocks)) {
       lastError = "path blocked";
       return false;
     }

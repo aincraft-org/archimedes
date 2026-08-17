@@ -12,11 +12,19 @@ import dev.mintychochip.archimedes.config.ShipConfig;
 import dev.mintychochip.archimedes.config.ShipConfigLoader;
 import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.render.RenderSurface;
+import dev.mintychochip.archimedes.phys.ShipPhysics;
+import dev.mintychochip.archimedes.phys.ShipPhysicsImpl;
+import dev.mintychochip.archimedes.phys.bukkit.BukkitFluidField;
+import dev.mintychochip.archimedes.phys.bukkit.BukkitMaterialKeyResolver;
 import dev.mintychochip.archimedes.ship.ShipRuntime;
 import dev.mintychochip.archimedes.ship.ShipRuntimeImpl;
 import dev.mintychochip.archimedes.ship.ShipService;
 import dev.mintychochip.archimedes.ship.ShipServiceImpl;
 import dev.mintychochip.archimedes.store.ShipStore;
+import dev.mintychochip.phys.FluidField;
+import dev.mintychochip.phys.PhysicsEngine;
+import dev.mintychochip.phys.Vector3;
+import dev.mintychochip.phys.World;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -61,25 +69,45 @@ public final class ArchimedesPlugin extends JavaPlugin {
       BukkitShipEntityCarrier carrier =
           new BukkitShipEntityCarrier(world, collisionOwnerKey, shipKey, tracker);
       ShipRuntime runtime = new ShipRuntimeImpl(renderer, collisions, carrier);
-      dev.mintychochip.phys.BuoyancySurface buoyancySurface =
-          new dev.mintychochip.phys.BukkitBuoyancySurface(world);
-      dev.mintychochip.phys.BuoyancyEngine engine =
-          new dev.mintychochip.phys.BuoyancyEngine(
-              config.gravity(),
-              config.waterDensity(),
-              config.blockDensity(),
-              config.damping(),
-              config.physicsTicks());
-      dev.mintychochip.phys.BuoyancyImpl buoyancy =
-          new dev.mintychochip.phys.BuoyancyImpl(
-              buoyancySurface, engine, runtime, config.maxRise(), config.bobAmplitude());
+      BukkitFluidField fluidField = new BukkitFluidField(world, config.waterDensity());
+      BukkitMaterialKeyResolver materialResolver = new BukkitMaterialKeyResolver();
+      World physicsWorld =
+          new World() {
+            public Vector3 gravity() {
+              return new Vector3(0, -config.gravity(), 0);
+            }
+
+            public FluidField fluidField() {
+              return fluidField;
+            }
+
+            public double timeStep() {
+              return config.physicsTicks() * 0.05;
+            }
+
+            public boolean isObstacle(Vector3 point) {
+              int x = (int) Math.floor(point.x());
+              int y = (int) Math.floor(point.y());
+              int z = (int) Math.floor(point.z());
+              org.bukkit.Material type = world.getBlockAt(x, y, z).getType();
+              return !type.isAir() && type != org.bukkit.Material.WATER;
+            }
+          };
+      ShipPhysics shipPhysics =
+          new ShipPhysicsImpl(
+              new PhysicsEngine(),
+              physicsWorld,
+              config,
+              materialResolver,
+              runtime,
+              ship -> tracker.riders(ship).size());
       service =
           new ShipServiceImpl(
               storeAdapter,
               new BukkitScannerWorld(world, config.maximumBlocks(), forbidden),
               runtime,
               new BukkitWorldMutator(world),
-              buoyancy,
+              shipPhysics,
               config.buoyancyEnabled(),
               config.worldEnabled(world.getUID()),
               world.getUID());
@@ -117,6 +145,9 @@ public final class ArchimedesPlugin extends JavaPlugin {
         () -> service.removeAllRuntime(),
         () -> ((ShipServiceImpl) service).runtime().removeAllTagged(),
         message -> getLogger().severe(message));
+  }
+  public ShipService shipService() {
+    return service;
   }
 
   static void registerAfterLoad(Runnable load, Runnable registration) {

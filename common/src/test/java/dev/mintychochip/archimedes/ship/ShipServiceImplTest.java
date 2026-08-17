@@ -99,7 +99,7 @@ class ShipServiceImplTest {
   }
 
   /** Buoyancy fake recording calls. */
-  private static class RecordingBuoyancy implements dev.mintychochip.phys.Buoyancy {
+  private static class RecordingBuoyancy implements dev.mintychochip.archimedes.phys.ShipPhysics {
     final List<String> calls = new ArrayList<>();
     boolean riseFails;
     boolean tickResult;
