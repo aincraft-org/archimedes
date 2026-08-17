@@ -17,6 +17,17 @@ public final class WaterlineResolver {
 
   private WaterlineResolver() {}
 
+  /**
+   * Counts submerged colliders by sampling each collider's center column.
+   *
+   * <p>The water search scans a 64-block window above and below the collider and treats an obstacle
+   * as sealing the column, so enclosed water does not count as a surface. One unit is counted per
+   * submerged collider (not the collider's exact volume).
+   *
+   * @param body body whose colliders are sampled
+   * @param world world supplying fluid and obstacle queries
+   * @return number of submerged colliders
+   */
   public static int submergedVolume(Body body, World world) {
     int count = 0;
     for (Collider c : body.colliders()) {
@@ -35,6 +46,18 @@ public final class WaterlineResolver {
     return count;
   }
 
+  /**
+   * Checks every integer-Y pose between the current and target positions.
+   *
+   * <p>The path check is all-or-nothing: any solid non-fluid block rejects the move.
+   *
+   * @param ship ship whose blocks define the swept volume
+   * @param world world supplying obstacle and fluid queries
+   * @param poseY target relative Y pose
+   * @param config ship movement configuration; reserved for future movement tolerances and
+   *     currently unused
+   * @return whether every sampled block path position is clear
+   */
   public static boolean isPathClear(Ship ship, World world, double poseY, ShipConfig config) {
     int min = Math.min(ship.pose().anchorDy(), (int) Math.floor(poseY));
     int max = Math.max(ship.pose().anchorDy(), (int) Math.floor(poseY));
@@ -50,12 +73,30 @@ public final class WaterlineResolver {
     return true;
   }
 
+  /**
+   * Builds a collider transform by combining the body's world position with local collider pose.
+   *
+   * @param body body supplying the world transform
+   * @param c collider supplying the local transform
+   * @return world-space collider transform
+   */
   private static Transform transform(Body body, Collider c) {
     return new Transform(
         body.transform().position().add(c.localTransform().position(), new Vector3d()),
         c.localTransform().orientation());
   }
 
+  /**
+   * Finds the highest fluid sample in the bounded column scan. An obstacle encountered below an
+   * already-found fluid block does not erase that surface, but it prevents lower (deeper) fluid
+   * blocks from being considered, so only the shallowest unsealed water counts.
+   *
+   * @param world world supplying fluid and obstacle queries
+   * @param x column x coordinate
+   * @param bottom lower scan anchor
+   * @param z column z coordinate
+   * @return highest fluid sample, or {@link #NO_WATER} when none is found
+   */
   private static int columnWaterSurface(World world, int x, int bottom, int z) {
     boolean sealed = false;
     int highest = NO_WATER;

@@ -32,6 +32,13 @@ public final class LiftForce implements Force {
     this.coefficient = coefficient;
   }
 
+  /**
+   * Computes lift along the world-space lift axis from velocity transverse to that axis.
+   *
+   * @param body body whose orientation and linear velocity are sampled
+   * @param world world context; required for the force contract
+   * @return lift force and zero torque
+   */
   @Override
   public Result apply(Body body, World world) {
     Objects.requireNonNull(body);

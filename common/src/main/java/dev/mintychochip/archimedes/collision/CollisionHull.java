@@ -59,6 +59,13 @@ public final class CollisionHull {
         .toList();
   }
 
+  /**
+   * Returns whether any of the block's six cardinal neighbors is unoccupied.
+   *
+   * @param pos block position to inspect
+   * @param occupied occupied block positions
+   * @return {@code true} when at least one cardinal neighbor is absent
+   */
   private static boolean isExposed(BlockPos pos, Set<BlockPos> occupied) {
     for (int[] direction : DIRECTIONS) {
       if (!occupied.contains(

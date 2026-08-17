@@ -18,6 +18,13 @@ public final class QuadraticDragForce implements Force {
     this.coefficient = coefficient;
   }
 
+  /**
+   * Applies drag opposing linear velocity with magnitude quadratic in speed.
+   *
+   * @param body body whose linear velocity is sampled
+   * @param world world context; required for the force contract
+   * @return quadratic drag force and zero torque
+   */
   @Override
   public Result apply(Body body, World world) {
     Objects.requireNonNull(body);

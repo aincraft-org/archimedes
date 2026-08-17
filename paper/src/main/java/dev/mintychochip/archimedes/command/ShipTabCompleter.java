@@ -11,6 +11,17 @@ public final class ShipTabCompleter implements org.bukkit.command.TabCompleter {
   private static final List<String> SUBCOMMANDS =
       List.of("assemble", "inspect", "disassemble", "buoyancy", "sink");
 
+  /**
+   * Completes the first {@code /ship} argument from the known subcommands.
+   *
+   * <p>Only the first argument is completed; later arguments return an empty list.
+   *
+   * @param sender command sender
+   * @param command invoked command
+   * @param alias label used to invoke the command
+   * @param args arguments entered so far
+   * @return matching subcommands for the first argument, or an empty list
+   */
   @Override
   public List<String> onTabComplete(
       @NotNull CommandSender sender,

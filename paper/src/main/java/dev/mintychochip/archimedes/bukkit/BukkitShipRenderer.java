@@ -49,10 +49,11 @@ public final class BukkitShipRenderer implements ShipRendererLike {
   }
 
   /**
-   * Renders the ship as tagged non-persistent block displays.
+   * Renders the ship as tagged non-persistent block displays. If rendering or registration fails,
+   * already-created displays are removed before the failure is propagated.
    *
    * @param ship the ship to render
-   * @param holder the finalization receiver
+   * @param holder finalization receiver invoked only after registration succeeds
    */
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   public void render(Ship ship, ShipHolder holder) {
@@ -98,7 +99,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
   }
 
   /**
-   * Removes every tagged display for the ship.
+   * Removes every tagged display for the ship. This is idempotent when no matching display exists.
    *
    * @param ship the ship to clean up
    */
@@ -114,6 +115,10 @@ public final class BukkitShipRenderer implements ShipRendererLike {
     }
   }
 
+  /**
+   * Removes every tagged display owned by this renderer's ship key, including stale displays from
+   * ships no longer present in memory. Failures are normalized to {@link ShipRuntimeException}.
+   */
   @Override
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   public void removeAllRuntime() {
@@ -128,11 +133,14 @@ public final class BukkitShipRenderer implements ShipRendererLike {
   }
 
   /**
-   * Teleports every tagged display to model-derived positions.
+   * Teleports every tagged display to positions derived from the ship model. The {@code oldY}
+   * argument describes the pose before the caller updated the model; {@code newY} describes the
+   * resulting pose and is retained for the renderer contract even though the current model-derived
+   * locations provide the authoritative destination.
    *
-   * @param ship the ship to reposition
-   * @param oldY the previous pose y
-   * @param newY the new pose y
+   * @param ship the ship whose displays are moved
+   * @param oldY previous pose y
+   * @param newY resulting pose y
    */
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   public void reposition(Ship ship, double oldY, double newY) {

@@ -18,6 +18,12 @@ public final class ContactPlane {
   /** Distance tolerance for “on the plane”. */
   private final double slop;
 
+  /**
+   * Creates a plane with the default contact tolerance of {@code 1e-6}.
+   *
+   * @param point a point on the plane
+   * @param normal free-side normal; normalized when stored
+   */
   public ContactPlane(Vector3dc point, Vector3dc normal) {
     this(point, normal, 1e-6);
   }
@@ -43,14 +49,26 @@ public final class ContactPlane {
     this.slop = slop;
   }
 
+  /**
+   * @return a defensive-copy-backed point on the plane
+   */
   public Vector3dc point() {
     return point;
   }
 
+  /**
+   * @return the normalized free-side normal
+   */
   public Vector3dc normal() {
     return normal;
   }
 
+  /**
+   * Tests whether a position lies on or on the supported side of the plane.
+   *
+   * @param position position to test
+   * @return whether signed distance along the normal is at most the contact slop
+   */
   public boolean contacting(Vector3dc position) {
     Objects.requireNonNull(position);
     return new Vector3d(position).sub(point).dot(normal) <= slop;

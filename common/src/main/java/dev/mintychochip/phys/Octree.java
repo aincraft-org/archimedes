@@ -28,6 +28,11 @@ public final class Octree<T> {
   /** Maximum tree depth. */
   private final int maxDepth;
 
+  /**
+   * Creates an octree with default leaf capacity and depth.
+   *
+   * @param world root bounds
+   */
   public Octree(Bounds world) {
     this(world, DEFAULT_CAPACITY, DEFAULT_MAX_DEPTH);
   }

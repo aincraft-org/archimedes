@@ -8,10 +8,22 @@ public final class SupportForce implements Force {
   /** Supporting plane. */
   private final ContactPlane plane;
 
+  /**
+   * Creates a support force for the supplied contact plane.
+   *
+   * @param plane plane providing contact and normal-load calculations
+   */
   public SupportForce(ContactPlane plane) {
     this.plane = Objects.requireNonNull(plane);
   }
 
+  /**
+   * Applies the plane's compressive gravity load as a normal force.
+   *
+   * @param body body whose contact and mass are sampled
+   * @param world world supplying gravity
+   * @return normal support force, or zero when the body is not loaded by the plane
+   */
   @Override
   public Result apply(Body body, World world) {
     Objects.requireNonNull(body);

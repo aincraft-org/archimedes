@@ -39,6 +39,12 @@ final class TopSurfaceIndex {
    */
   private static final double CELL_EPSILON = 1e-9;
 
+  /**
+   * Creates an index whose stored columns are expressed at pose {@code y = 0}.
+   *
+   * @param grid columns keyed by their integer x/z cell
+   * @param bounds aggregate bounds of those columns at pose {@code y = 0}
+   */
   private TopSurfaceIndex(Map<Long, TopSurface> grid, BoundingBox bounds) {
     this.grid = grid;
     this.bounds = bounds;

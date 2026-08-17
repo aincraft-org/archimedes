@@ -44,10 +44,12 @@ public final class BukkitWorldMutator implements WorldMutator {
   }
 
   /**
-   * Removes every source block of the ship, replacing with air.
+   * Removes every source block of the ship, replacing with air. The operation writes directly to
+   * the bound Bukkit world and does not itself provide rollback.
    *
    * @param ship the ship to clear
-   * @return true
+   * @return {@code true} after all source blocks have been written as air; failures propagate from
+   *     Bukkit
    */
   @Override
   public boolean clearBlocks(Ship ship) {
@@ -61,10 +63,11 @@ public final class BukkitWorldMutator implements WorldMutator {
   }
 
   /**
-   * Validates that every ship destination is currently empty.
+   * Validates that every ship destination is currently empty without changing the world. A failure
+   * records the first blocked absolute destination in {@link #lastError()}.
    *
    * @param ship the ship to validate
-   * @return true when every destination is empty
+   * @return {@code true} when every destination is empty; {@code false} when restoration is blocked
    */
   @Override
   public boolean validateRestore(Ship ship) {
@@ -82,10 +85,11 @@ public final class BukkitWorldMutator implements WorldMutator {
   }
 
   /**
-   * Restores every ship block's original data at its destination.
+   * Restores every ship block's original serialized data at its destination. Callers should invoke
+   * {@link #validateRestore(Ship)} first when they need an all-or-nothing preflight.
    *
    * @param ship the ship to restore
-   * @return true
+   * @return {@code true} after all block data has been written; failures propagate from Bukkit
    */
   @Override
   public boolean restoreBlocks(Ship ship) {
@@ -101,7 +105,9 @@ public final class BukkitWorldMutator implements WorldMutator {
   }
 
   /**
-   * @return the last failure message
+   * Returns the most recent restore-preflight failure, or {@code null} if no failure was recorded.
+   *
+   * @return the last failure message, if any
    */
   @Override
   public String lastError() {

@@ -16,7 +16,7 @@ public final class ShipRuntimeImpl implements ShipRuntime {
   private final ShipEntityCarrier carrier;
 
   /**
-   * Creates a transactional runtime from renderer and collision adapters.
+   * Creates a transactional runtime using the no-op entity carrier.
    *
    * @param renderer renderer adapter
    * @param collisions collision adapter
@@ -39,6 +39,11 @@ public final class ShipRuntimeImpl implements ShipRuntime {
     this.carrier = carrier;
   }
 
+  /**
+   * Spawns all runtime components for a ship.
+   *
+   * @param ship ship to spawn
+   */
   @Override
   public void spawn(Ship ship) {
     boolean rendererStarted = false;
@@ -69,6 +74,13 @@ public final class ShipRuntimeImpl implements ShipRuntime {
     }
   }
 
+  /**
+   * Moves all runtime components from one pose to another.
+   *
+   * @param ship ship to move
+   * @param oldY previous pose y
+   * @param newY new pose y
+   */
   @Override
   public void move(Ship ship, double oldY, double newY) {
     boolean rising = newY > oldY;
@@ -119,6 +131,11 @@ public final class ShipRuntimeImpl implements ShipRuntime {
     }
   }
 
+  /**
+   * Removes all runtime components for one ship.
+   *
+   * @param ship ship to remove
+   */
   @Override
   public void remove(Ship ship) {
     ShipRuntimeException failure = null;
@@ -143,6 +160,11 @@ public final class ShipRuntimeImpl implements ShipRuntime {
     }
   }
 
+  /**
+   * Removes all runtime components for a collection of ships.
+   *
+   * @param ships ships to remove
+   */
   @Override
   public void removeAll(Collection<Ship> ships) {
     try {
@@ -155,6 +177,11 @@ public final class ShipRuntimeImpl implements ShipRuntime {
     }
   }
 
+  /**
+   * Removes renderer and collision entries tagged as runtime-owned.
+   *
+   * <p>Carrier state is cleared even when either adapter reports a cleanup failure.
+   */
   public void removeAllTagged() {
     try {
       renderer.removeAllRuntime();

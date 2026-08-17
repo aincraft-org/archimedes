@@ -81,7 +81,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
   }
 
   /**
-   * Steps the engine until vertical motion settles, then commits the pose.
+   * Steps the engine up to a fixed step limit, then commits the pose.
    *
    * @param ship ship to raise
    * @return whether the move was committed; no water or disabled buoyancy is handled explicitly
@@ -130,6 +130,13 @@ public final class ShipPhysicsImpl implements ShipPhysics {
         new ShipBuoyancyForce());
   }
 
+  /**
+   * Steps vertical physics, clamps the result, damps retained velocity, and commits movement.
+   *
+   * @param ship ship being simulated
+   * @param steps number of physics steps to perform
+   * @return whether the ship moved
+   */
   private boolean integrate(Ship ship, int steps) {
     double oldY = ship.pose().y();
     Body body = body(ship);
@@ -147,6 +154,15 @@ public final class ShipPhysicsImpl implements ShipPhysics {
     return moveDirect(ship, oldY, newY);
   }
 
+  /**
+   * Clamps a simulated absolute height to the configured rise/fall range and resets velocity if
+   * clipped.
+   *
+   * @param ship ship whose origin defines the relative height
+   * @param oldY previous relative pose height
+   * @param body simulated body whose position is being clamped
+   * @return the clamped relative pose height
+   */
   private double clamp(Ship ship, double oldY, Body body) {
     double rawY = body.transform().position().y() - ship.origin().y();
     double low = oldY - config.maxFall();
@@ -165,6 +181,14 @@ public final class ShipPhysicsImpl implements ShipPhysics {
     return clampedY;
   }
 
+  /**
+   * Commits a path-checked pose and rolls back both pose and retained velocity on runtime failure.
+   *
+   * @param ship ship being moved
+   * @param oldY previous relative pose height
+   * @param newY target relative pose height
+   * @return whether the runtime move succeeded
+   */
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   private boolean moveDirect(Ship ship, double oldY, double newY) {
     if (!WaterlineResolver.isPathClear(ship, world, newY, config)) return false;

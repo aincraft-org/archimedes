@@ -6,9 +6,10 @@ import dev.mintychochip.phys.World;
 import org.joml.Vector3d;
 
 /**
- * Ship-column hydrostatic lift: displaced unit volume × fluid density × |g|, upward only.
+ * Ship-column hydrostatic lift: number of submerged colliders × fluid density × |g|, upward only.
  *
- * <p>Weight is applied separately by {@link dev.mintychochip.phys.GravityForce}.
+ * <p>The buoyancy is based on the count reported by {@link WaterlineResolver#submergedVolume}, not
+ * the exact volume of each collider. Weight is applied separately by {@link GravityForce}.
  */
 public final class ShipBuoyancyForce implements Force {
   /**

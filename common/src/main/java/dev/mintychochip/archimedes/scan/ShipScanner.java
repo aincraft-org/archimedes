@@ -26,8 +26,11 @@ public final class ShipScanner {
   private ShipScanner() {}
 
   /**
-   * Scans the component containing the seed up to {@code maximumBlocks} blocks. Forbidden material
-   * names are lowered before comparison.
+   * Scans the face-connected component containing the seed, up to {@code maximumBlocks} captured
+   * blocks. A forbidden seed returns an incomplete result; forbidden neighboring blocks are not
+   * captured or traversed. Captured blocks are connected through faces only. A non-positive {@code
+   * maximumBlocks} causes the first non-air captured block to exceed the limit and returns an
+   * incomplete result. Forbidden material names are lowered before comparison.
    *
    * @param world the world to scan
    * @param seed the seed block

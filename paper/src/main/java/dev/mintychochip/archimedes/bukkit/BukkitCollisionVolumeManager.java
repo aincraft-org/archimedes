@@ -16,7 +16,12 @@ import org.bukkit.World;
 import org.bukkit.entity.Shulker;
 import org.bukkit.persistence.PersistentDataType;
 
-/** Bukkit collision manager using non-persistent Shulkers for exposed ship blocks. */
+/**
+ * Manages non-persistent Shulkers that represent exposed ship blocks as Bukkit collision volumes.
+ *
+ * <p>Volumes are indexed in memory by ship id and relative block position. Spawn and move failures
+ * attempt cleanup or rollback and attach cleanup failures as suppressed exceptions.
+ */
 @SuppressWarnings({
   "checkstyle:IllegalCatch",
   "PMD.AvoidCatchingGenericException",
@@ -47,10 +52,17 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     this.blockKey = new NamespacedKey(ownerKey.getNamespace(), ownerKey.getKey() + "-block");
   }
 
+  /**
+   * Spawns one collision volume for each exposed relative block. Existing volumes for the ship are
+   * removed first; a partial spawn is cleaned up before the normalized failure is rethrown.
+   *
+   * @param ship ship whose exposed blocks receive collision volumes
+   */
   @Override
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   public void spawn(Ship ship) {
     normalizeRemoval(ship.id(), "collision spawn pre-cleanup");
+
     Map<BlockPos, CollisionVolume> spawned = new HashMap<>();
     try {
       for (BlockPos relative : CollisionHull.exposedBlocks(ship)) {
@@ -90,7 +102,12 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     }
   }
 
-  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
+  /**
+   * Removes all partially spawned volumes and attaches cleanup failures to the original failure.
+   *
+   * @param spawned partially created volumes
+   * @param failure original spawn failure receiving suppressed cleanup failures
+   */
   private static void cleanupSpawned(
       Map<BlockPos, CollisionVolume> spawned, ShipRuntimeException failure) {
     for (CollisionVolume volume : spawned.values()) {
@@ -102,6 +119,13 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     }
   }
 
+  /**
+   * Moves registered volumes to their model collision anchors. Only changes in the anchor's block
+   * y-coordinate are applied; if a later move fails, earlier moves are restored to their prior
+   * locations.
+   *
+   * @param ship ship whose registered volumes are moved
+   */
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   @Override
   public void move(Ship ship) {
@@ -136,7 +160,12 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     }
   }
 
-  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
+  /**
+   * Restores previously moved volumes after a failed move, preserving the original failure.
+   *
+   * @param previous volumes and their prior absolute anchors
+   * @param failure original move failure receiving suppressed rollback failures
+   */
   private void rollbackMoved(
       Map<CollisionVolume, ShipTransform.CollisionAnchor> previous, ShipRuntimeException failure) {
     for (Map.Entry<CollisionVolume, ShipTransform.CollisionAnchor> entry : previous.entrySet()) {
@@ -149,7 +178,12 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     }
   }
 
-  @Override
+  /**
+   * Restores registered volumes to a prior pose y without changing the ship model.
+   *
+   * @param ship ship whose volumes are restored
+   * @param oldY previous pose y to restore
+   */
   public void rollback(Ship ship, double oldY) {
     Map<BlockPos, CollisionVolume> shipVolumes = volumes.get(ship.id());
     if (shipVolumes == null) {
@@ -162,7 +196,11 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     }
   }
 
-  @Override
+  /**
+   * Removes all tracked volumes for one ship and reports aggregated cleanup failures.
+   *
+   * @param shipId identifier of the ship to remove
+   */
   public void remove(UUID shipId) {
     normalizeRemoval(shipId, "collision removal");
   }
@@ -214,6 +252,11 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     return new ShipRuntimeException(operation + " failed for ship " + shipId, failure);
   }
 
+  /**
+   * Removes all plugin-owned collision volumes and any matching stale Shulker entities in the
+   * world. Removal continues across individual failures so that all candidates are attempted;
+   * failures are aggregated and reported after the sweep.
+   */
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   @Override
   public void removeAll() {
@@ -283,7 +326,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     return position.x() + "," + position.y() + "," + position.z();
   }
 
-  /** Collision volume backed by a Bukkit Shulker entity. */
+  /** Collision volume backed by a Bukkit Shulker entity; movement preserves its ship identity. */
   private static final class BukkitShulkerCollisionVolume implements CollisionVolume {
     /** Owning ship identifier. */
     private final UUID shipId;
@@ -301,6 +344,13 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
       return shipId;
     }
 
+    /**
+     * Moves the backing entity to an absolute world coordinate, preserving orientation.
+     *
+     * @param x absolute world x coordinate
+     * @param y absolute world y coordinate
+     * @param z absolute world z coordinate
+     */
     public void move(double x, double y, double z) {
       try {
         Location location = entity.getLocation();
@@ -318,6 +368,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
       }
     }
 
+    /** Removes the backing entity, normalizing Bukkit failures to {@link ShipRuntimeException}. */
     @Override
     public void remove() {
       try {

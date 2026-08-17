@@ -26,6 +26,13 @@ public final class FluidBuoyancyForce implements Force {
     this.medium = Objects.requireNonNull(medium);
   }
 
+  /**
+   * Applies buoyancy from the configured medium or the world's liquid field.
+   *
+   * @param body body whose collider volumes are sampled
+   * @param world world supplying gravity and, when needed, liquid density
+   * @return upward buoyancy force proportional to displaced fluid mass
+   */
   @Override
   public Result apply(Body body, World world) {
     Objects.requireNonNull(body);

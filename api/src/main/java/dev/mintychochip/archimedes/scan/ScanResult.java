@@ -3,7 +3,7 @@ package dev.mintychochip.archimedes.scan;
 import dev.mintychochip.archimedes.model.BlockPos;
 import java.util.List;
 
-/** Bounded result of a ship assembly scan. */
+/** Bounded scan result; captured positions are copied when present and absent on failure. */
 public final class ScanResult {
   /** Whether the whole component fit within the limit. */
   private final boolean complete;
@@ -17,16 +17,20 @@ public final class ScanResult {
   /** Scan seed z coordinate. */
   private final int rootZ;
 
-  /** Captured relative positions, or null when incomplete. */
+  /** Captured relative positions in supplied iteration order, or null when incomplete. */
   private final List<BlockPos> captured;
 
   /**
    * Creates a successful scan result.
    *
+   * <p>The captured list is copied in iteration order and rejects null elements. A null {@code
+   * captured} argument is retained as {@code null}, despite this result being marked complete;
+   * other arguments are primitive values and therefore always present.
+   *
    * @param rootX the scan seed x coordinate
    * @param rootY the scan seed y coordinate
    * @param rootZ the scan seed z coordinate
-   * @param captured the captured relative positions
+   * @param captured the captured relative positions; may be {@code null}
    */
   public ScanResult(int rootX, int rootY, int rootZ, List<BlockPos> captured) {
     this.complete = true;
@@ -36,7 +40,7 @@ public final class ScanResult {
     this.captured = captured == null ? null : List.copyOf(captured);
   }
 
-  /** Creates a failed scan result with no captured blocks. */
+  /** Creates an incomplete scan result with null captured positions and zero root coordinates. */
   public ScanResult() {
     this.complete = false;
     this.rootX = 0;
@@ -74,7 +78,9 @@ public final class ScanResult {
   }
 
   /**
-   * @return captured relative positions, or null when incomplete
+   * @return captured relative positions in supplied iteration order as an unmodifiable list, or
+   *     {@code null} when incomplete (or when a null list was supplied to the successful-result
+   *     constructor)
    */
   public List<BlockPos> captured() {
     return captured;

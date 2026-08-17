@@ -83,6 +83,16 @@ public final class ShipServiceImpl implements ShipService {
     this.worldId = worldId;
   }
 
+  /**
+   * Assembles a scanned component at a world coordinate.
+   *
+   * @param playerId requesting owner
+   * @param x component origin x
+   * @param y component origin y
+   * @param z component origin z
+   * @param targetWorldId requested world
+   * @return the created ship, or {@code null} when validation or startup fails
+   */
   @Override
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   public Ship assembleAt(UUID playerId, int x, int y, int z, UUID targetWorldId) {
@@ -183,6 +193,9 @@ public final class ShipServiceImpl implements ShipService {
         : new ShipRuntimeException(cleanup);
   }
 
+  /**
+   * @return the first loaded ship owned by the player in the requested world, or {@code null}
+   */
   @Override
   public Ship findOwnedInWorld(UUID playerId, UUID targetWorldId) {
     for (Ship ship : ships.values()) {
@@ -193,6 +206,11 @@ public final class ShipServiceImpl implements ShipService {
     return null;
   }
 
+  /**
+   * Restores and removes a ship after checking ownership and world block safety.
+   *
+   * @return whether disassembly completed; {@link #lastError()} describes a rejection
+   */
   @Override
   public boolean disassemble(UUID shipId, UUID requesterId, boolean operator) {
     Ship ship = ships.get(shipId);
@@ -220,11 +238,20 @@ public final class ShipServiceImpl implements ShipService {
     return true;
   }
 
+  /**
+   * @return the most recent user-facing failure message, or {@code null}
+   */
   @Override
   public String lastError() {
     return lastError;
   }
 
+  /**
+   * Loads persisted ships, clears stale runtime tags, and spawns the loaded set.
+   *
+   * @return the currently loaded ships keyed by identifier
+   * @throws IllegalStateException if loading or runtime startup fails
+   */
   @Override
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   public Map<UUID, Ship> loadAll() {
@@ -265,21 +292,27 @@ public final class ShipServiceImpl implements ShipService {
     throw new IllegalStateException("Failed during " + phase + " for ship " + shipId, primary);
   }
 
+  /** Persists all currently loaded ships. */
   @Override
   public void saveAll() {
     persistAll();
   }
 
+  /** Removes all loaded ships from the runtime without deleting persisted data. */
   @Override
   public void removeAllRuntime() {
     runtime.removeAll(ships.values());
   }
 
+  /**
+   * @return an immutable snapshot of currently loaded ships
+   */
   @Override
   public Collection<Ship> all() {
     return List.copyOf(ships.values());
   }
 
+  /** Advances physics for every loaded ship and persists when any ship moved. */
   @Override
   public void tick() {
     boolean moved = false;
@@ -291,6 +324,11 @@ public final class ShipServiceImpl implements ShipService {
     }
   }
 
+  /**
+   * Toggles buoyancy for the requester's ship in the target world.
+   *
+   * @return whether a matching ship was found and persisted
+   */
   @Override
   public boolean toggleBuoyancy(UUID requesterId, UUID targetWorldId) {
     Ship ship = findOwnedInWorld(requesterId, targetWorldId);
@@ -303,6 +341,11 @@ public final class ShipServiceImpl implements ShipService {
     return true;
   }
 
+  /**
+   * Attempts to sink the requester's ship by a positive block count.
+   *
+   * @return whether movement and persistence succeeded
+   */
   @Override
   public boolean sink(UUID requesterId, UUID targetWorldId, int blocks) {
     if (blocks <= 0) {

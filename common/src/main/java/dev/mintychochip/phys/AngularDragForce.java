@@ -18,6 +18,13 @@ public final class AngularDragForce implements Force {
     this.coefficient = coefficient;
   }
 
+  /**
+   * Applies angular drag opposing the body's angular velocity.
+   *
+   * @param body body whose angular velocity is sampled
+   * @param world world context; required for the force contract
+   * @return zero linear force and viscous angular torque
+   */
   @Override
   public Result apply(Body body, World world) {
     Objects.requireNonNull(body);

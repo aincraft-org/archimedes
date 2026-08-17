@@ -92,7 +92,10 @@ public interface RenderSurface {
   Collection<BlockDisplay> tagged(NamespacedKey key, String shipId);
 
   /**
-   * Removes every display carrying the supplied plugin tag.
+   * Removes every display carrying the supplied plugin tag when supported by the surface.
+   *
+   * <p>The default implementation is a no-op; surfaces that support bulk tagged removal may
+   * override it.
    *
    * @param key the plugin-owned tag key
    */

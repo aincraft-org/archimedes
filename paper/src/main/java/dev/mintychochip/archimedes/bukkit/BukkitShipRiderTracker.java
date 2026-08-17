@@ -31,7 +31,7 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.BoundingBox;
 
 /**
- * Maintains a persistent set of entities that are standing on each ship's exposed top hull. The
+ * Maintains an in-memory set of entities that are standing on each ship's exposed top hull. The
  * tracker listens to Bukkit entity events and uses a cached {@link TopSurfaceIndex} per ship, so a
  * vertical ship move only teleports the already-known riders instead of scanning the surrounding
  * area.
@@ -169,41 +169,82 @@ public final class BukkitShipRiderTracker implements Listener {
     }
   }
 
+  /**
+   * Re-evaluates a player after movement, retaining the rider association only while it overlaps a
+   * ship surface.
+   *
+   * @param event movement event
+   */
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
   void onPlayerMove(PlayerMoveEvent event) {
     updateAtLocation(event.getPlayer(), event.getTo());
   }
 
+  /**
+   * Updates rider state for non-player entity movement.
+   *
+   * @param event entity movement event
+   */
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
   void onEntityMove(io.papermc.paper.event.entity.EntityMoveEvent event) {
     updateAtLocation(event.getEntity(), event.getTo());
   }
 
+  /**
+   * Updates rider state when a vehicle moves.
+   *
+   * @param event vehicle movement event
+   */
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
   void onVehicleMove(VehicleMoveEvent event) {
     updateAtLocation(event.getVehicle(), event.getTo());
   }
 
+  /**
+   * Considers newly spawned entities for immediate ship boarding.
+   *
+   * @param event entity spawn event
+   */
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
   void onEntitySpawn(EntitySpawnEvent event) {
     updateAtLocation(event.getEntity(), event.getLocation());
   }
 
+  /**
+   * Considers newly spawned items for immediate ship boarding.
+   *
+   * @param event item spawn event
+   */
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
   void onItemSpawn(ItemSpawnEvent event) {
     updateAtLocation(event.getEntity(), event.getEntity().getLocation());
   }
 
+  /**
+   * Removes an entity from rider tracking when it enters a vehicle.
+   *
+   * @param event vehicle entry event
+   */
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
   void onVehicleEnter(VehicleEnterEvent event) {
     removeRider(event.getEntered().getUniqueId());
   }
 
+  /**
+   * Re-evaluates an entity after it exits a vehicle.
+   *
+   * @param event vehicle exit event
+   */
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
   void onVehicleExit(VehicleExitEvent event) {
     updateAtLocation(event.getExited(), event.getExited().getLocation());
   }
 
+  /**
+   * Re-evaluates an entity after teleport, removing it when no destination exists.
+   *
+   * @param event entity teleport event
+   */
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
   void onEntityTeleport(EntityTeleportEvent event) {
     Location to = event.getTo();
@@ -214,21 +255,41 @@ public final class BukkitShipRiderTracker implements Listener {
     }
   }
 
+  /**
+   * Re-evaluates a player after teleport.
+   *
+   * @param event player teleport event
+   */
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
   void onPlayerTeleport(PlayerTeleportEvent event) {
     updateAtLocation(event.getPlayer(), event.getTo());
   }
 
+  /**
+   * Removes a player when it changes worlds.
+   *
+   * @param event world-change event
+   */
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
   void onPlayerChangedWorld(PlayerChangedWorldEvent event) {
     removeRider(event.getPlayer().getUniqueId());
   }
 
+  /**
+   * Removes dead entities from rider tracking.
+   *
+   * @param event entity death event
+   */
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
   void onEntityDeath(EntityDeathEvent event) {
     removeRider(event.getEntity().getUniqueId());
   }
 
+  /**
+   * Removes players that leave the server from rider tracking.
+   *
+   * @param event player quit event
+   */
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
   void onPlayerQuit(PlayerQuitEvent event) {
     removeRider(event.getPlayer().getUniqueId());

@@ -1,6 +1,11 @@
 package dev.mintychochip.archimedes.model;
 
-/** Axis-aligned integer position of a ship block relative to the ship origin. */
+/**
+ * Axis-aligned integer position of a ship block relative to the ship origin.
+ *
+ * <p>This value object compares equal to another {@code BlockPos} with the same three coordinates
+ * and has a matching coordinate-based hash code.
+ */
 public final class BlockPos {
   /** Relative x coordinate. */
   private final int x;

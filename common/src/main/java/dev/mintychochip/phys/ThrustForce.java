@@ -29,6 +29,13 @@ public final class ThrustForce implements Force {
     this.magnitude = magnitude;
   }
 
+  /**
+   * Applies fixed-magnitude thrust along the transformed body-local direction.
+   *
+   * @param body body whose orientation is sampled
+   * @param world world context; required for the force contract
+   * @return thrust force and zero torque
+   */
   @Override
   public Result apply(Body body, World world) {
     Objects.requireNonNull(body);

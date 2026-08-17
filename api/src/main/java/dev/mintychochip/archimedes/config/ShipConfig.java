@@ -63,6 +63,12 @@ public final class ShipConfig {
   /**
    * Creates configuration with legacy physics defaults.
    *
+   * <p>This delegates to the full constructor with an empty material-density map, default material
+   * density {@code 1.0}, player mass {@code 80.0}, maximum fall {@code 16.0}, mass tolerance {@code
+   * 1e-6}, and draft tolerance {@code 1e-3}. Set and map arguments are copied in their iteration
+   * order where applicable and reject null arguments and null elements or entries with {@link
+   * NullPointerException}.
+   *
    * @param maximumBlocks the maximum captured blocks per ship
    * @param targetDistance the maximum command targeting distance
    * @param forbiddenMaterials materials that cannot be assembled
@@ -112,6 +118,10 @@ public final class ShipConfig {
 
   /**
    * Creates the configuration with explicit physics settings.
+   *
+   * <p>The supplied sets and map are defensively copied and exposed as unmodifiable collections.
+   * Null collection/map arguments and null elements, keys, or values are rejected with {@link
+   * NullPointerException}; scalar arguments are stored as supplied.
    *
    * @param maximumBlocks the maximum captured blocks per ship
    * @param targetDistance the maximum command targeting distance
@@ -186,14 +196,14 @@ public final class ShipConfig {
   }
 
   /**
-   * @return material registry names that cannot be assembled
+   * @return an unmodifiable set of material registry names that cannot be assembled
    */
   public Set<String> forbiddenMaterials() {
     return forbiddenMaterials;
   }
 
   /**
-   * @return world identifiers where assembly is disabled
+   * @return an unmodifiable set of world identifiers where assembly is disabled
    */
   public Set<UUID> disabledWorlds() {
     return disabledWorlds;
@@ -263,26 +273,57 @@ public final class ShipConfig {
     return damping;
   }
 
+  /**
+   * Returns configured per-material densities.
+   *
+   * @return an unmodifiable map keyed by material registry name, in the copied map's iteration
+   *     order
+   */
   public Map<String, Double> materialDensities() {
     return materialDensities;
   }
 
+  /**
+   * Returns the density used when a material has no explicit entry.
+   *
+   * @return fallback material density
+   */
   public double defaultMaterialDensity() {
     return defaultMaterialDensity;
   }
 
+  /**
+   * Returns the mass assigned to each rider.
+   *
+   * @return rider mass
+   */
   public double playerMass() {
     return playerMass;
   }
 
+  /**
+   * Returns the maximum downward displacement from the build site.
+   *
+   * @return maximum fall distance
+   */
   public double maxFall() {
     return maxFall;
   }
 
+  /**
+   * Returns the tolerance used when comparing equilibrium masses.
+   *
+   * @return mass comparison tolerance
+   */
   public double massTolerance() {
     return massTolerance;
   }
 
+  /**
+   * Returns the tolerance below which draft changes are ignored.
+   *
+   * @return draft movement tolerance
+   */
   public double draftTolerance() {
     return draftTolerance;
   }

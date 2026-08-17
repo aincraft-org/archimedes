@@ -20,12 +20,31 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
   /** Target resolver. */
   private final TargetResolver targetResolver;
 
+  /**
+   * Creates a command executor backed by the ship service and target resolver.
+   *
+   * @param service service performing ship operations
+   * @param config command configuration
+   * @param targetResolver resolves the block targeted by the player
+   */
   public ShipCommand(ShipService service, ShipConfig config, TargetResolver targetResolver) {
     this.service = service;
     this.config = config;
     this.targetResolver = targetResolver;
   }
 
+  /**
+   * Dispatches a {@code /ship} subcommand.
+   *
+   * <p>Only players may execute ship operations; recognized subcommands are delegated to the
+   * corresponding service operation and unknown or malformed input receives a usage/error message.
+   *
+   * @param sender command sender
+   * @param command invoked command
+   * @param commandLabel label used to invoke the command
+   * @param args subcommand and its arguments
+   * @return always {@code true}, indicating that the command handled its input
+   */
   @Override
   public boolean onCommand(
       @NotNull CommandSender sender,

@@ -56,26 +56,53 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
     this.tracker = tracker;
   }
 
+  /**
+   * Starts tracking entities for a ship and records its current vertical pose basis.
+   *
+   * @param ship the ship whose riders are tracked
+   * @param poseY the ship's current vertical pose
+   */
   @Override
   public void track(Ship ship, double poseY) {
     tracker.track(ship, poseY);
   }
 
+  /**
+   * Stops tracking a ship and removes its rider associations.
+   *
+   * @param ship the ship to stop tracking
+   */
   @Override
   public void untrack(Ship ship) {
     tracker.untrack(ship);
   }
 
+  /** Clears all tracked ships, pose bases, rider associations, and entity indexes. */
   @Override
   public void clear() {
     tracker.clear();
   }
 
+  /**
+   * Updates the remembered vertical pose basis without carrying entities.
+   *
+   * @param ship the ship whose basis is updated
+   * @param poseY the new vertical pose basis
+   */
   @Override
   public void updatePoseBasis(Ship ship, double poseY) {
     tracker.updatePoseBasis(ship, poseY);
   }
 
+  /**
+   * Carries currently tracked, valid, same-world, non-vehicle, non-ship entities by the ship's
+   * vertical movement. Player velocity is adjusted directly; other entities are teleported when
+   * possible. A zero movement delta performs no work.
+   *
+   * @param ship the ship that moved
+   * @param oldY the previous vertical pose
+   * @param newY the new vertical pose
+   */
   @Override
   public void carry(Ship ship, double oldY, double newY) {
     double delta = newY - oldY;

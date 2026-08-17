@@ -21,6 +21,13 @@ public final class ViscousDragForce implements Force {
     this.coefficient = coefficient;
   }
 
+  /**
+   * Applies linear drag opposing the body's velocity.
+   *
+   * @param body body whose linear velocity is sampled
+   * @param world world context; required for the force contract
+   * @return viscous drag force and zero torque
+   */
   @Override
   public Result apply(Body body, World world) {
     Objects.requireNonNull(body);
