@@ -13,7 +13,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 ### In scope
 
 - Generic math helpers on JOML (`Vectors`, `Quaternions`) plus `Transform`.
-- Generic abstractions: `Body`, `Collider`, `Shape`, `Material`, `Force`, `World`, `FluidField`, `DensityField`, `Physics`.
+- Generic abstractions: `Body`, `Collider`, `Shape`, `Material`, `Force`, `World`, `FluidField`, `DensityField`, `FlowField`, `Physics`.
 - Default `BodyImpl`, `Aabb`, `ColliderImpl`, `Octree`, and `PhysicsEngine` in `:common`.
 - Octree broadphase plus AABB contact depenetration on `Physics.step` (body–body).
 - Reusable `Force` units: `GravityForce`, `FluidBuoyancyForce`, `QuadraticDragForce` (optional `DensityField`), `ThrustForce`, `MediumThrustForce`, `LiftForce`, `SupportForce`, `CoulombFrictionForce`, `ViscousDragForce`, `AngularDragForce`.
@@ -60,6 +60,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - `MediumThrustForce` is `F = k · ρ(p) · n̂` at a body-local application point, with `τ = (p − X) × F`. The no-medium constructor uses `DensityField.liquid(world.fluidField())`. It never gates on `isFluid` directly.
 - `ThrustForce` stays density-blind (rocket). `QuadraticDragForce(c)` stays lumped `−c |v| v` and does not sample density. `QuadraticDragForce(c, DensityField)` is `−c · ρ · |v| v` with volume-weighted mean `ρ` over colliders (body position if none). The one-arg constructor is not a world-liquid default.
 - Parameterize medium thrust and density drag by `DensityField` the same way as hydrostatic buoyancy. Watercraft uses liquid; airships use `DensityField.uniform(ρ_air)`. Do not add `World.densityField()`.
+- `FlowField` is pointwise flow velocity (`still`, `uniform`, axis-aligned `box`, and `compose`). Multiple winds exist by composing or by attaching different fields to different forces. Do not add `World.flowField()`. Do not use `isFluid` for air.
 - Support and Coulomb friction share a `ContactPlane`. Support cancels the compressive gravity load along the normal when the body is in contact; it is not a penetration constraint. Friction uses that same gravity-derived `N`: kinetic is `−μ_k N v̂_t`; static cancels sibling tangent load when `|T| ≤ μ_s N` at rest. `N = 0` off the plane.
 - Viscous linear drag is `F = −c v`, distinct from quadratic `−c |v| v`. Angular drag is `τ = −c ω`. Neither is applied to Archimedes ships.
 - Put Bukkit-specific material/world parsing behind interfaces and implement them only in `:paper`.
@@ -88,6 +89,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - [x] Viscous linear drag and angular drag (rest ≈ 0; `|v|` / `|ω|` decrease after `step`).
 - [x] Every catalog force has a defining post-step signature through the real `Physics.step`, including a mixed collection (vehicles + floor contact + spin).
 - [x] Octree broadphase + AABB contact depenetration on `Physics.step`.
+- [x] `FlowField`: still / uniform / box / compose; not owned by `World`.
 
 ### Current notes
 
@@ -113,8 +115,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - [ ] Multi-ship fluid displacement.
 - [ ] Water entry/splash effects and drowning rules.
 - [ ] Stall, control surfaces, and atmosphere tables.
-- [ ] `FlowField` / wind velocity input so sails can use relative wind (not `isFluid`, not `F = k ρ n̂`)
-- [ ] `PressureSailForce` then `LiftingSailForce` as attachable catalog units (density, area/orientation, `v_app`; sheet, offset `r × F`, multi-sail composition)
+- [ ] `PressureSailForce` then `LiftingSailForce` as attachable catalog units (density, area/orientation, `v_app` from `FlowField`; sheet, offset `r × F`, multi-sail composition)
 
 ## Decisions log
 
@@ -140,6 +141,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 | 2026-08-17 | Generic `MediumThrustForce` + opt-in density drag; no ship wiring | Same catalog later attaches to airships; `isFluid` must not kill air props |
 | 2026-08-17 | `ThrustForce` remains density-blind; one-arg quadratic drag stays lumped | Rocket and legacy callers keep their law; density coupling is explicit |
 | 2026-08-17 | Sails are future catalog forces, not medium thrust and not a `Body` subclass | Need `v_app` and area/orientation; `F = k ρ n̂` has no relative wind |
+| 2026-08-17 | `FlowField` is constructor-injected; multiple winds via `compose` or per-force fields | Same reason as no `World.densityField()`: two bodies can share a world and differ by attached flow |
 
 ## Open questions
 

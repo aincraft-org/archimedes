@@ -163,8 +163,7 @@ A useful identity: two equal-and-opposite sail forces at different points are a 
 
 ### Missing (do not fake these with medium thrust)
 
-- **A wind / relative-flow input.** `World` has gravity, a liquid `FluidField`, and `timeStep`. It has no `velocity(point)` flow. Sails need `v_wind` so that `v_app = v_wind − v − ω × r` exists. Still air plus body motion is not enough: a ship at rest in a breeze must move.
-- **A `FlowField` (or `WindField`) type** the force can hold, analogous to `DensityField`. Constructor-injected, not `World.densityField()`-style world ownership, so two bodies can sit in different canned winds in tests.
+- **Wiring sails to `FlowField`.** The type now exists (`still`, `uniform`, `box`, `compose`) and is constructor-injected. Sails are not attached yet. `v_app = v_wind − v − ω × r` still needs a sail force to sample it. Still air plus body motion is not enough: a ship at rest in a breeze must move.
 - **Apparent wind at an offset point** (`ω × r`). Optional for a first cut if `ω` is small; required for honest kite / heel coupling.
 - **Angle-of-attack coefficients** for the lifting sail. Linear `C_L = c α` is enough to start. Stall, reefing, and points-of-sail tables stay out.
 - **A side-force / keel sibling** if we want upwind track without sliding. That is not a sail. It is a hull force (`F` opposing leeway, possibly another `DensityField.liquid` unit). Do not hide it inside the sail.
