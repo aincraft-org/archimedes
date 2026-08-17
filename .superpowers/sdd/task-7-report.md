@@ -10,7 +10,7 @@ Semantic setup: a one-block ship is tracked with supplied seed basis `4.0`; the 
 
 Command:
 ```bash
-./gradlew test --tests dev.jlo.ships.bukkit.BukkitShipRiderTrackerTest --tests dev.jlo.ships.bukkit.BukkitShipEntityCarrierTest --tests dev.jlo.ships.bukkit.TopSurfaceIndexTest --tests dev.jlo.ships.bukkit.BukkitCollisionVolumeManagerTest
+./gradlew test --tests dev.mintychochip.ships.bukkit.BukkitShipRiderTrackerTest --tests dev.mintychochip.ships.bukkit.BukkitShipEntityCarrierTest --tests dev.mintychochip.ships.bukkit.TopSurfaceIndexTest --tests dev.mintychochip.ships.bukkit.BukkitCollisionVolumeManagerTest
 ```
 
 Outcome: `BUILD SUCCESSFUL` (22 tests completed, 0 failed).

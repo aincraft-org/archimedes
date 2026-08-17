@@ -41,7 +41,7 @@ Success looks like: a `Ship` is a pure, unit-testable description of a build (or
 - Unsafe supplied config values never silently fall back — validation rejects them and plugin enable fails with a clear log. Missing list and optional scalar keys fall back to code defaults; `maximum-blocks` and `target-distance` instead use loader default `0` and fail validation when absent.
 ## Implementation guidance
 
-- Model classes live in `dev.jlo.archimedes.model`; records for value types (`BlockPos`), final classes with accessors elsewhere. `ShipOrigin` intentionally has no `equals` (identity semantics).
+- Model classes live in `dev.mintychochip.archimedes.model`; records for value types (`BlockPos`), final classes with accessors elsewhere. `ShipOrigin` intentionally has no `equals` (identity semantics).
 - JSON via Gson in `ShipStore`; version field not present — compatibility is handled by optional fields only.
 - `StoreAdapter` (in `ArchimedesPlugin`) wraps store I/O checked exceptions into service-contract exceptions; `ShipStore.loadAll()` and `saveAll()` declare `IOException` for filesystem failures, while malformed JSON parsing errors such as Gson's `JsonSyntaxException` propagate unchecked from `loadAll()`.
 - Config loading pattern: `ShipConfigLoader` validates every supplied value. Missing `maximum-blocks` and `target-distance` are read with a numeric default of `0`, then fail the positive-value checks; missing list keys produce empty forbidden-material and disabled-world sets; other missing keys use the code defaults: buoyancy enabled, physics ticks `1`, bob amplitude `0.5`, max rise `16.0`, gravity `0.05`, water density `1.0`, block density `0.5`, and damping `0.9`. Unsafe supplied values fail enable; missing keys do not generally fall back for the two required positive integers.
@@ -80,7 +80,7 @@ Success looks like: a `Ship` is a pure, unit-testable description of a build (or
 | 2026-08-16 | Living specs live in `docs/specs/`; dated docs in `docs/superpowers/` remain historical record | User directive; one maintained catalog per domain |
 | 2026-08-16 | Material densities are configuration-only; rider mass and equilibrium diagnostics are runtime-only | Avoid schema migration and stale persisted load; recompute from blocks, config, and tracked players |
 | 2026-08-16 | Public models/interfaces in `:api`; scanner/store in `:common`; config loader in `:paper` | Gradle submodule split keeps Paper toolchain off domain implementations |
-| 2026-08-16 | Product renamed Ships → Archimedes (`dev.jlo.archimedes`, `archimedes.json`) | Align plugin identity with the archimedes remote; leftover `ships.json` still loads |
+| 2026-08-16 | Product renamed Ships → Archimedes (`dev.mintychochip.archimedes`, `archimedes.json`) | Align plugin identity with the archimedes remote; leftover `ships.json` still loads |
 | 2026-08-14 | Pose persisted as optional field, not schema version bump | Backward compat without migration machinery |
 | 2026-08-14 | `anchorDy = floor(y)` is authoritative for collision/restoration | Integer cells must match world semantics; fractional y is visual only |
 

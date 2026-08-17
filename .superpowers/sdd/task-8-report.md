@@ -4,6 +4,6 @@ The negative-floor movement test now captures each Shulker with its own teleport
 
 Final focused command:
 ```bash
-./gradlew test --tests dev.jlo.ships.bukkit.BukkitCollisionVolumeManagerTest
+./gradlew test --tests dev.mintychochip.ships.bukkit.BukkitCollisionVolumeManagerTest
 ```
 Outcome: `BUILD SUCCESSFUL`; focused test file passed with 9 tests and 0 failures.

@@ -3,5 +3,5 @@ plugins {
     id("xyz.jpenilla.run-paper") version "3.1.0" apply false
 }
 
-group = "dev.jlo"
+group = "dev.mintychochip"
 version = "0.1.0-SNAPSHOT"

@@ -41,7 +41,7 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 
 ## Implementation guidance
 
-- Domain interfaces live in `:api` and never import Bukkit except the documented `compileOnly` leaks; Paper-free runtime composition (`ShipRuntimeImpl`, `CollisionHull`) lives in `:common`; Bukkit adapters live in `:paper` under `dev.jlo.archimedes.bukkit`.
+- Domain interfaces live in `:api` and never import Bukkit except the documented `compileOnly` leaks; Paper-free runtime composition (`ShipRuntimeImpl`, `CollisionHull`) lives in `:common`; Bukkit adapters live in `:paper` under `dev.mintychochip.archimedes.bukkit`.
 - PDC identity uses distinct renderer (`ship-id`) and collision (`collision-owner`) key families; stale sweeps and remove paths remain symmetric with their spawn-time tags.
 - Reposition pairs tagged displays by PDC block key and recomputes from the model; collision volumes are keyed by relative block position.
 - Buoyancy callers change pose then call `runtime.move(oldY,newY)`; runtime failure restores the old pose.

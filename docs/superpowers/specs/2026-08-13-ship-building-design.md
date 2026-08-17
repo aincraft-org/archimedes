@@ -15,7 +15,7 @@ The repository uses the `../skills/repository-setup` Paper starter conventions:
 - JPenilla `runServer`
 - Spotless, Checkstyle, PMD, and SpotBugs build gates
 
-The plugin is named `Ships`, uses package `dev.jlo.ships`, and stores generated development-server state under the ignored `run/` directory.
+The plugin is named `Ships`, uses package `dev.mintychochip.ships`, and stores generated development-server state under the ignored `run/` directory.
 
 ## Player Workflow
 

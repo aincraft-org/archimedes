@@ -8,7 +8,7 @@ Give assembled ships a rigid-body vertical buoyancy: a ship floats on water, ris
 
 ## Platform
 
-Extends the `Ships` plugin (Paper 26.2, Java 25, Gradle Kotlin DSL, Paperweight Userdev, `runServer`, Spotless/Checkstyle/PMD/SpotBugs gates). Package `dev.jlo.ships`. The existing `2026-08-13-ship-building-design.md` spec describes assembly, rendering, walkable decks, persistence, and reconciliation; this design extends it.
+Extends the `Ships` plugin (Paper 26.2, Java 25, Gradle Kotlin DSL, Paperweight Userdev, `runServer`, Spotless/Checkstyle/PMD/SpotBugs gates). Package `dev.mintychochip.ships`. The existing `2026-08-13-ship-building-design.md` spec describes assembly, rendering, walkable decks, persistence, and reconciliation; this design extends it.
 
 ## Scope Decision
 

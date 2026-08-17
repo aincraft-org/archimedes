@@ -42,7 +42,7 @@ Test that a fake manager can represent a volume, move its integer anchor, and re
 Run:
 
 ```bash
-./gradlew test --tests dev.jlo.ships.collision.CollisionVolumeTest
+./gradlew test --tests dev.mintychochip.ships.collision.CollisionVolumeTest
 ```
 
 Expected: FAIL because the collision package does not exist.
@@ -91,7 +91,7 @@ Use a fake or proxy `Shulker` to assert every required configuration flag, owner
 - [ ] **Step 3: Run focused tests**
 
 ```bash
-./gradlew test --tests dev.jlo.ships.bukkit.BukkitCollisionVolumeManagerTest
+./gradlew test --tests dev.mintychochip.ships.bukkit.BukkitCollisionVolumeManagerTest
 ```
 
 Expected: FAIL until the adapter exists.
@@ -135,7 +135,7 @@ Assert permission rejection, spawn delegation, move delegation, and cleanup dele
 - [ ] **Step 2: Run focused command tests**
 
 ```bash
-./gradlew test --tests dev.jlo.ships.command.ShipCommandTest
+./gradlew test --tests dev.mintychochip.ships.command.ShipCommandTest
 ```
 
 Expected: FAIL for the new subcommand behavior.

@@ -1,6 +1,6 @@
 name: Archimedes
 version: '${version}'
-main: dev.jlo.archimedes.ArchimedesPlugin
+main: dev.mintychochip.archimedes.ArchimedesPlugin
 description: Build persistent display-and-collision ships
 api-version: '26.2'
 author: jlo

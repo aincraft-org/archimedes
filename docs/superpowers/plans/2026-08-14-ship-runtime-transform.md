@@ -44,7 +44,7 @@ Assert initial BlockDisplay locations are integer-aligned block corners and two 
 
 - [ ] **Step 3: Run tests and verify red**
 
-Run: `./gradlew test --tests dev.jlo.ships.model.ShipTransformTest --tests dev.jlo.ships.render.ShipRendererTest`
+Run: `./gradlew test --tests dev.mintychochip.ships.model.ShipTransformTest --tests dev.mintychochip.ships.render.ShipRendererTest`
 
 Expected: failures showing the existing `+0.5` projection and missing canonical transform.
 
@@ -54,7 +54,7 @@ Add an immutable transform utility whose visual projection uses fractional pose 
 
 - [ ] **Step 5: Run focused tests and commit**
 
-Run: `./gradlew spotlessApply test --tests dev.jlo.ships.model.ShipTransformTest --tests dev.jlo.ships.render.ShipRendererTest`
+Run: `./gradlew spotlessApply test --tests dev.mintychochip.ships.model.ShipTransformTest --tests dev.mintychochip.ships.render.ShipRendererTest`
 
 Expected: PASS.
 
@@ -85,7 +85,7 @@ Use an in-memory manager to prove all expected relative keys spawn once, moving 
 
 - [ ] **Step 3: Run tests and verify red**
 
-Run: `./gradlew test --tests dev.jlo.ships.collision.CollisionHullTest --tests dev.jlo.ships.bukkit.BukkitCollisionVolumeManagerTest`
+Run: `./gradlew test --tests dev.mintychochip.ships.collision.CollisionHullTest --tests dev.mintychochip.ships.bukkit.BukkitCollisionVolumeManagerTest`
 
 Expected: failures for missing hull and ship lifecycle methods.
 
@@ -95,7 +95,7 @@ Replace the one-volume debug map with `Map<UUID, Map<BlockPos, CollisionVolume>>
 
 - [ ] **Step 5: Run focused tests and commit**
 
-Run: `./gradlew spotlessApply test --tests dev.jlo.ships.collision.CollisionHullTest --tests dev.jlo.ships.bukkit.BukkitCollisionVolumeManagerTest`
+Run: `./gradlew spotlessApply test --tests dev.mintychochip.ships.collision.CollisionHullTest --tests dev.mintychochip.ships.bukkit.BukkitCollisionVolumeManagerTest`
 
 Expected: PASS.
 
@@ -126,7 +126,7 @@ Prove assembly never invokes any barrier/deck surface, assembly rollback removes
 
 - [ ] **Step 3: Run tests and verify red**
 
-Run: `./gradlew test --tests dev.jlo.ships.ship.ShipRuntimeImplTest --tests dev.jlo.ships.ship.ShipServiceImplTest`
+Run: `./gradlew test --tests dev.mintychochip.ships.ship.ShipRuntimeImplTest --tests dev.mintychochip.ships.ship.ShipServiceImplTest`
 
 Expected: failures because service still requires `DeckManager` and has no collision lifecycle.
 
@@ -136,7 +136,7 @@ Construct one production collision manager in `ShipsPlugin`, compose it with the
 
 - [ ] **Step 5: Run focused tests and commit**
 
-Run: `./gradlew spotlessApply test --tests dev.jlo.ships.ship.ShipRuntimeImplTest --tests dev.jlo.ships.ship.ShipServiceImplTest`
+Run: `./gradlew spotlessApply test --tests dev.mintychochip.ships.ship.ShipRuntimeImplTest --tests dev.mintychochip.ships.ship.ShipServiceImplTest`
 
 Expected: PASS.
 
@@ -161,7 +161,7 @@ Test sinking three blocks in one command, three consecutive one-block sinks, a c
 
 - [ ] **Step 2: Run tests and verify red**
 
-Run: `./gradlew test --tests dev.jlo.ships.buoyancy.BuoyancyEngineTest`
+Run: `./gradlew test --tests dev.mintychochip.ships.buoyancy.BuoyancyEngineTest`
 
 Expected: failures showing current deck coupling and missing runtime transaction behavior.
 
@@ -171,7 +171,7 @@ Remove `DeckManager` from `BuoyancyImpl`. Generate every traversed authoritative
 
 - [ ] **Step 4: Run focused and aggregate tests**
 
-Run: `./gradlew spotlessApply test --tests dev.jlo.ships.buoyancy.BuoyancyEngineTest --tests dev.jlo.ships.ship.ShipServiceImplTest --tests dev.jlo.ships.render.ShipRendererTest`
+Run: `./gradlew spotlessApply test --tests dev.mintychochip.ships.buoyancy.BuoyancyEngineTest --tests dev.mintychochip.ships.ship.ShipServiceImplTest --tests dev.mintychochip.ships.render.ShipRendererTest`
 
 Expected: PASS.
 
