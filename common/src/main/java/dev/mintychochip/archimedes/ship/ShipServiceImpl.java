@@ -57,6 +57,8 @@ public final class ShipServiceImpl implements ShipService {
    *
    * @param store persistence backend
    * @param scanner component scanner
+   * @param runtime runtime composition
+   * @param mutator world block mutator
    * @param shipPhysics ship physics controller
    * @param buoyancyEnabled whether buoyancy is enabled globally
    * @param worldEnabled whether assembly is enabled in the bound world

@@ -1,11 +1,13 @@
 package dev.mintychochip.archimedes.config;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 
 class ShipConfigPhysicsTest {
-  @Test void loadsMaterialDensitiesAndTolerances() {
+  @Test
+  void loadsMaterialDensitiesAndTolerances() {
     YamlConfiguration cfg = new YamlConfiguration();
     cfg.set("maximum-blocks", 10);
     cfg.set("target-distance", 16);

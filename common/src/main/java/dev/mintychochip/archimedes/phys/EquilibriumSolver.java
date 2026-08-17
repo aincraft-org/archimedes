@@ -19,9 +19,10 @@ public final class EquilibriumSolver {
     double high = originY + config.maxRise();
     try {
       for (double y = low; y <= high; y += 1.0) {
-        body.setTransform(new Transform(
-            new Vector3(original.position().x(), y, original.position().z()),
-            original.orientation()));
+        body.setTransform(
+            new Transform(
+                new Vector3(original.position().x(), y, original.position().z()),
+                original.orientation()));
         int submerged = WaterlineResolver.submergedVolume(body, world);
         double displacedMass = submerged * world.fluidField().density(body.transform().position());
         double error = Math.abs(displacedMass - targetMass);

@@ -6,13 +6,15 @@ import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.phys.Body;
 import dev.mintychochip.phys.Bounds;
 import dev.mintychochip.phys.Collider;
-import dev.mintychochip.phys.Quaternion;
 import dev.mintychochip.phys.Transform;
 import dev.mintychochip.phys.Vector3;
 import dev.mintychochip.phys.World;
 
+/** Resolves submerged unit volumes and collision-safe vertical paths. */
 public final class WaterlineResolver {
+  /** Sentinel for columns without water. */
   public static final int NO_WATER = Integer.MIN_VALUE;
+
   private WaterlineResolver() {}
 
   public static int submergedVolume(Body body, World world) {
@@ -20,9 +22,11 @@ public final class WaterlineResolver {
     for (Collider c : body.colliders()) {
       Bounds b = c.shape().bounds(transform(body, c));
       int bottom = (int) Math.floor(b.min().y());
-      Vector3 center = new Vector3((b.min().x() + b.max().x()) / 2.0,
-                                   (b.min().y() + b.max().y()) / 2.0,
-                                   (b.min().z() + b.max().z()) / 2.0);
+      Vector3 center =
+          new Vector3(
+              (b.min().x() + b.max().x()) / 2.0,
+              (b.min().y() + b.max().y()) / 2.0,
+              (b.min().z() + b.max().z()) / 2.0);
       int ax = (int) Math.floor(center.x());
       int az = (int) Math.floor(center.z());
       int surface = columnWaterSurface(world, ax, bottom, az);

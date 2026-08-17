@@ -11,11 +11,11 @@ import dev.mintychochip.archimedes.command.ShipTabCompleter;
 import dev.mintychochip.archimedes.config.ShipConfig;
 import dev.mintychochip.archimedes.config.ShipConfigLoader;
 import dev.mintychochip.archimedes.model.Ship;
-import dev.mintychochip.archimedes.render.RenderSurface;
 import dev.mintychochip.archimedes.phys.ShipPhysics;
 import dev.mintychochip.archimedes.phys.ShipPhysicsImpl;
 import dev.mintychochip.archimedes.phys.bukkit.BukkitFluidField;
 import dev.mintychochip.archimedes.phys.bukkit.BukkitMaterialKeyResolver;
+import dev.mintychochip.archimedes.render.RenderSurface;
 import dev.mintychochip.archimedes.ship.ShipRuntime;
 import dev.mintychochip.archimedes.ship.ShipRuntimeImpl;
 import dev.mintychochip.archimedes.ship.ShipService;
@@ -146,6 +146,7 @@ public final class ArchimedesPlugin extends JavaPlugin {
         () -> ((ShipServiceImpl) service).runtime().removeAllTagged(),
         message -> getLogger().severe(message));
   }
+
   public ShipService shipService() {
     return service;
   }

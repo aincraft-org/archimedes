@@ -115,15 +115,20 @@ public final class ShipConfigLoader {
     if (densities != null) {
       for (String key : densities.getKeys(false)) {
         double value = densities.getDouble(key);
-        if (!Double.isFinite(value) || value <= 0) throw new IllegalArgumentException("bad density: " + key);
+        if (!Double.isFinite(value) || value <= 0)
+          throw new IllegalArgumentException("bad density: " + key);
         materialDensities.put(key.toLowerCase(Locale.ROOT), value);
       }
     }
-    double defaultMaterialDensity = positiveFinite(buoyancy.getDouble("default-material-density", 1.0), "default-material-density");
+    double defaultMaterialDensity =
+        positiveFinite(
+            buoyancy.getDouble("default-material-density", 1.0), "default-material-density");
     double playerMass = positiveFinite(buoyancy.getDouble("player-mass", 80.0), "player-mass");
     double maxFall = positiveFinite(buoyancy.getDouble("max-fall", 16.0), "max-fall");
-    double massTolerance = positiveFinite(buoyancy.getDouble("mass-tolerance", 1e-6), "mass-tolerance");
-    double draftTolerance = positiveFinite(buoyancy.getDouble("draft-tolerance", 1e-3), "draft-tolerance");
+    double massTolerance =
+        positiveFinite(buoyancy.getDouble("mass-tolerance", 1e-6), "mass-tolerance");
+    double draftTolerance =
+        positiveFinite(buoyancy.getDouble("draft-tolerance", 1e-3), "draft-tolerance");
     return new ShipConfig(
         maximumBlocks,
         targetDistance,
@@ -146,7 +151,8 @@ public final class ShipConfigLoader {
   }
 
   private static double positiveFinite(double value, String name) {
-    if (!Double.isFinite(value) || value <= 0) throw new IllegalArgumentException(name + " must be positive and finite");
+    if (!Double.isFinite(value) || value <= 0)
+      throw new IllegalArgumentException(name + " must be positive and finite");
     return value;
   }
 }

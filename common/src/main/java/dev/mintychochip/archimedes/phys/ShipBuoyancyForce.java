@@ -6,7 +6,8 @@ import dev.mintychochip.phys.Vector3;
 import dev.mintychochip.phys.World;
 
 public final class ShipBuoyancyForce implements Force {
-  @Override public Result apply(Body body, World world) {
+  @Override
+  public Result apply(Body body, World world) {
     int submerged = WaterlineResolver.submergedVolume(body, world);
     double gMag = Math.abs(world.gravity().y());
     double buoyancy = submerged * world.fluidField().density(body.transform().position()) * gMag;

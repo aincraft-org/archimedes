@@ -7,7 +7,8 @@ import dev.mintychochip.archimedes.model.ShipBlock;
 public final class ShipMassModel {
   private ShipMassModel() {}
 
-  public static double mass(Ship ship, MaterialKeyResolver resolver, ShipConfig config, int riderCount) {
+  public static double mass(
+      Ship ship, MaterialKeyResolver resolver, ShipConfig config, int riderCount) {
     if (riderCount < 0) throw new IllegalArgumentException("negative rider count");
     double total = riderCount * config.playerMass();
     for (ShipBlock block : ship.blocks()) {

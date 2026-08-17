@@ -40,18 +40,78 @@ public final class ShipConfig {
   private final double blockDensity;
 
   /** Velocity damping factor. */
-  /** Velocity damping factor. */
   private final double damping;
 
+  /** Configured per-material densities. */
   private final Map<String, Double> materialDensities;
+
+  /** Density used when a material has no explicit entry. */
   private final double defaultMaterialDensity;
+
+  /** Mass of each rider. */
   private final double playerMass;
+
+  /** Maximum downward displacement from the build site. */
   private final double maxFall;
+
+  /** Mass tolerance used by equilibrium solving. */
   private final double massTolerance;
+
+  /** Draft tolerance used to suppress tiny pose changes. */
   private final double draftTolerance;
 
   /**
-   * Creates the configuration.
+   * Creates configuration with legacy physics defaults.
+   *
+   * @param maximumBlocks the maximum captured blocks per ship
+   * @param targetDistance the maximum command targeting distance
+   * @param forbiddenMaterials materials that cannot be assembled
+   * @param disabledWorlds worlds where assembly is disabled
+   * @param buoyancyEnabled whether buoyancy is enabled globally
+   * @param physicsTicks physics tick interval
+   * @param bobAmplitude max bob amplitude
+   * @param maxRise max rise from build site
+   * @param gravity gravity constant
+   * @param waterDensity water density constant
+   * @param blockDensity block density constant
+   * @param damping velocity damping factor
+   */
+  public ShipConfig(
+      int maximumBlocks,
+      int targetDistance,
+      Set<String> forbiddenMaterials,
+      Set<UUID> disabledWorlds,
+      boolean buoyancyEnabled,
+      int physicsTicks,
+      double bobAmplitude,
+      double maxRise,
+      double gravity,
+      double waterDensity,
+      double blockDensity,
+      double damping) {
+    this(
+        maximumBlocks,
+        targetDistance,
+        forbiddenMaterials,
+        disabledWorlds,
+        buoyancyEnabled,
+        physicsTicks,
+        bobAmplitude,
+        maxRise,
+        gravity,
+        waterDensity,
+        blockDensity,
+        damping,
+        Map.of(),
+        1.0,
+        80.0,
+        16.0,
+        1e-6,
+        1e-3);
+  }
+
+  /**
+   * Creates the configuration with explicit physics settings.
    *
    * @param maximumBlocks the maximum captured blocks per ship
    * @param targetDistance the maximum command targeting distance
@@ -72,24 +132,6 @@ public final class ShipConfig {
    * @param massTolerance mass equilibrium tolerance
    * @param draftTolerance waterline tolerance
    */
-  public ShipConfig(
-      int maximumBlocks,
-      int targetDistance,
-      Set<String> forbiddenMaterials,
-      Set<UUID> disabledWorlds,
-      boolean buoyancyEnabled,
-      int physicsTicks,
-      double bobAmplitude,
-      double maxRise,
-      double gravity,
-      double waterDensity,
-      double blockDensity,
-      double damping) {
-    this(maximumBlocks, targetDistance, forbiddenMaterials, disabledWorlds, buoyancyEnabled,
-        physicsTicks, bobAmplitude, maxRise, gravity, waterDensity, blockDensity, damping,
-        Map.of(), 1.0, 80.0, 16.0, 1e-6, 1e-3);
-  }
-
   public ShipConfig(
       int maximumBlocks,
       int targetDistance,
@@ -221,10 +263,27 @@ public final class ShipConfig {
     return damping;
   }
 
-  public Map<String, Double> materialDensities() { return materialDensities; }
-  public double defaultMaterialDensity() { return defaultMaterialDensity; }
-  public double playerMass() { return playerMass; }
-  public double maxFall() { return maxFall; }
-  public double massTolerance() { return massTolerance; }
-  public double draftTolerance() { return draftTolerance; }
+  public Map<String, Double> materialDensities() {
+    return materialDensities;
+  }
+
+  public double defaultMaterialDensity() {
+    return defaultMaterialDensity;
+  }
+
+  public double playerMass() {
+    return playerMass;
+  }
+
+  public double maxFall() {
+    return maxFall;
+  }
+
+  public double massTolerance() {
+    return massTolerance;
+  }
+
+  public double draftTolerance() {
+    return draftTolerance;
+  }
 }
