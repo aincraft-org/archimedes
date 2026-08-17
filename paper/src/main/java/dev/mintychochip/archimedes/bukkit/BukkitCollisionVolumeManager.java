@@ -142,7 +142,9 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
         ShipTransform.CollisionAnchor oldAnchor =
             new ShipTransform.CollisionAnchor(location.getX(), location.getY(), location.getZ());
         ShipTransform.CollisionAnchor anchor = ShipTransform.collisionAnchor(ship, entry.getKey());
-        if (Math.floor(oldAnchor.y()) == Math.floor(anchor.y())) {
+        if (Math.floor(oldAnchor.x()) == Math.floor(anchor.x())
+            && Math.floor(oldAnchor.y()) == Math.floor(anchor.y())
+            && Math.floor(oldAnchor.z()) == Math.floor(anchor.z())) {
           continue;
         }
         previous.put(volume, oldAnchor);

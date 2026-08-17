@@ -21,6 +21,8 @@ import dev.mintychochip.archimedes.ship.ShipRuntimeImpl;
 import dev.mintychochip.archimedes.ship.ShipService;
 import dev.mintychochip.archimedes.ship.ShipServiceImpl;
 import dev.mintychochip.archimedes.store.ShipStore;
+import dev.mintychochip.phys.DensityField;
+import dev.mintychochip.phys.FlowField;
 import dev.mintychochip.phys.FluidField;
 import dev.mintychochip.phys.PhysicsEngine;
 import dev.mintychochip.phys.World;
@@ -104,7 +106,9 @@ public final class ArchimedesPlugin extends JavaPlugin {
               config,
               materialResolver,
               runtime,
-              ship -> tracker.riders(ship).size());
+              ship -> tracker.riders(ship).size(),
+              DensityField.uniform(1.2),
+              FlowField.uniform(new org.joml.Vector3d(0, 0, 8)));
       service =
           new ShipServiceImpl(
               storeAdapter,
@@ -217,6 +221,12 @@ public final class ArchimedesPlugin extends JavaPlugin {
     }
   }
 
+  /**
+   * Registers the {@code /ship} command executor and tab completer if the command is declared in
+   * the plugin configuration.
+   *
+   * @param config loaded ship configuration
+   */
   private void registerCommand(ShipConfig config) {
     PluginCommand command = getCommand("ship");
     if (command == null) {
@@ -232,10 +242,17 @@ public final class ArchimedesPlugin extends JavaPlugin {
     command.setTabCompleter(new ShipTabCompleter());
   }
 
+  /** Returns the namespaced key used to tag Bukkit entities as part of a ship. */
   private NamespacedKey shipKey() {
     return new NamespacedKey(this, "ship-id");
   }
 
+  /**
+   * Returns the forbidden material set without modification.
+   *
+   * @param materials forbidden materials from configuration
+   * @return the same set of materials
+   */
   private static Set<String> normalizeForbidden(Set<String> materials) {
     return materials;
   }
@@ -250,6 +267,7 @@ public final class ArchimedesPlugin extends JavaPlugin {
       this.world = org.bukkit.Bukkit.getWorlds().get(0);
     }
 
+    /** Returns the primary Bukkit world used for ship assembly. */
     org.bukkit.World world() {
       return world;
     }
@@ -270,6 +288,11 @@ public final class ArchimedesPlugin extends JavaPlugin {
       this.store = store;
     }
 
+    /**
+     * Loads all persisted ships, converting IO failures into a runtime exception.
+     *
+     * @return the loaded ships by id
+     */
     @Override
     public Map<UUID, Ship> loadAll() {
       try {
@@ -279,6 +302,12 @@ public final class ArchimedesPlugin extends JavaPlugin {
       }
     }
 
+    /**
+     * Saves all ships through the persistent store, converting IO failures into a runtime
+     * exception.
+     *
+     * @param ships ships to save
+     */
     @Override
     public void saveAll(Map<UUID, Ship> ships) {
       try {

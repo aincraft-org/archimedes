@@ -11,6 +11,8 @@ import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
 import dev.mintychochip.archimedes.model.ShipPose;
 import dev.mintychochip.archimedes.ship.ShipRuntime;
+import dev.mintychochip.phys.DensityField;
+import dev.mintychochip.phys.FlowField;
 import dev.mintychochip.phys.FluidField;
 import dev.mintychochip.phys.PhysicsEngine;
 import dev.mintychochip.phys.World;
@@ -93,6 +95,83 @@ class ShipPhysicsTest {
     ShipPose old = ship.pose();
     assertFalse(physics.tick(ship));
     assertEquals(old.y(), ship.pose().y(), 1e-9);
+  }
+
+  @Test
+  void tickMovesForwardWhenClothFacesTheWind() {
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
+            List.of(new ShipBlock(new BlockPos(0, 1, 0), "minecraft:white_wool")),
+            new ShipPose(0),
+            true);
+    ShipConfig config =
+        new ShipConfig(
+            2048,
+            8,
+            Set.of(),
+            Set.of(),
+            true,
+            1,
+            0.5,
+            16.0,
+            0.05,
+            1.0,
+            0.5,
+            0.9,
+            Map.of("minecraft:white_wool", 1.0),
+            1.0,
+            80.0,
+            16.0,
+            1e-6,
+            1e-3);
+    World world =
+        new World() {
+          public Vector3d gravity() {
+            return new Vector3d(0, 0, 0);
+          }
+
+          public FluidField fluidField() {
+            return new FluidField() {
+              public boolean isFluid(Vector3dc p) {
+                return false;
+              }
+
+              public double density(Vector3dc p) {
+                return 0;
+              }
+            };
+          }
+
+          public double timeStep() {
+            return 0.05;
+          }
+        };
+    ShipRuntime runtime =
+        new ShipRuntime() {
+          public void spawn(Ship s) {}
+
+          public void move(Ship s, double oldY, double newY) {}
+
+          public void remove(Ship s) {}
+
+          public void removeAll(java.util.Collection<Ship> s) {}
+        };
+    ShipPhysics physics =
+        new ShipPhysicsImpl(
+            new PhysicsEngine(),
+            world,
+            config,
+            new BukkitLikeResolver(),
+            runtime,
+            s -> 0,
+            DensityField.uniform(1.2),
+            FlowField.uniform(new Vector3d(0, 0, 10)));
+
+    assertTrue(physics.tick(ship));
+    assertTrue(ship.pose().z() > 0);
   }
 
   @Test

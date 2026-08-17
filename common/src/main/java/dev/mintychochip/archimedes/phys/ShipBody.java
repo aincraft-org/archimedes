@@ -50,7 +50,10 @@ public final class ShipBody {
       colliders.add(new SimpleCollider(box, new Material(density), local));
     }
     Vector3d world =
-        new Vector3d(ship.origin().x(), ship.origin().y() + ship.pose().y(), ship.origin().z());
+        new Vector3d(
+            ship.origin().x() + ship.pose().x(),
+            ship.origin().y() + ship.pose().y(),
+            ship.origin().z() + ship.pose().z());
     double mass = ShipMassModel.mass(ship, resolver, config, riderCount);
     return new BodyImpl(new Transform(world, new Quaterniond()), mass, colliders, List.of(forces));
   }
