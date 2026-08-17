@@ -31,6 +31,16 @@ class ShipPoseTest {
   }
 
   @Test
+  void horizontalOffsetsDefaultToZeroAndFloorIndependently() {
+    assertEquals(0.0, new ShipPose(1.5).x());
+    assertEquals(0.0, new ShipPose(1.5).z());
+    ShipPose pose = new ShipPose(2.25, 1.5, -0.25);
+    assertEquals(2, pose.anchorDx());
+    assertEquals(1, pose.anchorDy());
+    assertEquals(-1, pose.anchorDz());
+  }
+
+  @Test
   void poseAndBuoyancyAreMutable() {
     Ship ship =
         new Ship(

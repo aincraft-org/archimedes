@@ -38,6 +38,29 @@ class ShipTransformTest {
   }
 
   @Test
+  void horizontalPoseShiftsVisualAndCell() {
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(WORLD, 100, 200, 300),
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), "minecraft:stone")),
+            new ShipPose(0.5, 1.75, 2.25),
+            true);
+    BlockPos relative = new BlockPos(2, -1, 3);
+
+    ShipTransform.VisualPosition visual = ShipTransform.visual(ship, relative);
+    BlockPos cell = ShipTransform.cell(ship, relative);
+
+    assertEquals(102.5, visual.x());
+    assertEquals(200.75, visual.y());
+    assertEquals(305.25, visual.z());
+    assertEquals(102, cell.x());
+    assertEquals(200, cell.y());
+    assertEquals(305, cell.z());
+  }
+
+  @Test
   void floorsNegativePoseForAuthoritativeCell() {
     Ship ship = ship(new ShipOrigin(WORLD, 100, 200, 300), -0.25);
     BlockPos cell = ShipTransform.cell(ship, new BlockPos(2, -1, 3));

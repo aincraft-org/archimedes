@@ -26,7 +26,9 @@ public final class ShipTransform {
   public static VisualPosition visual(Ship ship, BlockPos relative, double y) {
     ShipOrigin origin = ship.origin();
     return new VisualPosition(
-        origin.x() + relative.x(), origin.y() + y + relative.y(), origin.z() + relative.z());
+        origin.x() + ship.pose().x() + relative.x(),
+        origin.y() + y + relative.y(),
+        origin.z() + ship.pose().z() + relative.z());
   }
 
   /**
@@ -39,9 +41,9 @@ public final class ShipTransform {
   public static BlockPos cell(Ship ship, BlockPos relative) {
     ShipOrigin origin = ship.origin();
     return new BlockPos(
-        origin.x() + relative.x(),
+        origin.x() + ship.pose().anchorDx() + relative.x(),
         origin.y() + ship.pose().anchorDy() + relative.y(),
-        origin.z() + relative.z());
+        origin.z() + ship.pose().anchorDz() + relative.z());
   }
 
   /**
