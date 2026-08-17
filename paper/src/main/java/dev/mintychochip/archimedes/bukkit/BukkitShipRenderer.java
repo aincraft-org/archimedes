@@ -5,6 +5,7 @@ import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipTransform;
 import dev.mintychochip.archimedes.render.RenderSurface;
 import dev.mintychochip.archimedes.render.SailTransform;
+import dev.mintychochip.archimedes.render.ShipRenderer;
 import dev.mintychochip.archimedes.sail.SailMesh;
 import dev.mintychochip.archimedes.sail.SailPiece;
 import dev.mintychochip.archimedes.ship.ShipHolder;
@@ -92,6 +93,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
               d -> {
                 d.setBlock(data);
                 d.setPersistent(false);
+                d.setTeleportDuration(ShipRenderer.TELEPORT_DURATION_TICKS);
                 d.getPersistentDataContainer()
                     .set(shipKey, PersistentDataType.STRING, ship.id().toString());
                 d.getPersistentDataContainer().set(blockKey, PersistentDataType.STRING, key(block));
@@ -112,6 +114,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
         d -> {
           d.setBlock(data);
           d.setPersistent(false);
+          d.setTeleportDuration(ShipRenderer.TELEPORT_DURATION_TICKS);
           d.getPersistentDataContainer()
               .set(shipKey, PersistentDataType.STRING, ship.id().toString());
           d.getPersistentDataContainer().set(sailKey, PersistentDataType.STRING, sailIndex);

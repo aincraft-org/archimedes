@@ -17,6 +17,12 @@ import org.bukkit.entity.BlockDisplay;
  */
 public final class ShipRenderer {
   /**
+   * Client interpolation window for visual teleports, in ticks. One physics tick so the picture
+   * does not lag a full step behind the collision hull.
+   */
+  public static final int TELEPORT_DURATION_TICKS = 1;
+
+  /**
    * Renders hull blocks as untransformed displays and cloth as tessellated plates.
    *
    * @param ship the ship to render
@@ -36,7 +42,13 @@ public final class ShipRenderer {
               position.y() - ship.origin().y(),
               position.z() - ship.origin().z());
       BlockData data = surface.blockData(block.blockData());
-      BlockDisplay display = surface.spawnBlockDisplay(location, d -> d.setBlock(data));
+      BlockDisplay display =
+          surface.spawnBlockDisplay(
+              location,
+              d -> {
+                d.setBlock(data);
+                d.setTeleportDuration(TELEPORT_DURATION_TICKS);
+              });
       display.setPersistent(false);
       displays.add(display);
     }
@@ -48,6 +60,7 @@ public final class ShipRenderer {
               d -> {
                 d.setBlock(data);
                 d.setTransformation(SailTransform.transformation(piece));
+                d.setTeleportDuration(TELEPORT_DURATION_TICKS);
               });
       display.setPersistent(false);
       displays.add(display);

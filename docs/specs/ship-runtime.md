@@ -48,6 +48,7 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 - PDC identity uses distinct renderer (`ship-id`) and collision (`collision-owner`) key families; stale sweeps and remove paths remain symmetric with their spawn-time tags.
 - Reposition pairs hull displays by PDC block key and sail plates by tessellation index, then recomputes from the model. Collision volumes stay keyed by relative block position.
 - Hull picture stays one untransformed `BlockDisplay` per non-cloth captured block (`setBlock` only). Cloth (`*_wool`, `*_banner`, `*_wall_banner`) is a tessellated sheet of transformed `BlockDisplay` plates from `SailMesh` — not one cube per cloth cell, and not a resource-pack / `ItemDisplay` model. Other curved looks (`ItemDisplay` + pack model, or a later bone engine) remain Future overlays. See `docs/superpowers/specs/2026-08-17-curved-mesh-rendering-review.md`.
+- Visual `BlockDisplay`s (hull and sail plates) get `setTeleportDuration(1)` at spawn so the client interpolates 20 TPS teleports. Reposition still teleports to the model visual corner and does not clear that duration. Collision Shulkers stay on the snap path.
 - Buoyancy callers change pose then call `runtime.move(oldY,newY)`; runtime failure restores the old pose.
 - `removeAllTagged` is a runtime capability: `ShipRuntimeImpl` delegates to `ShipRendererLike.removeAllRuntime()` and `CollisionVolumeManager.removeAllTagged()`, which Bukkit adapters implement as tagged-entity sweeps.
 
@@ -62,6 +63,7 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 - [x] Plugin disable independently attempts registered-runtime removal and tagged-entity removal, logs each failure, and never saves persistence during disable.
 - [x] Review: Paper cannot stream a GPU mesh; hulls stay `BlockDisplay` per block; curves are overlay options only (`docs/superpowers/specs/2026-08-17-curved-mesh-rendering-review.md`)
 - [x] Cloth regions render as a tessellated series of thin transformed `BlockDisplay` plates (`SailMesh`); hull cells stay one untransformed cube; sail plates tag with the ship, move on reposition, and vanish on tagged remove
+- [x] Visual BlockDisplays interpolate pose teleports (`setTeleportDuration` ≥ 1 tick); collision Shulkers do not
 
 ## Next
 
@@ -89,3 +91,4 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 | 2026-08-14 | Shulker hulls integrated despite blocked live spike evidence | Acceptance gap remains recorded |
 | 2026-08-17 | No GPU mesh upload; hull stays voxel `BlockDisplay`; curves are Future overlays | Paper protocol has no triangle-mesh packet; the ship is the scanned build |
 | 2026-08-17 | Cloth sails are tessellated `BlockDisplay` plates from the captured region | User asked for a series of block displays from a 3D cloth region before any resource pack |
+| 2026-08-17 | Visual displays use 1-tick teleport interpolation; Shulkers snap | 20 TPS teleports look stuttery; duration > 1 lags the picture behind collision |

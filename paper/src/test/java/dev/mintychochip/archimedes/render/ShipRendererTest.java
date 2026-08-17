@@ -50,6 +50,8 @@ class ShipRendererTest {
     boolean persistent = true;
     Location location;
     Transformation transformation;
+    int teleportDuration;
+    final List<Integer> teleportDurations = new ArrayList<>();
     final Map<NamespacedKey, String> tags = new HashMap<>();
     final List<String> invoked = new ArrayList<>();
 
@@ -70,6 +72,12 @@ class ShipRendererTest {
                     return transformation;
                   case "setTransformation":
                     transformation = (Transformation) args[0];
+                    return null;
+                  case "getTeleportDuration":
+                    return teleportDuration;
+                  case "setTeleportDuration":
+                    teleportDuration = (Integer) args[0];
+                    teleportDurations.add((Integer) args[0]);
                     return null;
                   case "getLocation":
                     return location;
@@ -500,6 +508,93 @@ class ShipRendererTest {
     assertTrue(surface.tagged(shipKey, ship.id().toString()).isEmpty());
     assertEquals(0, transformed(surface).size());
     assertEquals(0, surface.spawned.size());
+  }
+
+  @Test
+  void stoneShipVisualsGetNonZeroTeleportDurationAndStayUntransformed() {
+    SpySurface surface = new SpySurface();
+    surface.dataById.put(STONE, markerData(STONE));
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(WORLD, 100, 200, 300),
+            List.of(
+                new ShipBlock(new BlockPos(0, 0, 0), STONE),
+                new ShipBlock(new BlockPos(1, 0, 0), STONE)),
+            new ShipPose(0.5),
+            true);
+    new dev.mintychochip.archimedes.bukkit.BukkitShipRenderer(
+            surface, new NamespacedKey(NAMESPACE, "test"))
+        .render(ship, ignored -> {});
+
+    assertEquals(2, surface.fakes.size());
+    for (FakeDisplay fake : surface.fakes) {
+      assertTrue(fake.invoked.contains("setBlock"));
+      assertFalse(fake.invoked.contains("setTransformation"));
+      assertFalse(fake.invoked.contains("setTransformationMatrix"));
+      assertTrue(fake.invoked.contains("setTeleportDuration"));
+      assertTrue(fake.teleportDuration >= 1, "client must interpolate visual teleports");
+    }
+  }
+
+  @Test
+  void clothShipVisualsGetTeleportDurationAndKeepPlateTransforms() {
+    SpySurface surface = new SpySurface();
+    surface.dataById.put(STONE, markerData(STONE));
+    surface.dataById.put(WHITE_WOOL, markerData(WHITE_WOOL));
+    new dev.mintychochip.archimedes.bukkit.BukkitShipRenderer(
+            surface, new NamespacedKey(NAMESPACE, "test"))
+        .render(stoneAndWoolWall(), ignored -> {});
+
+    List<FakeDisplay> hull = new ArrayList<>();
+    List<FakeDisplay> sails = new ArrayList<>();
+    for (FakeDisplay fake : surface.fakes) {
+      assertTrue(fake.invoked.contains("setTeleportDuration"));
+      assertTrue(fake.teleportDuration >= 1);
+      if (fake.invoked.contains("setTransformation")
+          || fake.invoked.contains("setTransformationMatrix")) {
+        sails.add(fake);
+      } else {
+        hull.add(fake);
+      }
+    }
+    assertEquals(1, hull.size());
+    assertFalse(hull.get(0).invoked.contains("setTransformation"));
+    assertEquals(surface.dataById.get(STONE), hull.get(0).block);
+    assertTrue(sails.size() > 1);
+    for (FakeDisplay sail : sails) {
+      assertEquals(surface.dataById.get(WHITE_WOOL), sail.block);
+      assertNotNull(sail.transformation);
+    }
+  }
+
+  @Test
+  void repositionKeepsModelCornersAndDoesNotClearTeleportDuration() {
+    SpySurface surface = new SpySurface();
+    surface.dataById.put(STONE, markerData(STONE));
+    surface.dataById.put(WHITE_WOOL, markerData(WHITE_WOOL));
+    Ship ship = stoneAndWoolWall();
+    NamespacedKey shipKey = new NamespacedKey(NAMESPACE, "test");
+    dev.mintychochip.archimedes.bukkit.BukkitShipRenderer renderer =
+        new dev.mintychochip.archimedes.bukkit.BukkitShipRenderer(surface, shipKey);
+    renderer.render(ship, ignored -> {});
+    for (FakeDisplay fake : surface.fakes) {
+      assertTrue(fake.teleportDuration >= 1);
+    }
+
+    ship.setPose(new ShipPose(3.0));
+    renderer.reposition(ship, 0.0, 3.0);
+
+    ShipTransform.VisualPosition hull =
+        ShipTransform.visual(ship, new BlockPos(0, 0, 0));
+    assertEquals(hull.x(), surface.fakes.get(0).location.getX(), 0.001);
+    assertEquals(hull.y(), surface.fakes.get(0).location.getY(), 0.001);
+    assertEquals(hull.z(), surface.fakes.get(0).location.getZ(), 0.001);
+    for (FakeDisplay fake : surface.fakes) {
+      assertTrue(fake.teleportDuration >= 1, "reposition must not snap duration back to 0");
+      assertFalse(fake.teleportDurations.contains(0));
+    }
   }
 
   private static Ship stoneAndWoolWall() {
