@@ -91,6 +91,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - Dated design: `docs/superpowers/specs/2026-08-16-physics-library-design.md` (math types later moved to JOML).
 - `docs/specs/buoyancy.md` remains the ship-client vertical contract.
 - Generic 6DOF is available to any caller; Archimedes `ShipPose` is still Y-only.
+- `archimedes.phys` review (2026-08-17): `Body` is the per-step physics object. `ShipPhysics` is the ship facade (rebuild body, clamp, path, `ShipRuntime`). `RiderCount` and `MaterialKeyResolver` are one-method seams so `:common` stays off Bukkit; they are not unused. No type in that package is a pass-through.
 
 ## Next
 
@@ -126,6 +127,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 | 2026-08-17 | Catalog forces are proven through `Physics.step`, not `apply` alone | Isolated apply tests can pass while the integrator never sees the force |
 | 2026-08-17 | Remove ship `EquilibriumSolver`; ships only step gravity + waterline buoyancy | Duplicate Y-search fought the engine and is not needed for draft |
 | 2026-08-17 | Body–body collision uses an octree broadphase and AABB depenetration | User asked for spatial-tree collision; not an LCP solver or Shulker replacement |
+| 2026-08-17 | Keep `ShipPhysics` and `RiderCount`; do not fold them into `Body` | `Body` is ephemeral per step; rider count and runtime moves are ship/Bukkit seams |
 
 ## Open questions
 
