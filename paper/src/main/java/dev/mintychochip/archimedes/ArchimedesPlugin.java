@@ -61,17 +61,17 @@ public final class ArchimedesPlugin extends JavaPlugin {
       BukkitShipEntityCarrier carrier =
           new BukkitShipEntityCarrier(world, collisionOwnerKey, shipKey, tracker);
       ShipRuntime runtime = new ShipRuntimeImpl(renderer, collisions, carrier);
-      dev.mintychochip.archimedes.buoyancy.BuoyancySurface buoyancySurface =
-          new dev.mintychochip.archimedes.bukkit.BukkitBuoyancySurface(world);
-      dev.mintychochip.archimedes.buoyancy.BuoyancyEngine engine =
-          new dev.mintychochip.archimedes.buoyancy.BuoyancyEngine(
+      dev.mintychochip.phys.BuoyancySurface buoyancySurface =
+          new dev.mintychochip.phys.BukkitBuoyancySurface(world);
+      dev.mintychochip.phys.BuoyancyEngine engine =
+          new dev.mintychochip.phys.BuoyancyEngine(
               config.gravity(),
               config.waterDensity(),
               config.blockDensity(),
               config.damping(),
               config.physicsTicks());
-      dev.mintychochip.archimedes.buoyancy.BuoyancyImpl buoyancy =
-          new dev.mintychochip.archimedes.buoyancy.BuoyancyImpl(
+      dev.mintychochip.phys.BuoyancyImpl buoyancy =
+          new dev.mintychochip.phys.BuoyancyImpl(
               buoyancySurface, engine, runtime, config.maxRise(), config.bobAmplitude());
       service =
           new ShipServiceImpl(

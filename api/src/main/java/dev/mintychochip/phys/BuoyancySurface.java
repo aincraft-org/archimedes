@@ -1,4 +1,4 @@
-package dev.mintychochip.archimedes.buoyancy;
+package dev.mintychochip.phys;
 
 /** World queries the buoyancy engine needs, separated for unit testing. */
 public interface BuoyancySurface {

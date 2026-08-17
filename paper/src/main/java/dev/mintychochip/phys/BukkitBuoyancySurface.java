@@ -1,6 +1,5 @@
-package dev.mintychochip.archimedes.bukkit;
+package dev.mintychochip.phys;
 
-import dev.mintychochip.archimedes.buoyancy.BuoyancySurface;
 import org.bukkit.Material;
 import org.bukkit.World;
 

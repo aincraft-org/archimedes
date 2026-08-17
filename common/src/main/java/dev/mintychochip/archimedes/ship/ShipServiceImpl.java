@@ -26,7 +26,7 @@ public final class ShipServiceImpl implements ShipService {
   private final WorldMutator mutator;
 
   /** Buoyancy controller. */
-  private final dev.mintychochip.archimedes.buoyancy.Buoyancy buoyancy;
+  private final dev.mintychochip.phys.Buoyancy buoyancy;
 
   /** Whether buoyancy is enabled globally. */
   private final boolean buoyancyEnabled;
@@ -69,7 +69,7 @@ public final class ShipServiceImpl implements ShipService {
       ComponentScanner scanner,
       ShipRuntime runtime,
       WorldMutator mutator,
-      dev.mintychochip.archimedes.buoyancy.Buoyancy buoyancy,
+      dev.mintychochip.phys.Buoyancy buoyancy,
       boolean buoyancyEnabled,
       boolean worldEnabled,
       UUID worldId) {

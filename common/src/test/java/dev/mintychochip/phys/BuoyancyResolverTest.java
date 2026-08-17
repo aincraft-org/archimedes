@@ -1,4 +1,4 @@
-package dev.mintychochip.archimedes.buoyancy;
+package dev.mintychochip.phys;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

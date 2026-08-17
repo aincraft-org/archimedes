@@ -43,7 +43,7 @@ Success looks like: a ship floats at the shallowest water it sits in, bobs gentl
 
 ## Implementation guidance
 
-- Physics is unit-testable without Bukkit: `Buoyancy` / `BuoyancySurface` live in `:api`; engine/resolver/`BuoyancyImpl` live in `:common`; `BukkitBuoyancySurface` lives in `:paper` and adapts `World` (`isWater` = exact `Material.WATER`; `isClear` = air or water).
+- Physics is unit-testable without Bukkit and lives in `dev.mintychochip.phys`: `Buoyancy` / `BuoyancySurface` live in `:api`; engine/resolver/`BuoyancyImpl` live in `:common`; `BukkitBuoyancySurface` lives in `:paper` and adapts `World` (`isWater` = exact `Material.WATER`; `isClear` = air or water). Archimedes constructs and drives that physics; it does not own a second copy.
 - Per-ship state (velocity, equilibrium) lives in `BuoyancyImpl` maps keyed by ship UUID; cleared on disassembly/rollback (`clear(Ship)`).
 - `ShipService.tick` drives `buoyancy.tick` per ship and persists once iff any ship moved; the scheduler only runs when the **global** `config.buoyancy-enabled` is true (per-ship toggles cannot re-enable physics when the scheduler is off).
 - Path clearance: `BuoyancyImpl.pathClear` hand-rolls integer cells from `floor(min/max y)` spans over `origin + y + rel` (no `ShipTransform.cell` call today); allowed when air or water. Prefer centralizing this with the transform in future.
@@ -61,6 +61,7 @@ Success looks like: a ship floats at the shallowest water it sits in, bobs gentl
 - [x] Disassembly restores at `origin + anchorDy`
 - [x] Blocked-path rejection: tick resets velocity; rise/sink reject without clearing velocity (checked individually — see Next); runtime failure restores pose only
 - [x] Constants configurable via `ShipConfig`/loader + `ArchimedesPlugin` engine wiring: `physics-ticks`, `bob-amplitude`, `max-rise`, `gravity`, `water-density`, `block-density`, `damping`
+- [x] Buoyancy types and tests live in `dev.mintychochip.phys`; Archimedes only constructs and ticks them
 
 ### Current notes
 
@@ -95,6 +96,7 @@ Success looks like: a ship floats at the shallowest water it sits in, bobs gentl
 | 2026-08-14 | Rigid-body bobbing with real buoyancy mechanics (user choice) | Fractional pose needed for oscillation |
 | 2026-08-14 | Shallowest column surface = effective waterline | Hull floats at shallowest water it sits in |
 | 2026-08-16 | Positive manual sink remains unbounded below waterline; non-positive input rejected at command, service, and domain boundaries | Preserve debug utility without allowing negative input to raise a ship |
+| 2026-08-16 | Relocate buoyancy physics to `dev.mintychochip.phys` | Isolate the integrator from Archimedes ship-runtime ownership; further physics work stays in that package |
 
 ## Open questions
 
