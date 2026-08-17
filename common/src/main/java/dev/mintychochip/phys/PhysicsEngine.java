@@ -32,7 +32,7 @@ public final class PhysicsEngine implements Physics {
 
       Vector3d p = new Vector3d(body.transform().position());
       Quaterniond q = new Quaterniond(body.transform().orientation());
-      Quaterniond newQ = q.integrate(newOmega.x(), newOmega.y(), newOmega.z(), dt);
+      Quaterniond newQ = q.integrate(dt, newOmega.x(), newOmega.y(), newOmega.z());
       body.setTransform(new Transform(p.add(newV.mul(dt, new Vector3d()), new Vector3d()), newQ));
     }
   }
