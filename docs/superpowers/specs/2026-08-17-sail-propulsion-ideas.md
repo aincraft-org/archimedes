@@ -1,6 +1,6 @@
 # Sail Propulsion and Steering Ideas
 
-> **Status:** Ideas only. Not an implementation contract. Not ship gameplay.
+> **Status:** Ideas note. `PressureSailForce` and `ShipSails` are implemented; lifting sails and ship gameplay are not.
 > **Related:** `docs/specs/physics.md`, `docs/superpowers/specs/2026-08-17-medium-propulsion-design.md`
 > **Date:** 2026-08-17
 

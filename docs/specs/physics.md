@@ -16,12 +16,13 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - Generic abstractions: `Body`, `Collider`, `Shape`, `Material`, `Force`, `World`, `FluidField`, `DensityField`, `FlowField`, `Physics`.
 - Default `BodyImpl`, `Aabb`, `ColliderImpl`, `Octree`, and `PhysicsEngine` in `:common`.
 - Octree broadphase plus AABB contact depenetration on `Physics.step` (body–body).
-- Reusable `Force` units: `GravityForce`, `FluidBuoyancyForce`, `QuadraticDragForce` (optional `DensityField`), `ThrustForce`, `MediumThrustForce`, `LiftForce`, `SupportForce`, `CoulombFrictionForce`, `ViscousDragForce`, `AngularDragForce`.
+- Reusable `Force` units: `GravityForce`, `FluidBuoyancyForce`, `QuadraticDragForce` (optional `DensityField`), `ThrustForce`, `MediumThrustForce`, `LiftForce`, `PressureSailForce`, `SupportForce`, `CoulombFrictionForce`, `ViscousDragForce`, `AngularDragForce`.
 - Ship client (`dev.mintychochip.archimedes.phys`):
   - `ShipBody` construction from `Ship` blocks.
   - `MaterialKeyResolver` for mapping `ShipBlock.blockData()` to canonical material keys.
   - `ShipMassModel` with per-material density table and tracked-player rider mass.
   - `ShipBuoyancyForce` (waterline lift only) plus `GravityForce` on the generic step.
+  - `ShipSails` maps marked structure blocks to `PressureSailForce` (not attached by `ShipPhysics`).
   - `ShipPhysics` facade that steps the engine and drives `ShipRuntime`.
 
 ### Out of scope / non-goals
@@ -61,6 +62,8 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - `ThrustForce` stays density-blind (rocket). `QuadraticDragForce(c)` stays lumped `−c |v| v` and does not sample density. `QuadraticDragForce(c, DensityField)` is `−c · ρ · |v| v` with volume-weighted mean `ρ` over colliders (body position if none). The one-arg constructor is not a world-liquid default.
 - Parameterize medium thrust and density drag by `DensityField` the same way as hydrostatic buoyancy. Watercraft uses liquid; airships use `DensityField.uniform(ρ_air)`. Do not add `World.densityField()`.
 - `FlowField` is pointwise flow velocity (`still`, `uniform`, axis-aligned `box`, and `compose`). Multiple winds exist by composing or by attaching different fields to different forces. Do not add `World.flowField()`. Do not use `isFluid` for air.
+- `PressureSailForce` is one-sided cloth: `F = q A max(n̂ · v̂_app, 0)² n̂`, `v_app = v_wind(p) − v − ω × r`, `τ = r × F`. Density and wind are constructor-injected. Still air or edge-on sheet is zero force.
+- Hook sails to a structure with `ShipSails.forces(ship, resolver, sailKeys, air, wind)` and pass the list into `ShipBody.from`. Do not attach sails in `ShipPhysics`; `ShipPose` is still Y-only.
 - Support and Coulomb friction share a `ContactPlane`. Support cancels the compressive gravity load along the normal when the body is in contact; it is not a penetration constraint. Friction uses that same gravity-derived `N`: kinetic is `−μ_k N v̂_t`; static cancels sibling tangent load when `|T| ≤ μ_s N` at rest. `N = 0` off the plane.
 - Viscous linear drag is `F = −c v`, distinct from quadratic `−c |v| v`. Angular drag is `τ = −c ω`. Neither is applied to Archimedes ships.
 - Put Bukkit-specific material/world parsing behind interfaces and implement them only in `:paper`.
@@ -90,6 +93,8 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - [x] Every catalog force has a defining post-step signature through the real `Physics.step`, including a mixed collection (vehicles + floor contact + spin).
 - [x] Octree broadphase + AABB contact depenetration on `Physics.step`.
 - [x] `FlowField`: still / uniform / box / compose; not owned by `World`.
+- [x] `PressureSailForce`: rest-in-breeze moves; still air and edge-on sheet do not; offset yaws.
+- [x] `ShipSails` maps marked structure blocks (`facing=` normal, 1 m² each) to pressure sails.
 
 ### Current notes
 
@@ -115,7 +120,8 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - [ ] Multi-ship fluid displacement.
 - [ ] Water entry/splash effects and drowning rules.
 - [ ] Stall, control surfaces, and atmosphere tables.
-- [ ] `PressureSailForce` then `LiftingSailForce` as attachable catalog units (density, area/orientation, `v_app` from `FlowField`; sheet, offset `r × F`, multi-sail composition)
+- [ ] `LiftingSailForce` (angle-of-attack lift/drag) as a later catalog unit
+- [ ] Attach `ShipSails` in a 6DOF ship step (horizontal `ShipPose`)
 
 ## Decisions log
 
@@ -142,6 +148,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 | 2026-08-17 | `ThrustForce` remains density-blind; one-arg quadratic drag stays lumped | Rocket and legacy callers keep their law; density coupling is explicit |
 | 2026-08-17 | Sails are future catalog forces, not medium thrust and not a `Body` subclass | Need `v_app` and area/orientation; `F = k ρ n̂` has no relative wind |
 | 2026-08-17 | `FlowField` is constructor-injected; multiple winds via `compose` or per-force fields | Same reason as no `World.densityField()`: two bodies can share a world and differ by attached flow |
+| 2026-08-17 | `PressureSailForce` is one-sided `q A` cloth; structure hook is `ShipSails` | User asked to wire sails and attach them to the build; not `ShipPhysics` 6DOF |
 
 ## Open questions
 
