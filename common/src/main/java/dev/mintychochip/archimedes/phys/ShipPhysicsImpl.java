@@ -1,0 +1,109 @@
+package dev.mintychochip.archimedes.phys;
+
+import dev.mintychochip.archimedes.config.ShipConfig;
+import dev.mintychochip.archimedes.model.Ship;
+import dev.mintychochip.archimedes.model.ShipPose;
+import dev.mintychochip.archimedes.ship.ShipRuntime;
+import dev.mintychochip.phys.Body;
+import dev.mintychochip.phys.Physics;
+import dev.mintychochip.phys.World;
+import dev.mintychochip.phys.Vector3;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+public final class ShipPhysicsImpl implements ShipPhysics {
+  private final Physics physics;
+  private final World world;
+  private final ShipConfig config;
+  private final MaterialKeyResolver resolver;
+  private final ShipRuntime runtime;
+  private final RiderCount riderCount;
+  private final Map<UUID, Double> velocities = new HashMap<>();
+
+  public ShipPhysicsImpl(Physics physics, World world, ShipConfig config,
+                         MaterialKeyResolver resolver, ShipRuntime runtime, RiderCount riderCount) {
+    this.physics = physics;
+    this.world = world;
+    this.config = config;
+    this.resolver = resolver;
+    this.runtime = runtime;
+    this.riderCount = riderCount;
+  }
+
+  @Override public boolean tick(Ship ship) {
+    if (!ship.buoyancyEnabled()) return false;
+    EquilibriumResult equilibrium = computeTarget(ship);
+    double oldY = ship.pose().y();
+    double targetY = equilibrium.equilibrium()
+        ? Math.min(config.maxRise(), oldY + equilibrium.targetY())
+        : oldY;
+    return step(ship, oldY, targetY);
+  }
+
+  @Override public boolean rise(Ship ship) {
+    if (!ship.buoyancyEnabled()) return true;
+    EquilibriumResult equilibrium = computeTarget(ship);
+    if (!equilibrium.equilibrium()) return false;
+    double oldY = ship.pose().y();
+    double targetY = Math.min(config.maxRise(), oldY + equilibrium.targetY());
+    velocities.put(ship.id(), 0.0);
+    return moveDirect(ship, oldY, targetY);
+  }
+
+  @Override public boolean sink(Ship ship, int blocks) {
+    if (!ship.buoyancyEnabled() || blocks <= 0) return false;
+    double oldY = ship.pose().y();
+    double targetY = Math.max(-config.maxFall(), oldY - blocks);
+    return moveDirect(ship, oldY, targetY);
+  }
+
+  @Override public void clear(Ship ship) {
+    velocities.remove(ship.id());
+  }
+
+  private EquilibriumResult computeTarget(Ship ship) {
+    Body body = ShipBody.from(ship, resolver, config, riderCount.count(ship), new ShipBuoyancyForce());
+    return new EquilibriumSolver().solve(body, world, config);
+  }
+
+  private boolean step(Ship ship, double oldY, double targetY) {
+    Body body = ShipBody.from(ship, resolver, config, riderCount.count(ship), new ShipBuoyancyForce());
+    double velocity = velocities.getOrDefault(ship.id(), 0.0);
+    body.setLinearVelocity(new Vector3(0, velocity, 0));
+    physics.step(world, List.of(body));
+    double rawY = body.transform().position().y() - ship.origin().y();
+    double newY = clampAndDamp(ship, oldY, targetY, rawY, body);
+    if (Math.abs(newY - oldY) < config.draftTolerance()) return false;
+    return moveDirect(ship, oldY, newY);
+  }
+
+  private double clampAndDamp(Ship ship, double oldY, double targetY, double newY, Body body) {
+    double low = Math.max(oldY - config.maxFall(), targetY - config.bobAmplitude());
+    double high = Math.min(oldY + config.maxRise(), targetY + config.bobAmplitude());
+    if (newY < low) {
+      newY = low;
+      body.setLinearVelocity(Vector3.ZERO);
+    }
+    if (newY > high) {
+      newY = high;
+      body.setLinearVelocity(Vector3.ZERO);
+    }
+    velocities.put(ship.id(), body.linearVelocity().y() * config.damping());
+    return newY;
+  }
+
+  private boolean moveDirect(Ship ship, double oldY, double newY) {
+    if (!WaterlineResolver.isPathClear(ship, world, newY, config)) return false;
+    try {
+      ship.setPose(new ShipPose(newY));
+      runtime.move(ship, oldY, newY);
+      return true;
+    } catch (RuntimeException failure) {
+      ship.setPose(new ShipPose(oldY));
+      velocities.put(ship.id(), 0.0);
+      return false;
+    }
+  }
+}
