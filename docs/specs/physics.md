@@ -16,7 +16,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - Generic abstractions: `Body`, `Collider`, `Shape`, `Material`, `Force`, `World`, `FluidField`, `DensityField`, `Physics`.
 - Default `BodyImpl`, `Aabb`, `ColliderImpl`, `Octree`, and `PhysicsEngine` in `:common`.
 - Octree broadphase plus AABB contact depenetration on `Physics.step` (body–body).
-- Reusable `Force` units: `GravityForce`, `FluidBuoyancyForce`, `QuadraticDragForce`, `ThrustForce`, `LiftForce`, `SupportForce`, `CoulombFrictionForce`, `ViscousDragForce`, `AngularDragForce`.
+- Reusable `Force` units: `GravityForce`, `FluidBuoyancyForce`, `QuadraticDragForce` (optional `DensityField`), `ThrustForce`, `MediumThrustForce`, `LiftForce`, `SupportForce`, `CoulombFrictionForce`, `ViscousDragForce`, `AngularDragForce`.
 - Ship client (`dev.mintychochip.archimedes.phys`):
   - `ShipBody` construction from `Ship` blocks.
   - `MaterialKeyResolver` for mapping `ShipBlock.blockData()` to canonical material keys.
@@ -57,6 +57,9 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - Parameterize hydrostatic buoyancy by `DensityField` so water and air share `F = −ρV g`. Watercraft uses `DensityField.liquid(FluidField)` (gated on `isFluid`). Airships use `DensityField.uniform(ρ_air)`.
 - `ShipBuoyancyForce` is waterline lift only. `ShipPhysics` attaches `GravityForce` + `ShipBuoyancyForce` and steps `Physics`. Do not add a second integrator or Y-search solver.
 - Lift is `c · |v × n|²` along the body-local lift axis: ~0 at rest, grows with airspeed, ignores purely vertical motion.
+- `MediumThrustForce` is `F = k · ρ(p) · n̂` at a body-local application point, with `τ = (p − X) × F`. The no-medium constructor uses `DensityField.liquid(world.fluidField())`. It never gates on `isFluid` directly.
+- `ThrustForce` stays density-blind (rocket). `QuadraticDragForce(c)` stays lumped `−c |v| v` and does not sample density. `QuadraticDragForce(c, DensityField)` is `−c · ρ · |v| v` with volume-weighted mean `ρ` over colliders (body position if none). The one-arg constructor is not a world-liquid default.
+- Parameterize medium thrust and density drag by `DensityField` the same way as hydrostatic buoyancy. Watercraft uses liquid; airships use `DensityField.uniform(ρ_air)`. Do not add `World.densityField()`.
 - Support and Coulomb friction share a `ContactPlane`. Support cancels the compressive gravity load along the normal when the body is in contact; it is not a penetration constraint. Friction uses that same gravity-derived `N`: kinetic is `−μ_k N v̂_t`; static cancels sibling tangent load when `|T| ≤ μ_s N` at rest. `N = 0` off the plane.
 - Viscous linear drag is `F = −c v`, distinct from quadratic `−c |v| v`. Angular drag is `τ = −c ω`. Neither is applied to Archimedes ships.
 - Put Bukkit-specific material/world parsing behind interfaces and implement them only in `:paper`.
@@ -89,12 +92,15 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 ### Current notes
 
 - Dated design: `docs/superpowers/specs/2026-08-16-physics-library-design.md` (math types later moved to JOML).
+- Medium thrust / density drag contract: `docs/superpowers/specs/2026-08-17-medium-propulsion-design.md`.
 - `docs/specs/buoyancy.md` remains the ship-client vertical contract.
 - Generic 6DOF is available to any caller; Archimedes `ShipPose` is still Y-only.
 - `archimedes.phys` review (2026-08-17): `Body` is the per-step physics object. `ShipPhysics` is the ship facade (rebuild body, clamp, path, `ShipRuntime`). `RiderCount` and `MaterialKeyResolver` are one-method seams so `:common` stays off Bukkit; they are not unused. No type in that package is a pass-through.
 
 ## Next
 
+- [ ] `MediumThrustForce`: density-scaled actuator at a body-local point with `r × F` torque
+- [ ] `QuadraticDragForce(c, DensityField)`: `−c · ρ · |v| v`; one-arg constructor stays lumped
 - [ ] Horizontal movement and water drag for ships.
 - [ ] `PhysicsWorld` that owns and steps a collection of bodies.
 - [ ] More `Shape` primitives (sphere, capsule).
@@ -128,6 +134,8 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 | 2026-08-17 | Remove ship `EquilibriumSolver`; ships only step gravity + waterline buoyancy | Duplicate Y-search fought the engine and is not needed for draft |
 | 2026-08-17 | Body–body collision uses an octree broadphase and AABB depenetration | User asked for spatial-tree collision; not an LCP solver or Shulker replacement |
 | 2026-08-17 | Keep `ShipPhysics` and `RiderCount`; do not fold them into `Body` | `Body` is ephemeral per step; rider count and runtime moves are ship/Bukkit seams |
+| 2026-08-17 | Generic `MediumThrustForce` + opt-in density drag; no ship wiring | Same catalog later attaches to airships; `isFluid` must not kill air props |
+| 2026-08-17 | `ThrustForce` remains density-blind; one-arg quadratic drag stays lumped | Rocket and legacy callers keep their law; density coupling is explicit |
 
 ## Open questions
 
