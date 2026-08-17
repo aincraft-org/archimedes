@@ -3,7 +3,7 @@ package dev.mintychochip.archimedes.model;
 import java.util.List;
 import java.util.UUID;
 
-/** Immutable assembled ship with its owner, origin, and captured blocks. */
+/** Assembled ship whose captured block list is immutable while runtime state remains mutable. */
 public final class Ship {
   /** Ship identifier. */
   private final UUID id;
@@ -14,7 +14,7 @@ public final class Ship {
   /** Absolute world origin. */
   private final ShipOrigin origin;
 
-  /** Captured blocks in deterministic order. */
+  /** Captured blocks copied into an unmodifiable list in the supplied iteration order. */
   private final List<ShipBlock> blocks;
 
   /** Runtime vertical pose. */
@@ -24,11 +24,14 @@ public final class Ship {
   private boolean buoyancyEnabled;
 
   /**
-   * Creates a ship.
+   * Creates a ship with its initial pose at zero and buoyancy enabled.
    *
-   * @param id the ship identifier
-   * @param ownerId the owning player identifier
-   * @param origin the absolute world origin
+   * <p>The captured block list is copied in iteration order and rejects null elements. A null
+   * {@code blocks} argument causes a {@link NullPointerException}.
+   *
+   * @param id the ship identifier; may be {@code null}
+   * @param ownerId the owning player identifier; may be {@code null}
+   * @param origin the absolute world origin; may be {@code null}
    * @param blocks the captured blocks
    */
   public Ship(UUID id, UUID ownerId, ShipOrigin origin, List<ShipBlock> blocks) {
@@ -36,13 +39,17 @@ public final class Ship {
   }
 
   /**
-   * Creates a ship with an explicit pose and buoyancy flag.
+   * Creates a ship with the supplied runtime state.
    *
-   * @param id the ship identifier
-   * @param ownerId the owning player identifier
-   * @param origin the absolute world origin
+   * <p>The captured block list is copied in iteration order and rejects null elements. A null
+   * {@code blocks} argument causes a {@link NullPointerException}; the other arguments are stored
+   * as supplied.
+   *
+   * @param id the ship identifier; may be {@code null}
+   * @param ownerId the owning player identifier; may be {@code null}
+   * @param origin the absolute world origin; may be {@code null}
    * @param blocks the captured blocks
-   * @param pose the runtime vertical pose
+   * @param pose the runtime vertical pose; may be {@code null}
    * @param buoyancyEnabled whether buoyancy is active
    */
   public Ship(
@@ -82,7 +89,7 @@ public final class Ship {
   }
 
   /**
-   * @return the captured blocks in deterministic order
+   * @return the captured blocks in supplied iteration order as an unmodifiable list
    */
   public List<ShipBlock> blocks() {
     return blocks;
@@ -96,19 +103,21 @@ public final class Ship {
   }
 
   /**
-   * @return the runtime vertical pose
-   */
-  public ShipPose pose() {
-    return pose;
-  }
-
-  /**
-   * Sets the runtime vertical pose.
+   * Sets the runtime vertical pose. The supplied reference is stored as-is.
    *
-   * @param newPose the new pose
+   * @param newPose the new pose; may be {@code null}
    */
   public void setPose(ShipPose newPose) {
     this.pose = newPose;
+  }
+
+  /**
+   * Returns the runtime vertical pose.
+   *
+   * @return the current runtime pose
+   */
+  public ShipPose pose() {
+    return pose;
   }
 
   /**

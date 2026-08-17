@@ -38,6 +38,11 @@ public final class ArchimedesPlugin extends JavaPlugin {
   /** Active ship service. */
   private ShipService service;
 
+  /**
+   * Enables the plugin by loading configuration, constructing the Bukkit-backed ship runtime, and
+   * starting the ship service. Invalid configuration disables the plugin; other startup failures
+   * are logged and also disable it.
+   */
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   @Override
   public void onEnable() {
@@ -135,6 +140,12 @@ public final class ArchimedesPlugin extends JavaPlugin {
     getLogger().info("Archimedes enabled");
   }
 
+  /**
+   * Stops the plugin's ship service and removes runtime entities when the plugin is disabled.
+   *
+   * <p>Cleanup is best-effort: registered runtime state and tagged Bukkit entities are attempted
+   * independently so a failure in one path does not prevent the other.
+   */
   @Override
   public void onDisable() {
     if (service == null) {
@@ -146,16 +157,41 @@ public final class ArchimedesPlugin extends JavaPlugin {
         message -> getLogger().severe(message));
   }
 
+  /**
+   * Returns the service initialized by {@link #onEnable()}, or {@code null} before successful
+   * startup.
+   *
+   * @return the active ship service
+   */
   public ShipService shipService() {
     return service;
   }
 
+  /**
+   * Loads persisted ships before registering listeners that observe ship-related entities.
+   *
+   * @param load action that loads the persisted ship state
+   * @param registration action that registers event listeners after loading
+   */
   static void registerAfterLoad(Runnable load, Runnable registration) {
     load.run();
     registration.run();
   }
 
   static final class CleanupCoordinator {
+    /**
+     * Handles a load failure by logging it and disabling the plugin.
+     *
+     * @param failure failure raised while loading
+     * @param logger failure logger
+     * @param disable action that disables the plugin
+     */
+    static void handleLoadFailure(
+        RuntimeException failure, java.util.function.Consumer<String> logger, Runnable disable) {
+      logger.accept("Failed to load Archimedes: " + failure.getMessage());
+      disable.run();
+    }
+
     private CleanupCoordinator() {}
 
     /**
@@ -178,12 +214,6 @@ public final class ArchimedesPlugin extends JavaPlugin {
       } catch (RuntimeException failure) {
         log.accept("Failed to remove tagged ship runtime: " + failure.getMessage());
       }
-    }
-
-    static void handleLoadFailure(
-        RuntimeException failure, java.util.function.Consumer<String> logger, Runnable disable) {
-      logger.accept("Failed to load Archimedes: " + failure.getMessage());
-      disable.run();
     }
   }
 
