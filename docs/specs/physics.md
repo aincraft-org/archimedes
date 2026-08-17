@@ -93,6 +93,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 
 - Dated design: `docs/superpowers/specs/2026-08-16-physics-library-design.md` (math types later moved to JOML).
 - Medium thrust / density drag contract: `docs/superpowers/specs/2026-08-17-medium-propulsion-design.md`.
+- Sail ideas (not an implementation contract): `docs/superpowers/specs/2026-08-17-sail-propulsion-ideas.md`.
 - `docs/specs/buoyancy.md` remains the ship-client vertical contract.
 - Generic 6DOF is available to any caller; Archimedes `ShipPose` is still Y-only.
 - `archimedes.phys` review (2026-08-17): `Body` is the per-step physics object. `ShipPhysics` is the ship facade (rebuild body, clamp, path, `ShipRuntime`). `RiderCount` and `MaterialKeyResolver` are one-method seams so `:common` stays off Bukkit; they are not unused. No type in that package is a pass-through.
@@ -112,6 +113,8 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - [ ] Multi-ship fluid displacement.
 - [ ] Water entry/splash effects and drowning rules.
 - [ ] Stall, control surfaces, and atmosphere tables.
+- [ ] `FlowField` / wind velocity input so sails can use relative wind (not `isFluid`, not `F = k ρ n̂`)
+- [ ] `PressureSailForce` then `LiftingSailForce` as attachable catalog units (density, area/orientation, `v_app`; sheet, offset `r × F`, multi-sail composition)
 
 ## Decisions log
 
@@ -136,6 +139,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 | 2026-08-17 | Keep `ShipPhysics` and `RiderCount`; do not fold them into `Body` | `Body` is ephemeral per step; rider count and runtime moves are ship/Bukkit seams |
 | 2026-08-17 | Generic `MediumThrustForce` + opt-in density drag; no ship wiring | Same catalog later attaches to airships; `isFluid` must not kill air props |
 | 2026-08-17 | `ThrustForce` remains density-blind; one-arg quadratic drag stays lumped | Rocket and legacy callers keep their law; density coupling is explicit |
+| 2026-08-17 | Sails are future catalog forces, not medium thrust and not a `Body` subclass | Need `v_app` and area/orientation; `F = k ρ n̂` has no relative wind |
 
 ## Open questions
 
