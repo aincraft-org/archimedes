@@ -1,0 +1,37 @@
+package dev.mintychochip.archimedes.phys;
+
+import static org.junit.jupiter.api.Assertions.*;
+import dev.mintychochip.archimedes.config.ShipConfig;
+import dev.mintychochip.phys.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.junit.jupiter.api.Test;
+
+class EquilibriumSolverTest {
+  @Test void equalBuoyancyAndWeightIsEquilibrium() {
+    Collider collider = new Collider() {
+      public Shape shape() { return new Aabb(Vector3.ZERO, new Vector3(0.5, 0.5, 0.5)); }
+      public Material material() { return new Material(1000); }
+      public Transform localTransform() { return new Transform(Vector3.ZERO, new Quaternion(0,0,0,1)); }
+    };
+    Body body = new BodyImpl(
+        new Transform(new Vector3(0,0,0), new Quaternion(0,0,0,1)),
+        1000, List.of(collider), List.of());
+    World world = new World() {
+      public Vector3 gravity() { return new Vector3(0, -10, 0); }
+      public FluidField fluidField() {
+        return new FluidField() {
+          public boolean isFluid(Vector3 p) { return p.y() <= 10.5; }
+          public double density(Vector3 p) { return 1000; }
+        };
+      }
+      public double timeStep() { return 0.05; }
+    };
+    ShipConfig config = new ShipConfig(
+        2048, 8, Set.of(), Set.of(), true, 1, 0.5, 16.0, 0.05, 1.0, 0.5, 0.9,
+        Map.of(), 1.0, 80.0, 16.0, 1e-6, 1e-3);
+    EquilibriumResult result = new EquilibriumSolver().solve(body, world, config);
+    assertTrue(result.equilibrium());
+  }
+}
