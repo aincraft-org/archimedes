@@ -4,10 +4,14 @@ import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipTransform;
 import dev.mintychochip.archimedes.render.RenderSurface;
+import dev.mintychochip.archimedes.render.SailTransform;
+import dev.mintychochip.archimedes.sail.SailMesh;
+import dev.mintychochip.archimedes.sail.SailPiece;
 import dev.mintychochip.archimedes.ship.ShipHolder;
 import dev.mintychochip.archimedes.ship.ShipRendererLike;
 import dev.mintychochip.archimedes.ship.ShipRuntimeException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,9 +21,10 @@ import org.bukkit.entity.BlockDisplay;
 import org.bukkit.persistence.PersistentDataType;
 
 /**
- * Bukkit-backed renderer adapter: creates a non-persistent block display per block carrying the
- * ship's identifier and stable relative block position, and removes every tagged display on
- * disassembly through the surface's world query.
+ * Bukkit-backed renderer adapter: creates a non-persistent block display per hull block carrying
+ * the ship's identifier and stable relative block position, plus a separate tagged set of
+ * tessellated sail plates. Removes every tagged display on disassembly through the surface's world
+ * query.
  */
 @SuppressWarnings({
   "checkstyle:IllegalCatch",
@@ -36,6 +41,9 @@ public final class BukkitShipRenderer implements ShipRendererLike {
   /** Tag key carrying each block's stable relative position. */
   private final NamespacedKey blockKey;
 
+  /** Tag key carrying each sail plate's tessellation index. */
+  private final NamespacedKey sailKey;
+
   /**
    * Creates the renderer for a surface and namespace key.
    *
@@ -46,6 +54,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
     this.surface = surface;
     this.shipKey = shipKey;
     this.blockKey = new NamespacedKey(shipKey.getNamespace(), shipKey.getKey() + "-block");
+    this.sailKey = new NamespacedKey(shipKey.getNamespace(), shipKey.getKey() + "-sail");
   }
 
   /**
@@ -73,6 +82,9 @@ public final class BukkitShipRenderer implements ShipRendererLike {
 
   private void renderDisplays(Ship ship, List<BlockDisplay> displays) {
     for (ShipBlock block : ship.blocks()) {
+      if (SailMesh.isCloth(block.blockData())) {
+        continue;
+      }
       BlockData data = surface.blockData(block.blockData());
       BlockDisplay display =
           surface.spawnBlockDisplay(
@@ -86,6 +98,25 @@ public final class BukkitShipRenderer implements ShipRendererLike {
               });
       displays.add(display);
     }
+    List<SailPiece> pieces = SailMesh.tessellate(SailMesh.cellsOf(ship.blocks()));
+    for (int i = 0; i < pieces.size(); i++) {
+      displays.add(spawnSail(ship, pieces.get(i), i));
+    }
+  }
+
+  private BlockDisplay spawnSail(Ship ship, SailPiece piece, int index) {
+    BlockData data = surface.blockData(piece.appearance());
+    String sailIndex = Integer.toString(index);
+    return surface.spawnBlockDisplay(
+        SailTransform.location(surface, ship, piece),
+        d -> {
+          d.setBlock(data);
+          d.setPersistent(false);
+          d.getPersistentDataContainer()
+              .set(shipKey, PersistentDataType.STRING, ship.id().toString());
+          d.getPersistentDataContainer().set(sailKey, PersistentDataType.STRING, sailIndex);
+          d.setTransformation(SailTransform.transformation(piece));
+        });
   }
 
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
@@ -149,6 +180,14 @@ public final class BukkitShipRenderer implements ShipRendererLike {
       for (Map.Entry<BlockDisplay, ShipBlock> entry : blocksByDisplay.entrySet()) {
         surface.teleport(entry.getKey(), location(ship, entry.getValue()));
       }
+      Map<String, BlockDisplay> sails = pairSails(ship);
+      List<SailPiece> pieces = SailMesh.tessellate(SailMesh.cellsOf(ship.blocks()));
+      for (int i = 0; i < pieces.size(); i++) {
+        BlockDisplay display = sails.get(Integer.toString(i));
+        if (display != null) {
+          surface.teleport(display, SailTransform.location(surface, ship, pieces.get(i)));
+        }
+      }
     } catch (ShipRuntimeException failure) {
       throw failure;
     } catch (RuntimeException failure) {
@@ -180,6 +219,17 @@ public final class BukkitShipRenderer implements ShipRendererLike {
       }
     }
     return paired;
+  }
+
+  private Map<String, BlockDisplay> pairSails(Ship ship) {
+    Map<String, BlockDisplay> sails = new HashMap<>();
+    for (BlockDisplay display : surface.tagged(shipKey, ship.id().toString())) {
+      String index = display.getPersistentDataContainer().get(sailKey, PersistentDataType.STRING);
+      if (index != null) {
+        sails.put(index, display);
+      }
+    }
+    return sails;
   }
 
   private static String key(ShipBlock block) {

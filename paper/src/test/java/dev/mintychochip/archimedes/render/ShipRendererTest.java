@@ -1,13 +1,18 @@
 package dev.mintychochip.archimedes.render;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.mintychochip.archimedes.model.BlockPos;
 import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
 import dev.mintychochip.archimedes.model.ShipPose;
+import dev.mintychochip.archimedes.model.ShipTransform;
 import dev.mintychochip.archimedes.ship.ShipRuntimeException;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
@@ -21,6 +26,7 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.BlockDisplay;
+import org.bukkit.util.Transformation;
 import org.junit.jupiter.api.Test;
 
 /** Behavior tests for the block-display ship renderer. */
@@ -32,6 +38,9 @@ class ShipRendererTest {
   @SuppressWarnings("PMD.AvoidDuplicateLiterals")
   private static final String STONE = "minecraft:stone";
 
+  /** Cloth material used for tessellated sail pieces. */
+  private static final String WHITE_WOOL = "minecraft:white_wool";
+
   /** Common world identifier. */
   private static final UUID WORLD = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
@@ -40,7 +49,9 @@ class ShipRendererTest {
     BlockData block;
     boolean persistent = true;
     Location location;
+    Transformation transformation;
     final Map<NamespacedKey, String> tags = new HashMap<>();
+    final List<String> invoked = new ArrayList<>();
 
     BlockDisplay proxy() {
       return (BlockDisplay)
@@ -48,11 +59,17 @@ class ShipRendererTest {
               getClass().getClassLoader(),
               new Class<?>[] {BlockDisplay.class},
               (target, method, args) -> {
+                invoked.add(method.getName());
                 switch (method.getName()) {
                   case "getBlock":
                     return block;
                   case "setBlock":
                     block = (BlockData) args[0];
+                    return null;
+                  case "getTransformation":
+                    return transformation;
+                  case "setTransformation":
+                    transformation = (Transformation) args[0];
                     return null;
                   case "getLocation":
                     return location;
@@ -109,6 +126,7 @@ class ShipRendererTest {
 
   private static final class SpySurface implements RenderSurface {
     final List<BlockDisplay> spawned = new ArrayList<>();
+    final List<FakeDisplay> fakes = new ArrayList<>();
 
     final List<Location> teleports = new ArrayList<>();
     final Map<String, BlockData> dataById = new HashMap<>();
@@ -125,6 +143,7 @@ class ShipRendererTest {
       fake.location = location;
       BlockDisplay proxy = fake.proxy();
       config.accept(proxy);
+      fakes.add(fake);
       spawned.add(proxy);
       teleports.add(location);
       return proxy;
@@ -137,14 +156,25 @@ class ShipRendererTest {
 
     @Override
     public Collection<BlockDisplay> tagged(NamespacedKey key, String shipId) {
-      List<BlockDisplay> reversed = new ArrayList<>(spawned);
-      java.util.Collections.reverse(reversed);
-      return reversed;
+      List<BlockDisplay> found = new ArrayList<>();
+      for (int i = 0; i < spawned.size(); i++) {
+        if (shipId.equals(fakes.get(i).tags.get(key))) {
+          found.add(spawned.get(i));
+        }
+      }
+      java.util.Collections.reverse(found);
+      return found;
     }
 
     @Override
     public void teleport(org.bukkit.entity.Entity entity, Location location) {
       teleports.add(location);
+      for (int i = 0; i < spawned.size(); i++) {
+        if (spawned.get(i) == entity) {
+          fakes.get(i).location = location;
+          break;
+        }
+      }
     }
 
     @Override
@@ -164,7 +194,12 @@ class ShipRendererTest {
 
     @Override
     public void removeTagged(NamespacedKey key, String shipId) {
-      // Test surface: no live entities to remove.
+      for (int i = spawned.size() - 1; i >= 0; i--) {
+        if (shipId.equals(fakes.get(i).tags.get(key))) {
+          spawned.remove(i);
+          fakes.remove(i);
+        }
+      }
     }
   }
 
@@ -256,6 +291,39 @@ class ShipRendererTest {
   }
 
   @Test
+  void renderUsesOneUntransformedBlockDisplayPerCapturedBlock() {
+    SpySurface surface = new SpySurface();
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(WORLD, 100, 200, 300),
+            List.of(
+                new ShipBlock(new BlockPos(0, 0, 0), STONE),
+                new ShipBlock(new BlockPos(1, 0, 0), STONE)),
+            new ShipPose(0.5),
+            true);
+
+    new ShipRenderer().render(ship, surface);
+
+    assertEquals(2, surface.spawned.size());
+    assertEquals(2, surface.fakes.size());
+    assertEquals(
+        ShipTransform.visual(ship, new BlockPos(0, 0, 0)).x(),
+        surface.spawned.get(0).getLocation().getX(),
+        0.001);
+    assertEquals(
+        ShipTransform.visual(ship, new BlockPos(1, 0, 0)).x(),
+        surface.spawned.get(1).getLocation().getX(),
+        0.001);
+    for (FakeDisplay fake : surface.fakes) {
+      assertTrue(fake.invoked.contains("setBlock"));
+      assertFalse(fake.invoked.contains("setTransformation"));
+      assertFalse(fake.invoked.contains("setTransformationMatrix"));
+    }
+  }
+
+  @Test
   void appliesBlockDataToDisplay() {
     SpySurface surface = new SpySurface();
     Ship ship = shipWithBlock(0, 0, 0, STONE);
@@ -335,6 +403,160 @@ class ShipRendererTest {
     java.util.Set<Double> repositionedX =
         java.util.Set.of(surface.teleports.get(2).getX(), surface.teleports.get(3).getX());
     assertEquals(java.util.Set.of(101.0, 109.0), repositionedX);
+  }
+
+  @Test
+  void stoneOnlyShipStillSpawnsOneUntransformedDisplayPerBlock() {
+    SpySurface surface = new SpySurface();
+    surface.dataById.put(STONE, markerData(STONE));
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(WORLD, 100, 200, 300),
+            List.of(
+                new ShipBlock(new BlockPos(0, 0, 0), STONE),
+                new ShipBlock(new BlockPos(1, 0, 0), STONE)),
+            new ShipPose(0.5),
+            true);
+    NamespacedKey shipKey = new NamespacedKey(NAMESPACE, "test");
+    new dev.mintychochip.archimedes.bukkit.BukkitShipRenderer(surface, shipKey)
+        .render(ship, ignored -> {});
+
+    assertEquals(2, surface.spawned.size());
+    for (FakeDisplay fake : surface.fakes) {
+      assertEquals(surface.dataById.get(STONE), fake.block);
+      assertTrue(fake.invoked.contains("setBlock"));
+      assertFalse(fake.invoked.contains("setTransformation"));
+      assertFalse(fake.invoked.contains("setTransformationMatrix"));
+    }
+  }
+
+  @Test
+  void clothRegionSpawnsTransformedPlatesInsteadOfUntransformedCubes() {
+    SpySurface surface = new SpySurface();
+    surface.dataById.put(STONE, markerData(STONE));
+    surface.dataById.put(WHITE_WOOL, markerData(WHITE_WOOL));
+    Ship ship = stoneAndWoolWall();
+    NamespacedKey shipKey = new NamespacedKey(NAMESPACE, "test");
+    new dev.mintychochip.archimedes.bukkit.BukkitShipRenderer(surface, shipKey)
+        .render(ship, ignored -> {});
+
+    List<FakeDisplay> hull = new ArrayList<>();
+    List<FakeDisplay> sails = new ArrayList<>();
+    for (FakeDisplay fake : surface.fakes) {
+      if (fake.invoked.contains("setTransformation")
+          || fake.invoked.contains("setTransformationMatrix")) {
+        sails.add(fake);
+      } else {
+        hull.add(fake);
+      }
+    }
+    assertEquals(1, hull.size(), "non-cloth hull stays one untransformed cube");
+    assertEquals(surface.dataById.get(STONE), hull.get(0).block);
+    assertFalse(hull.get(0).invoked.contains("setTransformation"));
+    assertTrue(sails.size() > 1, "multi-cell cloth must spawn a series of plates");
+    assertNotEquals(3, untransformedClothCount(surface), "cloth must not be one cube per cell");
+    for (FakeDisplay sail : sails) {
+      assertEquals(surface.dataById.get(WHITE_WOOL), sail.block);
+      assertTrue(sail.invoked.contains("setBlock"));
+      assertNotNull(sail.transformation);
+      org.joml.Vector3f scale = sail.transformation.getScale();
+      boolean thin = scale.x != 1.0f || scale.y != 1.0f || scale.z != 1.0f;
+      org.joml.Quaternionf rot = sail.transformation.getLeftRotation();
+      boolean rotated = rot.x != 0.0f || rot.y != 0.0f || rot.z != 0.0f || rot.w != 1.0f;
+      assertTrue(thin || rotated, "sail piece must be a transformed plate");
+    }
+  }
+
+  @Test
+  void sailPiecesMoveWithRepositionAndVanishOnRemove() {
+    SpySurface surface = new SpySurface();
+    surface.dataById.put(STONE, markerData(STONE));
+    surface.dataById.put(WHITE_WOOL, markerData(WHITE_WOOL));
+    Ship ship = stoneAndWoolWall();
+    NamespacedKey shipKey = new NamespacedKey(NAMESPACE, "test");
+    dev.mintychochip.archimedes.bukkit.BukkitShipRenderer renderer =
+        new dev.mintychochip.archimedes.bukkit.BukkitShipRenderer(surface, shipKey);
+    renderer.render(ship, ignored -> {});
+
+    List<FakeDisplay> sails = transformed(surface);
+    assertTrue(sails.size() > 1);
+    List<Double> yBefore = new ArrayList<>();
+    for (FakeDisplay sail : sails) {
+      yBefore.add(sail.location.getY());
+    }
+
+    ship.setPose(new ShipPose(3.0));
+    renderer.reposition(ship, 0.0, 3.0);
+
+    List<FakeDisplay> moved = transformed(surface);
+    assertEquals(sails.size(), moved.size());
+    for (int i = 0; i < moved.size(); i++) {
+      assertEquals(yBefore.get(i) + 3.0, moved.get(i).location.getY(), 0.001);
+    }
+
+    renderer.removeRuntime(ship);
+    assertTrue(surface.tagged(shipKey, ship.id().toString()).isEmpty());
+    assertEquals(0, transformed(surface).size());
+    assertEquals(0, surface.spawned.size());
+  }
+
+  private static Ship stoneAndWoolWall() {
+    return new Ship(
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        new ShipOrigin(WORLD, 100, 200, 300),
+        List.of(
+            new ShipBlock(new BlockPos(0, 0, 0), STONE),
+            new ShipBlock(new BlockPos(1, 0, 0), WHITE_WOOL),
+            new ShipBlock(new BlockPos(2, 0, 0), WHITE_WOOL),
+            new ShipBlock(new BlockPos(3, 0, 0), WHITE_WOOL)),
+        new ShipPose(0.0),
+        true);
+  }
+
+  private static List<FakeDisplay> transformed(SpySurface surface) {
+    List<FakeDisplay> sails = new ArrayList<>();
+    for (FakeDisplay fake : surface.fakes) {
+      if (fake.invoked.contains("setTransformation")
+          || fake.invoked.contains("setTransformationMatrix")) {
+        sails.add(fake);
+      }
+    }
+    return sails;
+  }
+
+  private static int untransformedClothCount(SpySurface surface) {
+    int count = 0;
+    BlockData wool = surface.dataById.get(WHITE_WOOL);
+    for (FakeDisplay fake : surface.fakes) {
+      if (wool.equals(fake.block)
+          && !fake.invoked.contains("setTransformation")
+          && !fake.invoked.contains("setTransformationMatrix")) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  private static BlockData markerData(String id) {
+    return (BlockData)
+        Proxy.newProxyInstance(
+            BlockData.class.getClassLoader(),
+            new Class<?>[] {BlockData.class},
+            (proxy, method, args) -> {
+              if ("toString".equals(method.getName()) || "getAsString".equals(method.getName())) {
+                return id;
+              }
+              if ("equals".equals(method.getName())) {
+                return proxy == args[0];
+              }
+              if ("hashCode".equals(method.getName())) {
+                return System.identityHashCode(proxy);
+              }
+              return defaultFor(method.getReturnType());
+            });
   }
 
   private static Ship shipWithBlock(int dx, int dy, int dz, String data) {
