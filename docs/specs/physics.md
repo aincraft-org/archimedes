@@ -14,7 +14,8 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 
 - Generic math helpers on JOML (`Vectors`, `Quaternions`) plus `Transform`.
 - Generic abstractions: `Body`, `Collider`, `Shape`, `Material`, `Force`, `World`, `FluidField`, `DensityField`, `Physics`.
-- Default `BodyImpl`, `Aabb`, `ColliderImpl`, and `PhysicsEngine` in `:common`.
+- Default `BodyImpl`, `Aabb`, `ColliderImpl`, `Octree`, and `PhysicsEngine` in `:common`.
+- Octree broadphase plus AABB contact depenetration on `Physics.step` (body–body).
 - Reusable `Force` units: `GravityForce`, `FluidBuoyancyForce`, `QuadraticDragForce`, `ThrustForce`, `LiftForce`, `SupportForce`, `CoulombFrictionForce`, `ViscousDragForce`, `AngularDragForce`.
 - Ship client (`dev.mintychochip.archimedes.phys`):
   - `ShipBody` construction from `Ship` blocks.
@@ -28,7 +29,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - Horizontal or rotational Archimedes ship gameplay (`ShipPose` remains a scalar `y`).
 - In-game Minecraft airships/airplanes (commands, rendering, 6DOF `ShipRuntime`, player controls, fuel).
 - Full flight-sim aerodynamics (stall, control surfaces, stability derivatives, atmosphere tables).
-- Collision detection, contact manifolds, restitution, joints, constraint/LCP solvers, ship-vs-ship or terrain contact solving.
+- Restitution, joints, constraint/LCP solvers, and replacing Minecraft Shulker hulls for player-solid ships.
 - Springs, rolling resistance, and gyroscopic `ω × Iω` beyond the current integrator.
 - Multi-ship water displacement or a shared fluid simulation.
 - Water entry effects, drowning, damage.
@@ -62,7 +63,8 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - The ship client is responsible for turning a `Ship` into a `Body` and for driving `ShipRuntime` after integration.
 - Reuse existing `ShipRuntime` transaction semantics; do not re-implement rollback in physics.
 - Write tests for the generic core first, then the ship client. Composition tests must call real `Force.apply` and `Physics.step`. Every shipped catalog force must also have a real-step assertion, not `apply` alone.
-- `Physics.step` is the only integrator. It sums attached results, skips inactive bodies, and does not inject gravity. Coulomb friction may re-invoke sibling `apply` to read tangent load; those sibling results are still summed once by the step.
+- `Physics.step` is the only integrator. It sums attached results, skips inactive bodies, and does not inject gravity. After integration it runs an octree broadphase and AABB depenetration for bodies that have colliders. Coulomb friction may re-invoke sibling `apply` to read tangent load; those sibling results are still summed once by the step.
+- Minecraft player-solid ship hulls stay Shulker volumes. The octree is the generic engine broadphase, not a replacement for those hulls.
 
 ## Current
 
@@ -82,6 +84,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - [x] Coulomb friction (kinetic opposes slip, zero with no load, static hold vs slip).
 - [x] Viscous linear drag and angular drag (rest ≈ 0; `|v|` / `|ω|` decrease after `step`).
 - [x] Every catalog force has a defining post-step signature through the real `Physics.step`, including a mixed collection (vehicles + floor contact + spin).
+- [x] Octree broadphase + AABB contact depenetration on `Physics.step`.
 
 ### Current notes
 
@@ -122,6 +125,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 | 2026-08-17 | Promote attachable support, Coulomb friction, and viscous/angular drag into the generic library | User asked for a complete attachable force catalog; not a contact/LCP solver |
 | 2026-08-17 | Catalog forces are proven through `Physics.step`, not `apply` alone | Isolated apply tests can pass while the integrator never sees the force |
 | 2026-08-17 | Remove ship `EquilibriumSolver`; ships only step gravity + waterline buoyancy | Duplicate Y-search fought the engine and is not needed for draft |
+| 2026-08-17 | Body–body collision uses an octree broadphase and AABB depenetration | User asked for spatial-tree collision; not an LCP solver or Shulker replacement |
 
 ## Open questions
 
