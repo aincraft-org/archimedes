@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /** Default ship service for persistence, world mutation, and runtime lifecycle. */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public final class ShipServiceImpl implements ShipService {
   /** Persistence backend. */
   private final ShipStoreLike store;
@@ -157,7 +158,7 @@ public final class ShipServiceImpl implements ShipService {
    */
   @Override
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
-  public Ship spawnSail(UUID playerId, UUID targetWorldId, int x, int y, int z) {
+  public Ship spawnSail(UUID playerId, UUID targetWorldId, int x, int y, int z, String sizeName) {
     if (!targetWorldId.equals(worldId)) {
       lastError = "Ship assembly is not permitted in this world";
       return null;
@@ -166,12 +167,17 @@ public final class ShipServiceImpl implements ShipService {
       lastError = "Ship assembly is disabled in this world";
       return null;
     }
+    SailShipTemplate.Size size = SailShipTemplate.Size.parse(sizeName);
+    if (size == null) {
+      lastError = "Unknown sail size: " + sizeName;
+      return null;
+    }
     Ship ship =
         new Ship(
             UUID.randomUUID(),
             playerId,
             new ShipOrigin(targetWorldId, x, y, z),
-            SailShipTemplate.blocks());
+            SailShipTemplate.blocks(size));
     boolean runtimeStarted = false;
     boolean buoyancyStarted = false;
     try {

@@ -9,15 +9,15 @@ import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
-/** Predetermined demo sail used by {@code /ship sail}. */
+/** Predetermined demo sail used by {@code /arch sail}. */
 class SailShipTemplateTest {
   private static final String OAK_PLANKS = "minecraft:oak_planks";
   private static final String OAK_LOG = "minecraft:oak_log";
   private static final String WHITE_WOOL = "minecraft:white_wool";
 
   @Test
-  void buildsAFixedDeckMastAndThreeByThreeSail() {
-    List<ShipBlock> blocks = SailShipTemplate.blocks();
+  void smallIsAThreeByThreeSail() {
+    List<ShipBlock> blocks = SailShipTemplate.blocks(SailShipTemplate.Size.SMALL);
 
     assertEquals(22, blocks.size());
     assertEquals(9, count(blocks, OAK_PLANKS));
@@ -30,9 +30,30 @@ class SailShipTemplateTest {
   }
 
   @Test
+  void defaultAndLargerSizesGrowTheSail() {
+    int small = count(SailShipTemplate.blocks(SailShipTemplate.Size.SMALL), WHITE_WOOL);
+    int medium = count(SailShipTemplate.blocks(), WHITE_WOOL);
+    int large = count(SailShipTemplate.blocks(SailShipTemplate.Size.LARGE), WHITE_WOOL);
+    assertEquals(9, small);
+    assertEquals(25, medium);
+    assertEquals(49, large);
+    assertTrue(medium > small);
+    assertTrue(large > medium);
+  }
+
+  @Test
+  void parseAcceptsNamedSizesAndRejectsUnknown() {
+    assertEquals(SailShipTemplate.Size.SMALL, SailShipTemplate.Size.parse("small"));
+    assertEquals(SailShipTemplate.Size.MEDIUM, SailShipTemplate.Size.parse("MEDIUM"));
+    assertEquals(SailShipTemplate.Size.LARGE, SailShipTemplate.Size.parse(" Large "));
+    assertEquals(null, SailShipTemplate.Size.parse("huge"));
+    assertEquals(null, SailShipTemplate.Size.parse(null));
+  }
+
+  @Test
   void clothIsAThreeByThreeWall() {
     Set<String> wool = new HashSet<>();
-    for (ShipBlock block : SailShipTemplate.blocks()) {
+    for (ShipBlock block : SailShipTemplate.blocks(SailShipTemplate.Size.SMALL)) {
       if (WHITE_WOOL.equals(block.blockData())) {
         wool.add(block.pos().x() + "," + block.pos().y() + "," + block.pos().z());
       }

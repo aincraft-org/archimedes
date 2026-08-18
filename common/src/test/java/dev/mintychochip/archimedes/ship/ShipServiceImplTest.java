@@ -39,6 +39,9 @@ class ShipServiceImplTest {
   /** Recorded buoyancy clear operation. */
   private static final String CLEAR_CALL = "clear";
 
+  /** Recorded buoyancy rise operation. */
+  private static final String RISE_CALL = "rise";
+
   private static final UUID WORLD = UUID.fromString("00000000-0000-0000-0000-000000000001");
   private static final UUID OWNER = UUID.fromString("00000000-0000-0000-0000-000000000002");
 
@@ -109,7 +112,7 @@ class ShipServiceImplTest {
 
     @Override
     public boolean rise(Ship ship) {
-      calls.add("rise");
+      calls.add(RISE_CALL);
       return !riseFails;
     }
 
@@ -424,7 +427,7 @@ class ShipServiceImplTest {
             WORLD);
 
     assertThrows(ShipRuntimeException.class, () -> service.assembleAt(OWNER, 100, 200, 300, WORLD));
-    assertEquals(List.of("rise", CLEAR_CALL), buoyancy.calls);
+    assertEquals(List.of(RISE_CALL, CLEAR_CALL), buoyancy.calls);
     assertEquals("persist", service.lastError());
   }
 
@@ -940,7 +943,7 @@ class ShipServiceImplTest {
             WORLD);
     Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNotNull(result);
-    assertEquals(List.of("rise"), buoyancy.calls);
+    assertEquals(List.of(RISE_CALL), buoyancy.calls);
   }
 
   @Test
@@ -1098,9 +1101,30 @@ class ShipServiceImplTest {
     assertEquals(1, fakes.rendered.size());
     assertEquals(STONE, fakes.blocks.get("5,64,8"));
     assertEquals(1, service.all().size());
-    long wool =
-        ship.blocks().stream().filter(block -> block.blockData().endsWith("_wool")).count();
-    assertEquals(9, wool);
+    long wool = ship.blocks().stream().filter(block -> block.blockData().endsWith("_wool")).count();
+    assertEquals(25, wool);
+  }
+
+  @Test
+  void spawnSailUsesTheNamedSizeAndRejectsUnknownNames() {
+    Fakes fakes = new Fakes();
+    ShipService service =
+        new ShipServiceImpl(
+            new MemoryStore(fakes),
+            (x, y, z) -> List.of(),
+            runtime(fakes),
+            fakes,
+            new RecordingBuoyancy(),
+            false,
+            true,
+            WORLD);
+
+    Ship large = service.spawnSail(OWNER, WORLD, 5, 64, 8, "large");
+    assertNotNull(large);
+    assertEquals(SailShipTemplate.blocks(SailShipTemplate.Size.LARGE).size(), large.blockCount());
+
+    assertNull(service.spawnSail(OWNER, WORLD, 5, 64, 8, "huge"));
+    assertEquals("Unknown sail size: huge", service.lastError());
   }
 
   @Test
@@ -1154,7 +1178,7 @@ class ShipServiceImplTest {
 
     assertNotNull(ship);
     assertEquals(1, service.all().size());
-    assertEquals(List.of("rise"), buoyancy.calls);
+    assertEquals(List.of(RISE_CALL), buoyancy.calls);
     assertEquals(1, fakes.rendered.size());
   }
 

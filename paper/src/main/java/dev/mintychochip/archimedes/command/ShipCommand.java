@@ -5,6 +5,7 @@ import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.phys.ShipInspection;
 import dev.mintychochip.archimedes.phys.ShipInspectionLines;
 import dev.mintychochip.archimedes.phys.ShipPhysics;
+import dev.mintychochip.archimedes.sail.SailShipTemplate;
 import dev.mintychochip.archimedes.ship.ShipService;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -84,7 +85,7 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
       case "sink":
         return permitted(player, "archimedes.sink") && sink(player, args);
       case "sail":
-        return permitted(player, "archimedes.sail") && sail(player);
+        return permitted(player, "archimedes.sail") && sail(player, args);
       default:
         player.sendMessage(ChatColor.RED + "Unknown subcommand: " + args[0]);
         return true;
@@ -183,12 +184,17 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
     return true;
   }
 
-  private boolean sail(Player player) {
+  private boolean sail(Player player, String[] args) {
+    String size = args.length >= 2 ? args[1] : "medium";
+    if (SailShipTemplate.Size.parse(size) == null) {
+      player.sendMessage(ChatColor.RED + "Usage: /arch sail [small|medium|large]");
+      return true;
+    }
     org.bukkit.block.BlockFace facing = player.getFacing();
     int x = player.getLocation().getBlockX() + facing.getModX() * 3;
     int y = player.getLocation().getBlockY();
     int z = player.getLocation().getBlockZ() + facing.getModZ() * 3;
-    Ship ship = service.spawnSail(player.getUniqueId(), player.getWorld().getUID(), x, y, z);
+    Ship ship = service.spawnSail(player.getUniqueId(), player.getWorld().getUID(), x, y, z, size);
     if (ship == null) {
       player.sendMessage(ChatColor.RED + "Cannot spawn sail: " + service.lastError());
       return true;

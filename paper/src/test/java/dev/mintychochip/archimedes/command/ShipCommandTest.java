@@ -62,6 +62,7 @@ class ShipCommandTest {
     int targetY;
     int targetZ;
     UUID lastWorld;
+    String lastSailSize;
     UUID lastRequester;
     boolean lastOperator;
     boolean disassembleFails;
@@ -76,10 +77,11 @@ class ShipCommandTest {
     }
 
     @Override
-    public Ship spawnSail(UUID playerId, UUID worldId, int x, int y, int z) {
+    public Ship spawnSail(UUID playerId, UUID worldId, int x, int y, int z, String size) {
       calls.add(SUB_SAIL);
       lastRequester = playerId;
       lastWorld = worldId;
+      lastSailSize = size;
       targetX = x;
       targetY = y;
       targetZ = z;
@@ -521,7 +523,26 @@ class ShipCommandTest {
     assertEquals(10, service.targetX);
     assertEquals(64, service.targetY);
     assertEquals(23, service.targetZ);
+    assertEquals("medium", service.lastSailSize);
     assertTrue(service.messages.get(0).contains("Spawned sail ship"));
+  }
+
+  @Test
+  void sailAcceptsNamedSizes() {
+    RecordingService service = new RecordingService();
+    service.assembled = ship();
+    commandNoTarget(service)
+        .onCommand(player(service, true), CMD, SHIP, new String[] {SUB_SAIL, "large"});
+    assertEquals("large", service.lastSailSize);
+  }
+
+  @Test
+  void sailRejectsUnknownSize() {
+    RecordingService service = new RecordingService();
+    commandNoTarget(service)
+        .onCommand(player(service, true), CMD, SHIP, new String[] {SUB_SAIL, "huge"});
+    assertTrue(service.calls.isEmpty());
+    assertTrue(service.messages.get(0).contains("Usage: /arch sail"));
   }
 
   @Test

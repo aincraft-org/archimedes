@@ -44,4 +44,12 @@ class ShipTabCompleterTest {
         new ShipTabCompleter()
             .onTabComplete(SENDER, COMMAND, SHIP_COMMAND, new String[] {"sink", "1"}));
   }
+
+  @Test
+  void completesSailSizes() {
+    assertEquals(
+        List.of("small"),
+        new ShipTabCompleter()
+            .onTabComplete(SENDER, COMMAND, SHIP_COMMAND, new String[] {"sail", "s"}));
+  }
 }

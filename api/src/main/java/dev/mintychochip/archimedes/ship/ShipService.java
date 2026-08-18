@@ -32,7 +32,23 @@ public interface ShipService {
    * @param z origin z
    * @return the spawned ship, or null on failure
    */
-  Ship spawnSail(UUID playerId, UUID worldId, int x, int y, int z);
+  default Ship spawnSail(UUID playerId, UUID worldId, int x, int y, int z) {
+    return spawnSail(playerId, worldId, x, y, z, "medium");
+  }
+
+  /**
+   * Spawns a predetermined sail ship of the given size ({@code small}, {@code medium}, {@code
+   * large}).
+   *
+   * @param playerId the owning player
+   * @param worldId the world identifier
+   * @param x origin x
+   * @param y origin y
+   * @param z origin z
+   * @param size named hull size
+   * @return the spawned ship, or null on failure
+   */
+  Ship spawnSail(UUID playerId, UUID worldId, int x, int y, int z, String size);
 
   /**
    * Returns the ship owned by a player in their current world, or null.
