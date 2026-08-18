@@ -9,7 +9,10 @@ import org.jetbrains.annotations.NotNull;
 public final class ShipTabCompleter implements org.bukkit.command.TabCompleter {
   /** Known ship subcommands. */
   private static final List<String> SUBCOMMANDS =
-      List.of("assemble", "inspect", "disassemble", "buoyancy", "sink", "sail");
+      List.of("assemble", "inspect", "disassemble", "kill", "buoyancy", "sink", "sail");
+
+  /** Kill argument names. */
+  private static final List<String> KILL_ARGS = List.of("all");
 
   /** Sail size names. */
   private static final List<String> SAIL_SIZES = List.of("small", "medium", "large");
@@ -17,7 +20,8 @@ public final class ShipTabCompleter implements org.bukkit.command.TabCompleter {
   /**
    * Completes the first {@code /arch} argument from the known subcommands.
    *
-   * <p>Only the first argument is completed; later arguments return an empty list.
+   * <p>The first argument is the subcommand list; {@code sail} and {@code kill} also complete their
+   * second argument. Other later arguments return an empty list.
    *
    * @param sender command sender
    * @param command invoked command
@@ -38,6 +42,10 @@ public final class ShipTabCompleter implements org.bukkit.command.TabCompleter {
     if (args.length == 2 && "sail".equalsIgnoreCase(args[0])) {
       String prefix = args[1].toLowerCase(java.util.Locale.ROOT);
       return SAIL_SIZES.stream().filter(size -> size.startsWith(prefix)).toList();
+    }
+    if (args.length == 2 && "kill".equalsIgnoreCase(args[0])) {
+      String prefix = args[1].toLowerCase(java.util.Locale.ROOT);
+      return KILL_ARGS.stream().filter(arg -> arg.startsWith(prefix)).toList();
     }
     return List.of();
   }

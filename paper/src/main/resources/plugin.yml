@@ -7,7 +7,7 @@ author: jlo
 commands:
   arch:
     description: Archimedes ships
-    usage: /arch assemble|inspect|disassemble|buoyancy|sink|sail
+    usage: /arch assemble|inspect|disassemble|kill|buoyancy|sink|sail
     aliases: [ship]
     permission: archimedes.command
 permissions:
@@ -22,6 +22,9 @@ permissions:
     default: true
   archimedes.disassemble:
     description: Disassemble ships
+    default: true
+  archimedes.kill:
+    description: Destroy ships without restoring blocks
     default: true
   archimedes.buoyancy:
     description: Toggle ship buoyancy

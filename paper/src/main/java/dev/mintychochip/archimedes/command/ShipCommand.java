@@ -7,6 +7,7 @@ import dev.mintychochip.archimedes.phys.ShipInspectionLines;
 import dev.mintychochip.archimedes.phys.ShipPhysics;
 import dev.mintychochip.archimedes.sail.SailShipTemplate;
 import dev.mintychochip.archimedes.ship.ShipService;
+import dev.mintychochip.archimedes.ship.ShipTargeting;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -70,7 +71,7 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
           ChatColor.RED
               + "Usage: /"
               + commandLabel
-              + " assemble|inspect|disassemble|buoyancy|sink|sail");
+              + " assemble|inspect|disassemble|kill|buoyancy|sink|sail");
       return true;
     }
     switch (args[0].toLowerCase(java.util.Locale.ROOT)) {
@@ -80,6 +81,8 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
         return permitted(player, "archimedes.inspect") && inspect(player);
       case "disassemble":
         return permitted(player, "archimedes.disassemble") && disassemble(player);
+      case "kill":
+        return permitted(player, "archimedes.kill") && kill(player, args);
       case "buoyancy":
         return permitted(player, "archimedes.buoyancy") && buoyancy(player);
       case "sink":
@@ -125,9 +128,9 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
   }
 
   private boolean inspect(Player player) {
-    Ship ship = service.findOwnedInWorld(player.getUniqueId(), player.getWorld().getUID());
+    Ship ship = nearby(player);
     if (ship == null) {
-      player.sendMessage(ChatColor.RED + "No ship in this world.");
+      player.sendMessage(ChatColor.RED + "No ship nearby.");
       return true;
     }
     ShipInspection report = physics.inspect(ship);
@@ -138,9 +141,9 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
   }
 
   private boolean disassemble(Player player) {
-    Ship ship = service.findOwnedInWorld(player.getUniqueId(), player.getWorld().getUID());
+    Ship ship = nearby(player);
     if (ship == null) {
-      player.sendMessage(ChatColor.RED + "No ship in this world.");
+      player.sendMessage(ChatColor.RED + "No ship nearby.");
       return true;
     }
     if (!service.disassemble(ship.id(), player.getUniqueId(), player.isOp())) {
@@ -149,6 +152,44 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
     }
     player.sendMessage(ChatColor.GREEN + "Disassembled ship.");
     return true;
+  }
+
+  private boolean kill(Player player, String[] args) {
+    if (args.length >= 2 && "all".equalsIgnoreCase(args[1])) {
+      return killAll(player);
+    }
+    Ship ship = nearby(player);
+    if (ship == null) {
+      player.sendMessage(ChatColor.RED + "No ship nearby.");
+      return true;
+    }
+    if (!service.kill(ship.id(), player.getUniqueId(), player.isOp())) {
+      player.sendMessage(ChatColor.RED + "Cannot kill: " + service.lastError());
+      return true;
+    }
+    player.sendMessage(ChatColor.GREEN + "Killed ship.");
+    return true;
+  }
+
+  private boolean killAll(Player player) {
+    if (!player.isOp()) {
+      player.sendMessage(ChatColor.RED + "Only operators can kill all ships.");
+      return true;
+    }
+    int killed = service.killAll();
+    player.sendMessage(ChatColor.GREEN + "Killed " + killed + " ships.");
+    return true;
+  }
+
+  private Ship nearby(Player player) {
+    org.bukkit.Location location = player.getLocation();
+    return ShipTargeting.nearest(
+        service.all(),
+        player.getWorld().getUID(),
+        location.getX(),
+        location.getY(),
+        location.getZ(),
+        config.targetDistance());
   }
 
   private boolean buoyancy(Player player) {

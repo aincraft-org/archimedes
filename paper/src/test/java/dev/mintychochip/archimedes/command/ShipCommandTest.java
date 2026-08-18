@@ -46,6 +46,12 @@ class ShipCommandTest {
   /** Sail spawn subcommand label. */
   private static final String SUB_SAIL = "sail";
 
+  /** Destroy subcommand label. */
+  private static final String SUB_KILL = "kill";
+
+  /** Shared list/kill-all token recorded by the fake service. */
+  private static final String ALL = "all";
+
   /** Common world identifier. */
   private static final UUID WORLD_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
@@ -66,6 +72,10 @@ class ShipCommandTest {
     UUID lastRequester;
     boolean lastOperator;
     boolean disassembleFails;
+    boolean killFails;
+    final List<Ship> registered = new ArrayList<>();
+    UUID lastKilled;
+    int killAllCount;
 
     @Override
     public Ship assembleAt(UUID playerId, int x, int y, int z, UUID worldId) {
@@ -103,6 +113,21 @@ class ShipCommandTest {
     }
 
     @Override
+    public boolean kill(UUID shipId, UUID requesterId, boolean operator) {
+      calls.add(SUB_KILL);
+      lastKilled = shipId;
+      lastRequester = requesterId;
+      lastOperator = operator;
+      return !killFails;
+    }
+
+    @Override
+    public int killAll() {
+      calls.add("killAll");
+      return killAllCount;
+    }
+
+    @Override
     public String lastError() {
       return error;
     }
@@ -120,7 +145,11 @@ class ShipCommandTest {
 
     @Override
     public Collection<Ship> all() {
-      return List.of();
+      calls.add(ALL);
+      if (!registered.isEmpty()) {
+        return List.copyOf(registered);
+      }
+      return owned == null ? List.of() : List.of(owned);
     }
 
     @Override
@@ -146,12 +175,22 @@ class ShipCommandTest {
 
   /** Builds a ship with one block for service returns. */
   private static Ship ship() {
-    ShipOrigin origin = new ShipOrigin(WORLD_ID, 1, 2, 3);
+    return shipAt(1, 2, 3);
+  }
+
+  /** Builds a one-block ship at the given origin. */
+  private static Ship shipAt(int x, int y, int z) {
+    ShipOrigin origin = new ShipOrigin(WORLD_ID, x, y, z);
     return new Ship(
         UUID.randomUUID(),
         UUID.randomUUID(),
         origin,
         List.of(new ShipBlock(new BlockPos(0, 0, 0), "minecraft:stone")));
+  }
+
+  /** Ship placed under the test player at (10, 64, 20). */
+  private static Ship nearbyShip() {
+    return shipAt(10, 64, 20);
   }
 
   /** Player proxy carrying permissions, world, and target block. */
@@ -399,19 +438,20 @@ class ShipCommandTest {
   }
 
   @Test
-  void inspectRequiresOwnedShip() {
+  void inspectRequiresNearbyShip() {
     RecordingService service = new RecordingService();
-    service.owned = null;
+    service.owned = shipAt(0, 64, 790);
     Player player = player(service, true);
     commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {SUB_INSPECT});
-    assertTrue(service.messages.get(0).contains("No ship in this world"));
-    assertEquals(List.of("find"), service.calls);
+    assertTrue(service.messages.get(0).contains("No ship nearby"));
+    assertTrue(service.calls.contains(ALL));
+    assertFalse(service.calls.contains("find"));
   }
 
   @Test
   void inspectReportsShipSummary() {
     RecordingService service = new RecordingService();
-    service.owned = ship();
+    service.owned = nearbyShip();
     Player player = player(service, true);
     commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {SUB_INSPECT});
     String joined = String.join("\n", service.messages);
@@ -424,23 +464,97 @@ class ShipCommandTest {
   }
 
   @Test
+  void inspectPicksNearbyHullOverFirstOwnedShip() {
+    RecordingService service = new RecordingService();
+    Ship distant = shipAt(0, 64, 790);
+    Ship nearby = nearbyShip();
+    service.owned = distant;
+    service.registered.add(distant);
+    service.registered.add(nearby);
+    commandNoTarget(service)
+        .onCommand(player(service, true), CMD, SHIP, new String[] {SUB_INSPECT});
+    String joined = String.join("\n", service.messages);
+    assertTrue(joined.contains(nearby.id().toString().substring(0, 8)));
+    assertFalse(joined.contains(distant.id().toString().substring(0, 8)));
+  }
+
+  @Test
   void disassembleDelegatesWithOwnership() {
     RecordingService service = new RecordingService();
-    service.owned = ship();
+    service.owned = nearbyShip();
     service.opUser = false;
     Player player = player(service, true);
     commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {SUB_DISASSEMBLE});
-    assertEquals(List.of("find", SUB_DISASSEMBLE), service.calls);
+    assertTrue(service.calls.contains(SUB_DISASSEMBLE));
     assertEquals(service.owner, service.lastRequester);
     assertFalse(service.lastOperator);
     assertTrue(service.messages.get(0).contains("Disassembled ship"));
   }
 
   @Test
+  void killDestroysNearbyShip() {
+    RecordingService service = new RecordingService();
+    Ship nearby = nearbyShip();
+    service.owned = nearby;
+    commandNoTarget(service).onCommand(player(service, true), CMD, SHIP, new String[] {SUB_KILL});
+    assertTrue(service.calls.contains(SUB_KILL));
+    assertEquals(nearby.id(), service.lastKilled);
+    assertEquals(service.owner, service.lastRequester);
+    assertTrue(service.messages.get(0).contains("Killed ship"));
+  }
+
+  @Test
+  void killReportsServiceFailure() {
+    RecordingService service = new RecordingService();
+    service.owned = nearbyShip();
+    service.killFails = true;
+    service.error = "You do not own this ship";
+    commandNoTarget(service).onCommand(player(service, true), CMD, SHIP, new String[] {SUB_KILL});
+    assertTrue(service.messages.get(0).contains("Cannot kill: You do not own this ship"));
+  }
+
+  @Test
+  void killRequiresNearbyShip() {
+    RecordingService service = new RecordingService();
+    service.owned = shipAt(0, 64, 790);
+    commandNoTarget(service).onCommand(player(service, true), CMD, SHIP, new String[] {SUB_KILL});
+    assertTrue(service.messages.get(0).contains("No ship nearby"));
+    assertFalse(service.calls.contains(SUB_KILL));
+  }
+
+  @Test
+  void killRejectsWithoutPermission() {
+    RecordingService service = new RecordingService();
+    commandNoTarget(service).onCommand(player(service, false), CMD, SHIP, new String[] {SUB_KILL});
+    assertEquals(0, service.calls.size());
+  }
+
+  @Test
+  void killAllRequiresOperator() {
+    RecordingService service = new RecordingService();
+    service.opUser = false;
+    commandNoTarget(service)
+        .onCommand(player(service, true), CMD, SHIP, new String[] {SUB_KILL, ALL});
+    assertTrue(service.messages.get(0).contains("Only operators can kill all ships"));
+    assertFalse(service.calls.contains("killAll"));
+  }
+
+  @Test
+  void killAllDestroysEveryShipWhenOperator() {
+    RecordingService service = new RecordingService();
+    service.opUser = true;
+    service.killAllCount = 4;
+    commandNoTarget(service)
+        .onCommand(player(service, true), CMD, SHIP, new String[] {SUB_KILL, ALL});
+    assertTrue(service.calls.contains("killAll"));
+    assertTrue(service.messages.get(0).contains("Killed 4 ships"));
+  }
+
+  @Test
   void disassembleReportsServiceFailure() {
     RecordingService service = new RecordingService();
     service.error = "You do not own this ship";
-    service.owned = ship();
+    service.owned = nearbyShip();
     service.disassembleFails = true;
     Player player = player(service, true);
     commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {SUB_DISASSEMBLE});
