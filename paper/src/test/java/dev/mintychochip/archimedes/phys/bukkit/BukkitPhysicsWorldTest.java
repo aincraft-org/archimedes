@@ -78,6 +78,8 @@ class BukkitPhysicsWorldTest {
     Vector3d p = new Vector3d(1.5, 62.5, 3.5);
     assertFalse(kelp.isObstacle(p));
     assertFalse(plant.isObstacle(p));
+    assertFalse(worldOf(Material.SHORT_GRASS).isObstacle(p));
+    assertFalse(worldOf(Material.TALL_GRASS).isObstacle(p));
     assertFalse(grass.isObstacle(p));
     assertFalse(tall.isObstacle(p));
     assertEquals(1.0, kelp.vegetation(p), 0.0);

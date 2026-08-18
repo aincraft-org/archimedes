@@ -542,7 +542,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
           && Math.abs(target.z() - oldPose.z()) < config.draftTolerance()) {
         return false;
       }
-      if (!WaterlineResolver.isPathClear(ship, world, target, config)) {
+      if (!WaterlineResolver.isHorizontalPathClear(ship, world, target, config)) {
         return false;
       }
       Vector3d velocity = velocities.get(ship.id());

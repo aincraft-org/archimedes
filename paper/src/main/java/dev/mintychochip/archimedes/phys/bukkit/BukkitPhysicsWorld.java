@@ -85,10 +85,33 @@ public final class BukkitPhysicsWorld implements World {
   }
 
   private static boolean vegetation(Material type) {
-    return type == Material.KELP
+    if (type == Material.KELP
         || type == Material.KELP_PLANT
         || type == Material.SEAGRASS
         || type == Material.TALL_SEAGRASS
-        || type == Material.SEA_PICKLE;
+        || type == Material.SEA_PICKLE
+        || type == Material.SHORT_GRASS
+        || type == Material.TALL_GRASS
+        || type == Material.FERN
+        || type == Material.LARGE_FERN
+        || type == Material.DEAD_BUSH
+        || type == Material.DANDELION
+        || type == Material.POPPY
+        || type == Material.SNOW
+        || type == Material.MOSS_CARPET) {
+      return true;
+    }
+    String name = type.name();
+    return name.endsWith("_TULIP")
+        || name.endsWith("_ORCHID")
+        || name.endsWith("_BLOSSOM")
+        || name.endsWith("_DAISY")
+        || name.equals("ALLIUM")
+        || name.equals("AZURE_BLUET")
+        || name.equals("CORNFLOWER")
+        || name.equals("LILY_OF_THE_VALLEY")
+        || name.equals("TORCHFLOWER")
+        || name.equals("PINK_PETALS")
+        || name.equals("WILDFLOWERS");
   }
 }

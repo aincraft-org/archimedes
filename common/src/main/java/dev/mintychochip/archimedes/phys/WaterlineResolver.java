@@ -114,12 +114,33 @@ public final class WaterlineResolver {
    * @return whether every sampled cell is clear
    */
   public static boolean isPathClear(Ship ship, World world, ShipPose target, ShipConfig config) {
+    return isPathClear(ship, world, target, config, false);
+  }
+
+  /**
+   * Like {@link #isPathClear(Ship, World, ShipPose, ShipConfig)} but solids at or below the keel
+   * are ignored. Used for XZ slides so ground contact cannot freeze the hull.
+   *
+   * @param ship ship whose blocks define the swept volume
+   * @param world world supplying obstacle and fluid queries
+   * @param target destination pose
+   * @param config unused; reserved for future tolerances
+   * @return whether the slide is clear of walls
+   */
+  public static boolean isHorizontalPathClear(
+      Ship ship, World world, ShipPose target, ShipConfig config) {
+    return isPathClear(ship, world, target, config, true);
+  }
+
+  private static boolean isPathClear(
+      Ship ship, World world, ShipPose target, ShipConfig config, boolean ignoreKeel) {
     int minX = Math.min(ship.pose().anchorDx(), target.anchorDx());
     int maxX = Math.max(ship.pose().anchorDx(), target.anchorDx());
     int minY = Math.min(ship.pose().anchorDy(), target.anchorDy());
     int maxY = Math.max(ship.pose().anchorDy(), target.anchorDy());
     int minZ = Math.min(ship.pose().anchorDz(), target.anchorDz());
     int maxZ = Math.max(ship.pose().anchorDz(), target.anchorDz());
+    int keel = ship.origin().y() + ship.pose().anchorDy() + minRelativeY(ship);
     for (int x = minX; x <= maxX; x++) {
       for (int y = minY; y <= maxY; y++) {
         for (int z = minZ; z <= maxZ; z++) {
@@ -127,6 +148,9 @@ public final class WaterlineResolver {
             int wx = ship.origin().x() + x + block.pos().x();
             int wy = ship.origin().y() + y + block.pos().y();
             int wz = ship.origin().z() + z + block.pos().z();
+            if (ignoreKeel && wy <= keel) {
+              continue;
+            }
             Vector3d center = new Vector3d(wx + 0.5, wy + 0.5, wz + 0.5);
             if (world.isObstacle(center) && !world.fluidField().isFluid(center)) {
               return false;
@@ -136,6 +160,18 @@ public final class WaterlineResolver {
       }
     }
     return true;
+  }
+
+  /**
+   * @param ship hull whose lowest relative Y is needed
+   * @return minimum block y, or 0 when empty
+   */
+  private static int minRelativeY(Ship ship) {
+    int min = Integer.MAX_VALUE;
+    for (ShipBlock block : ship.blocks()) {
+      min = Math.min(min, block.pos().y());
+    }
+    return min == Integer.MAX_VALUE ? 0 : min;
   }
 
   /**

@@ -172,6 +172,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 | 2026-08-17 | Plugin water/hull densities scale to `10`/`6` | Sail `qA` is SI-ish; old `water=1` hulls were ~47 mass and lighter than the sail force |
 | 2026-08-17 | Cloth is light; `rise` damps each step; buoyancy uses wet-cell density | Wool at water density plus 80 undamped rise steps slammed a surface spawn ~11 blocks down |
 | 2026-08-17 | Blocked Y no longer rejects sail XZ | `g=10` made `floor(y)` drop into the seafloor; all-or-nothing path froze ships |
+| 2026-08-17 | Horizontal slides ignore keel solids; grass is passable | Overlapping sand/grass at the deck froze every move, including XZ |
 
 ## Open questions
 
