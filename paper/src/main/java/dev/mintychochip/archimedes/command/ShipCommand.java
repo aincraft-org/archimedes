@@ -132,7 +132,7 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
     }
     ShipInspection report = physics.inspect(ship);
     for (String line : ShipInspectionLines.lines(report)) {
-      player.sendMessage(ChatColor.GOLD + line);
+      player.sendMessage(line);
     }
     return true;
   }

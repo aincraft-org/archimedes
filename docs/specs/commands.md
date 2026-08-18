@@ -30,7 +30,7 @@ Success looks like: every subcommand has a permission, explicit error messages f
 | Command | Permission | Behavior |
 |---------|-----------|----------|
 | `/arch assemble` | `archimedes.assemble` | Target block → `service.assembleAt` |
-| `/arch inspect` | `archimedes.inspect` | `findOwnedInWorld` then `ShipPhysics.inspect`: pose, vel, mass, riders, cloth, submerged, chunk loaded, last-tick/sample ms, each force/torque, net force |
+| `/arch inspect` | `archimedes.inspect` | `findOwnedInWorld` then `ShipPhysics.inspect`: pose, vel, mass, riders, cloth, submerged, chunk loaded, last-tick/sample ms, each force/torque, net force. Sail cells that share a facing collapse to one vector (`Sail +Z 25m2`) with summed area and force. Vector components are color-coded (X red, Y green, Z aqua). |
 | `/arch disassemble` | `archimedes.disassemble` | Owner or operator only |
 | `/arch buoyancy` | `archimedes.buoyancy` | Toggle for the requester's owned ship in the current world (`toggleBuoyancy(requester, world)` — not line-of-sight-targeted) |
 | `/arch sink <n>` | `archimedes.sink` | Positive integer parse; extra args silently ignored (no arity validation); delegates to service |
@@ -50,6 +50,7 @@ Success looks like: every subcommand has a permission, explicit error messages f
 - [x] Six subcommands routed with six per-subcommand checks, plus the Bukkit-enforced parent `archimedes.command` (`plugin.yml` `permission:` field) — seven effective nodes, all `default: true`
 - [x] `/arch` is the command (`/ship` alias); `/arch sail [small|medium|large]` spawns a named-size demo sail (default medium)
 - [x] `/arch inspect` reports pose, velocity, mass factors, chunk/submerged state, tick/sample timing, and each sampled force
+- [x] Inspect sail lines are one vector per facing (summed area/force); force vectors are RGB-colored (X/Y/Z)
 - [x] Player-only enforcement: single entry check gates all subcommands with one generic message (`Only players can build ships.`)
 - [x] Line-of-sight targeting capped at `target-distance` — assemble only
 - [x] Tab completion of subcommands
@@ -82,6 +83,7 @@ Success looks like: every subcommand has a permission, explicit error messages f
 | 2026-08-17 | `/ship sail` spawns a predetermined template via `spawnSail` | User asked for one command that drops a fixed-size sail without building |
 | 2026-08-17 | Command is `/arch` with `/ship` alias; inspect samples live forces | User asked for arch prefix and force/performance metrics |
 | 2026-08-17 | `/arch sail` accepts `small`/`medium`/`large`; default is medium | User asked for bigger hulls and named size variants |
+| 2026-08-17 | Inspect merges same-facing sails and color-codes vector XYZ | User asked for one sail vector per direction and readable force colors |
 
 ## Open questions
 
