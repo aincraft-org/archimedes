@@ -41,8 +41,9 @@ bob-amplitude: 0.5
 # Maximum vertical rise from the build site (blocks).
 max-rise: 16.0
 
-# Physics constants.
-gravity: 0.5
+# Downward acceleration in blocks/s². Must stay near 10 so airborne hulls fall
+# instead of gliding under sail force (0.5 plus damping is only ~0.2 blocks/s).
+gravity: 10.0
 water-density: 1.0
 block-density: 0.5
 buoyancy:

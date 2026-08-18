@@ -11,6 +11,7 @@ import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
 import dev.mintychochip.archimedes.model.ShipPose;
+import dev.mintychochip.archimedes.sail.SailShipTemplate;
 import dev.mintychochip.archimedes.ship.ShipRuntime;
 import dev.mintychochip.phys.DensityField;
 import dev.mintychochip.phys.FlowField;
@@ -246,6 +247,86 @@ class ShipPhysicsTest {
 
     assertTrue(physics.tick(ship));
     assertTrue(ship.pose().y() < -0.01, "gravity must be able to drop more than bob-amplitude");
+  }
+
+  @Test
+  void drySailFallsInsteadOfGlidingUnderPluginGravity() {
+    double gravity = 10.0;
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(UUID.randomUUID(), 0, 40, 0),
+            SailShipTemplate.blocks(),
+            new ShipPose(0),
+            true);
+    ShipConfig config =
+        new ShipConfig(
+            2048,
+            8,
+            Set.of(),
+            Set.of(),
+            true,
+            1,
+            0.5,
+            16.0,
+            gravity,
+            1.0,
+            0.5,
+            0.9,
+            Map.of(OAK_PLANKS, 0.6),
+            1.0,
+            80.0,
+            16.0,
+            1e-6,
+            1e-3);
+    World dry =
+        new World() {
+          public Vector3d gravity() {
+            return new Vector3d(0, -config.gravity(), 0);
+          }
+
+          public FluidField fluidField() {
+            return new FluidField() {
+              public boolean isFluid(Vector3dc p) {
+                return false;
+              }
+
+              public double density(Vector3dc p) {
+                return 0;
+              }
+            };
+          }
+
+          public double timeStep() {
+            return 0.05;
+          }
+        };
+    ShipPhysics physics =
+        new ShipPhysicsImpl(
+            new PhysicsEngine(),
+            dry,
+            config,
+            new BukkitLikeResolver(),
+            new ShipRuntime() {
+              public void spawn(Ship s) {}
+
+              public void move(Ship s, double oldY, double newY) {}
+
+              public void remove(Ship s) {}
+
+              public void removeAll(java.util.Collection<Ship> s) {}
+            },
+            s -> 0,
+            DensityField.uniform(1.2),
+            FlowField.uniform(new Vector3d(0, 0, 8)));
+    for (int i = 0; i < 20; i++) {
+      physics.tick(ship);
+    }
+    assertTrue(ship.pose().y() < -1.0, "airborne hull must drop more than a block in one second");
+    assertTrue(
+        -ship.pose().y() > ship.pose().z() * 0.5,
+        "fall must outpace sail glide; y=" + ship.pose().y() + " z=" + ship.pose().z());
   }
 
   @Test
