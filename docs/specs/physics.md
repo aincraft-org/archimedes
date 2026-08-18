@@ -104,7 +104,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - [x] Default plugin gravity is `10` blocks/s² (same scale as the generic engine). `0.05`/`0.5` plus 0.9 damping made airborne sails glide.
 - [x] Plugin hull/water densities are ~10× the old `water=1` table (`water=10`, oak `6`, log `7`, wool `1`, default `10`) so weight exceeds rest sail force and a wooden deck can still float the cloth.
 - [x] `PhysicsEngine` renormalizes orientation after `integrate` so a slightly non-unit JOML quaternion cannot abort ship ticks.
-- [x] Standing riders are carried by the ship's XZ pose delta as well as Y.
+- [x] Standing riders are carried by the ship's XZ pose delta as well as Y. Player horizontal velocity is set to that delta so walk input cannot outrun the hull.
 
 ### Current notes
 

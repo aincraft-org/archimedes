@@ -187,9 +187,24 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
     return shipId.equals(render);
   }
 
+  /**
+   * Applies one carry step. Players take the ship's XZ delta as their horizontal velocity so walk
+   * input cannot outrun the hull; other entities teleport by the same delta.
+   *
+   * @param entity rider to move
+   * @param dx ship pose delta x
+   * @param dy ship pose delta y
+   * @param dz ship pose delta z
+   * @param shipId ship id for log context
+   */
   private static void carryEntity(Entity entity, double dx, double dy, double dz, String shipId) {
     if (entity instanceof Player) {
-      entity.setVelocity(entity.getVelocity().add(new org.bukkit.util.Vector(dx, dy, dz)));
+      org.bukkit.util.Vector velocity = entity.getVelocity();
+      if (dx == 0.0 && dz == 0.0) {
+        entity.setVelocity(velocity.add(new org.bukkit.util.Vector(0.0, dy, 0.0)));
+      } else {
+        entity.setVelocity(new org.bukkit.util.Vector(dx, velocity.getY() + dy, dz));
+      }
       return;
     }
     Location current = entity.getLocation();

@@ -178,7 +178,10 @@ class BukkitShipEntityCarrierTest {
     carryEntity.setAccessible(true);
     carryEntity.invoke(null, player, 0.4, 0.0, 1.25, "ship-id");
 
-    assertEquals(new org.bukkit.util.Vector(0.6, 0.0, 1.15), velocity.get());
+    assertEquals(
+        new org.bukkit.util.Vector(0.4, 0.0, 1.25),
+        velocity.get(),
+        "ship XZ must replace walk so the player cannot outrun the hull");
   }
 
   @Test
