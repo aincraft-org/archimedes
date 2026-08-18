@@ -40,7 +40,10 @@ public final class WaterlineResolver {
   }
 
   /**
-   * Sums fluid density of each waterline-submerged collider.
+   * Sums fluid density of each collider times the fraction of that cell below the free surface.
+   *
+   * <p>The free surface is the top of the highest water block ({@code surface + 1}). A deck that
+   * only kisses the water therefore lifts by a sliver, not a full cell.
    *
    * <p>Density is sampled at the water column, not the body origin, so a deck that sits in water
    * still lifts when the origin corner is in air.
@@ -52,15 +55,25 @@ public final class WaterlineResolver {
   public static double displacedMass(Body body, World world) {
     double mass = 0;
     for (Collider c : body.colliders()) {
-      int surface = submerged(body, c, world);
+      Bounds b = c.shape().bounds(transform(body, c));
+      int surface = waterSurface(world, b);
       if (surface == NO_WATER) {
         continue;
       }
-      Bounds b = c.shape().bounds(transform(body, c));
+      double height = b.max().y() - b.min().y();
+      if (height <= 0) {
+        continue;
+      }
+      double waterTop = surface + 1.0;
+      double wetHeight = Math.min(b.max().y(), waterTop) - b.min().y();
+      if (wetHeight <= 0) {
+        continue;
+      }
+      double fraction = Math.min(1.0, wetHeight / height);
       Vector3d wet =
           new Vector3d(
               (b.min().x() + b.max().x()) / 2.0, surface + 0.5, (b.min().z() + b.max().z()) / 2.0);
-      mass += world.fluidField().density(wet);
+      mass += fraction * world.fluidField().density(wet);
     }
     return mass;
   }
@@ -73,19 +86,23 @@ public final class WaterlineResolver {
    */
   private static int submerged(Body body, Collider collider, World world) {
     Bounds b = collider.shape().bounds(transform(body, collider));
-    int bottom = (int) Math.floor(b.min().y());
-    Vector3d center =
-        new Vector3d(
-            (b.min().x() + b.max().x()) / 2.0,
-            (b.min().y() + b.max().y()) / 2.0,
-            (b.min().z() + b.max().z()) / 2.0);
-    int surface =
-        columnWaterSurface(
-            world, (int) Math.floor(center.x()), bottom, (int) Math.floor(center.z()));
-    if (surface == NO_WATER || bottom > surface) {
+    int surface = waterSurface(world, b);
+    if (surface == NO_WATER || b.min().y() >= surface + 1.0) {
       return NO_WATER;
     }
     return surface;
+  }
+
+  /**
+   * @param world fluid map
+   * @param bounds collider world bounds
+   * @return highest water-block Y in the collider's column, or {@link #NO_WATER}
+   */
+  private static int waterSurface(World world, Bounds b) {
+    int bottom = (int) Math.floor(b.min().y());
+    double midX = (b.min().x() + b.max().x()) / 2.0;
+    double midZ = (b.min().z() + b.max().z()) / 2.0;
+    return columnWaterSurface(world, (int) Math.floor(midX), bottom, (int) Math.floor(midZ));
   }
 
   /**

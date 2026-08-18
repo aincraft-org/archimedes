@@ -1,14 +1,14 @@
 # Buoyancy — Living Spec
 
 > Status: active
-> Last updated: 2026-08-16
+> Last updated: 2026-08-17
 > Owners: jlo
 
 Give assembled ships rigid-body vertical buoyancy by attaching gravity and waterline lift to the generic physics engine. No horizontal movement, steering, or rotation.
 
-A ship is one rigid body: a single pose moves the whole hull. Current buoyancy uses uniform block density for integration and no rider mass; the waterline/equilibrium behavior is geometry-based rather than a force-balance solve. Aggregate per-material mass and rider load are intended under Next.
+A ship is one rigid body: a single pose moves the whole hull. Weight is per-material block mass plus tracked-player rider mass. Lift is the wet fraction of each hull cell times water density times |g|, so a wide deck sits in the water instead of riding on a one-block kiss.
 
-Success looks like: a ship floats at the shallowest water it sits in, bobs gently around its geometry-based equilibrium, and restores/disassembles at its actual floated position. Load-sensitive draft and force-balance equilibrium are Next behavior.
+Success looks like: a heavier hull sits deeper, a player stepping on board dips the deck, and the ship restores/disassembles at its floated pose.
 
 ## Boundaries
 
@@ -28,7 +28,7 @@ Success looks like: a ship floats at the shallowest water it sits in, bobs gentl
 
 ## Invariants
 
-- Current buoyancy uses geometry-based waterline equilibrium, uniform block density, and no rider mass.
+- Weight is `blockMass + playerCount × playerMass`. Lift is wet-cell volume × water density × |g|. A cell that is only partly under the free surface (`surface + 1`) contributes that fraction.
 - Integration per tick: `a = (buoyancy − weight)/mass`; `v' = (v + a·dt) · damping`; `y' = y + v'·dt`. Ship never teleports; it integrates.
 - Waterline resolution is **per block**: each block samples its own column window (`bottom+64` down to `bottom−64`, where `bottom = origin.y + anchorDy + rel.y`); the effective surface is the minimum (shallowest) surface over all sampled columns. A solid (non-clear) block seals a column (no water below it in the window). Not a per-column algorithm — the window shifts with each block's own y.
 - Submerged volume counts each block whose `blockY <= its sampled column surface` (surface recomputed per block at that block's own y).
@@ -66,12 +66,13 @@ Success looks like: a ship floats at the shallowest water it sits in, bobs gentl
 ### Current notes
 
 - Positive manual sink remains unbounded below the waterline and does not alter velocity. The command and service require `blocks >= 1`; `BuoyancyImpl` also rejects non-positive values defensively.
-- Current geometry-only behavior is intentional: riders contribute no load, and equilibrium is not a force-balance solve. The exact current mass expression is `weight = mass × blockDensity × gravity`.
+- Rider mass is runtime-only (tracked players). Jumping off un-rides and lightens the hull; landing adds the load again, which is the visible step-on bob.
 
 ## Next
 
-- [ ] Implement the approved force-balance mass model in `docs/superpowers/specs/2026-08-16-buoyancy-mass-model-design.md`: namespaced per-material densities with validated positive finite fallback, tracked-player-only runtime load, bounded deterministic interpolation, immutable diagnostics, and explicit no-equilibrium states
-- [ ] Verify footprint behavior: `Δdraft ≈ Δmass ÷ (waterDensity × footprint)` within the approved discrete tolerance
+- [x] Wet-fraction displacement so draft is `Δmass ÷ (waterDensity × footprint)` instead of an all-or-nothing cell kiss
+- [x] Tracked-player rider mass deepens draft; only players count
+- [ ] Immutable equilibrium diagnostics / explicit no-equilibrium states from the 2026-08-16 mass-model design
 - [x] Keep positive manual sink unbounded below the waterline with velocity untouched; command, service, and domain boundaries reject non-positive distances
 - [x] Decide rise/sink velocity semantics: currently only `tick` resets velocity on blocked path; `rise`/`sink` reject without clearing
 - [x] Approve material/rider equilibrium contract: config-only densities, runtime-only tracked-player mass, no `archimedes.json` schema change, separate validated `max-fall` default `16.0`, and deterministic overloaded descent/clamp

@@ -13,9 +13,11 @@ import dev.mintychochip.archimedes.model.ShipOrigin;
 import dev.mintychochip.archimedes.model.ShipPose;
 import dev.mintychochip.archimedes.sail.SailShipTemplate;
 import dev.mintychochip.archimedes.ship.ShipRuntime;
+import dev.mintychochip.phys.Body;
 import dev.mintychochip.phys.DensityField;
 import dev.mintychochip.phys.FlowField;
 import dev.mintychochip.phys.FluidField;
+import dev.mintychochip.phys.GravityForce;
 import dev.mintychochip.phys.PhysicsEngine;
 import dev.mintychochip.phys.World;
 import java.util.List;
@@ -997,6 +999,121 @@ class ShipPhysicsTest {
   }
 
   @Test
+  void displacedMassUsesOnlyTheWetFractionOfACell() {
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), OAK_PLANKS)),
+            new ShipPose(0.75),
+            true);
+    ShipConfig config =
+        new ShipConfig(
+            2048,
+            8,
+            Set.of(),
+            Set.of(),
+            true,
+            1,
+            0.5,
+            16.0,
+            10.0,
+            10.0,
+            0.5,
+            0.9,
+            Map.of(OAK_PLANKS, 6.0),
+            10.0,
+            80.0,
+            16.0,
+            1e-6,
+            1e-3);
+    World water =
+        new World() {
+          public Vector3d gravity() {
+            return new Vector3d(0, -10, 0);
+          }
+
+          public FluidField fluidField() {
+            return new FluidField() {
+              public boolean isFluid(Vector3dc p) {
+                return p.y() < 1.0;
+              }
+
+              public double density(Vector3dc p) {
+                return 10.0;
+              }
+            };
+          }
+
+          public double timeStep() {
+            return 0.05;
+          }
+        };
+    Body body = ShipBody.from(ship, new BukkitLikeResolver(), config, 0, new GravityForce());
+    assertEquals(
+        2.5,
+        WaterlineResolver.displacedMass(body, water),
+        1e-6,
+        "a cell 25% under the free surface must not count as fully wet");
+  }
+
+  @Test
+  void pluginScaleLargeSailSitsInTheWaterNotOnTop() {
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(UUID.randomUUID(), 0, 10, 0),
+            SailShipTemplate.blocks(SailShipTemplate.Size.LARGE),
+            new ShipPose(0),
+            true);
+    ShipConfig config = pluginScaleConfig();
+    World ocean = pluginOcean(11.0);
+    ShipPhysics physics = pluginPhysics(ocean, config, s -> 0);
+    for (int i = 0; i < 80; i++) {
+      physics.tick(ship);
+    }
+    assertTrue(
+        ship.pose().y() < 0.4,
+        "large deck must settle in the water, not float on a 1-block kiss; y=" + ship.pose().y());
+  }
+
+  @Test
+  void pluginScalePlayerLoadDeepensLargeSailDraft() {
+    Ship empty =
+        new Ship(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(UUID.randomUUID(), 0, 10, 0),
+            SailShipTemplate.blocks(SailShipTemplate.Size.LARGE),
+            new ShipPose(0),
+            true);
+    Ship boarded =
+        new Ship(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(UUID.randomUUID(), 0, 10, 0),
+            SailShipTemplate.blocks(SailShipTemplate.Size.LARGE),
+            new ShipPose(0),
+            true);
+    ShipConfig config = pluginScaleConfig();
+    World ocean = pluginOcean(11.0);
+    ShipPhysics emptyPhysics = pluginPhysics(ocean, config, s -> 0);
+    ShipPhysics boardedPhysics = pluginPhysics(ocean, config, s -> 1);
+    for (int i = 0; i < 80; i++) {
+      emptyPhysics.tick(empty);
+      boardedPhysics.tick(boarded);
+    }
+    assertTrue(
+        empty.pose().y() - boarded.pose().y() > 0.1,
+        "one player must dip a large deck; empty="
+            + empty.pose().y()
+            + " boarded="
+            + boarded.pose().y());
+  }
+
+  @Test
   void pluginScaleWeightExceedsRestSailForce() {
     double oakDensity = 6.0;
     double defaultDensity = 10.0;
@@ -1373,6 +1490,72 @@ class ShipPhysicsTest {
       byName.put(line.name(), line);
     }
     return byName;
+  }
+
+  private static ShipConfig pluginScaleConfig() {
+    return new ShipConfig(
+        2048,
+        8,
+        Set.of(),
+        Set.of(),
+        true,
+        1,
+        0.5,
+        16.0,
+        10.0,
+        10.0,
+        0.5,
+        0.9,
+        Map.of(OAK_PLANKS, 6.0, SailShipTemplate.MAST, 7.0, SailShipTemplate.SAIL, 1.0),
+        10.0,
+        80.0,
+        16.0,
+        1e-6,
+        1e-3);
+  }
+
+  private static World pluginOcean(double waterTop) {
+    return new World() {
+      public Vector3d gravity() {
+        return new Vector3d(0, -10, 0);
+      }
+
+      public FluidField fluidField() {
+        return new FluidField() {
+          public boolean isFluid(Vector3dc p) {
+            return p.y() < waterTop;
+          }
+
+          public double density(Vector3dc p) {
+            return 10.0;
+          }
+        };
+      }
+
+      public double timeStep() {
+        return 0.05;
+      }
+    };
+  }
+
+  private static ShipPhysics pluginPhysics(World world, ShipConfig config, RiderCount riders) {
+    return new ShipPhysicsImpl(
+        new PhysicsEngine(),
+        world,
+        config,
+        new BukkitLikeResolver(),
+        new ShipRuntime() {
+          public void spawn(Ship s) {}
+
+          public void move(Ship s, double oldY, double newY) {}
+
+          public void remove(Ship s) {}
+
+          public void removeAll(java.util.Collection<Ship> s) {}
+        },
+        riders,
+        DensityField.uniform(1.2),
+        FlowField.still());
   }
 
   static final class BukkitLikeResolver implements MaterialKeyResolver {

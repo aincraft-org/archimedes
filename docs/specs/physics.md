@@ -105,6 +105,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - [x] Plugin hull/water densities are ~10× the old `water=1` table (`water=10`, oak `6`, log `7`, wool `1`, default `10`) so weight exceeds rest sail force and a wooden deck can still float the cloth.
 - [x] `PhysicsEngine` renormalizes orientation after `integrate` so a slightly non-unit JOML quaternion cannot abort ship ticks.
 - [x] Standing riders are carried by the ship's XZ pose delta as well as Y. Player horizontal velocity is set to that delta so walk input cannot outrun the hull.
+- [x] Wet-cell fraction drives displacement, so a large deck sits in the water and a boarded player deepens draft.
 
 ### Current notes
 
@@ -177,6 +178,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 | 2026-08-17 | Horizontal slides ignore keel solids; grass is passable | Overlapping sand/grass at the deck froze every move, including XZ |
 | 2026-08-17 | `PhysicsEngine` renormalizes after `integrate` | Live ticks threw `quaternion must be normalized` on plugin-scale small sails (JOML Taylor band) and aborted every ship |
 | 2026-08-17 | Rider carry applies the full pose delta | Sail XZ left standing players behind; carry used to no-op when `dy = 0` |
+| 2026-08-17 | Displacement is the wet fraction of each cell | A barely-wet deck was counted fully, so large rafts sat on the water and player load did not bob |
 
 ## Open questions
 

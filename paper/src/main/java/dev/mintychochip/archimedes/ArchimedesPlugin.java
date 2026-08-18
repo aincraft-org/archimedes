@@ -31,8 +31,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
+import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 /** Main plugin entry point. */
@@ -88,7 +91,7 @@ public final class ArchimedesPlugin extends JavaPlugin {
               config,
               materialResolver,
               runtime,
-              ship -> tracker.riders(ship).size(),
+              ship -> playerRiders(tracker, ship),
               DensityField.uniform(1.2),
               FlowField.uniform(new org.joml.Vector3d(0, 0, 8)));
       service =
@@ -223,6 +226,24 @@ public final class ArchimedesPlugin extends JavaPlugin {
             shipPhysics);
     command.setExecutor(executor);
     command.setTabCompleter(new ShipTabCompleter());
+  }
+
+  /**
+   * Counts tracked players on a ship. Mobs and items do not add rider mass.
+   *
+   * @param tracker rider membership
+   * @param ship ship whose riders are counted
+   * @return number of online player riders
+   */
+  static int playerRiders(BukkitShipRiderTracker tracker, Ship ship) {
+    int players = 0;
+    for (UUID id : tracker.riders(ship)) {
+      Entity entity = Bukkit.getEntity(id);
+      if (entity instanceof Player) {
+        players++;
+      }
+    }
+    return players;
   }
 
   /** Returns the namespaced key used to tag Bukkit entities as part of a ship. */
