@@ -1,0 +1,197 @@
+name: Nightly Release
+
+on:
+  push:
+    branches: [master]
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: archimedes-nightly-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  API_ROOT: https://api.github.com
+
+jobs:
+  build:
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Reject workflow reruns
+        if: github.run_attempt != 1
+        run: |
+          echo "Nightly versions are immutable. Start a new workflow run instead of rerunning this one."
+          exit 1
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
+
+      - name: Calculate and validate release version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(date -u +'%y.%-m.%-d').${GITHUB_RUN_NUMBER}"
+          if [[ ! "$version" =~ ^[0-9]{2}\.(1[0-2]|[1-9])\.(3[01]|[12][0-9]|[1-9])\.[1-9][0-9]*$ ]]; then
+            echo "Invalid release version: $version" >&2
+            exit 1
+          fi
+          echo "RELEASE_VERSION=$version" >> "$GITHUB_ENV"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Build and verify
+        run: ./gradlew --no-daemon -PreleaseVersion="$RELEASE_VERSION" clean test build
+
+      - name: Verify release artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f "paper/build/libs/archimedes-${RELEASE_VERSION}.jar"
+
+      - name: Compute artifact checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          artifact="paper/build/libs/archimedes-${RELEASE_VERSION}.jar"
+          sha256sum "$artifact" > "$artifact.sha256"
+
+      - name: Attest release artifacts
+        id: attest
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: paper/build/libs/archimedes-${{ env.RELEASE_VERSION }}.jar
+
+      - name: Normalize provenance bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle="${{ steps.attest.outputs.bundle-path }}"
+          test -s "$bundle"
+          cp "$bundle" "paper/build/libs/archimedes-${RELEASE_VERSION}.provenance.jsonl"
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: nightly-${{ env.RELEASE_VERSION }}
+          path: |
+            paper/build/libs/archimedes-${{ env.RELEASE_VERSION }}.jar
+            paper/build/libs/*.sha256
+            paper/build/libs/archimedes-${{ env.RELEASE_VERSION }}.provenance.jsonl
+          retention-days: 1
+          if-no-files-found: error
+
+  release:
+    needs: build
+    permissions:
+      contents: write
+      actions: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
+        with:
+          name: nightly-${{ needs.build.outputs.version }}
+          path: paper/build/libs
+      - name: Create or update rolling nightly release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          COMMIT_SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          auth=(-H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28")
+          repo_url="${API_ROOT}/repos/${REPOSITORY}"
+          release_json="$(mktemp)"
+          update_json="$(mktemp)"
+          trap 'rm -f "$release_json" "$update_json"' EXIT
+
+          release_status="$(curl --silent --show-error --output "$release_json" --write-out '%{http_code}' "${auth[@]}" "${repo_url}/releases/tags/nightly")"
+          if [[ "$release_status" == "200" ]]; then
+            release_id="$(jq -r '.id' "$release_json")"
+          elif [[ "$release_status" == "404" ]]; then
+            release_id=""
+          else
+            cat "$release_json"
+            exit 1
+          fi
+
+          if [[ -n "$release_id" ]]; then
+            jq -c '.assets[] | {id,name}' "$release_json" | while IFS= read -r asset; do
+              asset_id="$(jq -r '.id' <<<"$asset")"
+              curl --fail-with-body --silent --show-error -X DELETE "${auth[@]}" "${repo_url}/releases/assets/${asset_id}"
+            done
+            jq -n \
+              --arg name "Nightly ${RELEASE_VERSION}" \
+              --arg target "$COMMIT_SHA" \
+              --arg body "Automated nightly build.\n\nCommit: ${COMMIT_SHA}\nWorkflow run: ${RUN_URL}" \
+              '{tag_name:"nightly",target_commitish:$target,name:$name,body:$body,draft:false,prerelease:true,make_latest:"false"}' > "$update_json"
+            curl --fail-with-body --silent --show-error -X PATCH "${auth[@]}" -H 'Content-Type: application/json' \
+              "${repo_url}/releases/${release_id}" --data-binary "@${update_json}" > "$release_json"
+          else
+            jq -n \
+              --arg tag "nightly" \
+              --arg target "$COMMIT_SHA" \
+              --arg name "Nightly ${RELEASE_VERSION}" \
+              --arg body "Automated nightly build.\n\nCommit: ${COMMIT_SHA}\nWorkflow run: ${RUN_URL}" \
+              '{tag_name:$tag,target_commitish:$target,name:$name,body:$body,draft:false,prerelease:true,make_latest:"false"}' > "$update_json"
+            curl --fail-with-body --silent --show-error -X POST "${auth[@]}" -H 'Content-Type: application/json' \
+              "${repo_url}/releases" --data-binary "@${update_json}" > "$release_json"
+            release_id="$(jq -r '.id' "$release_json")"
+          fi
+          tag_ref="${repo_url}/git/refs/tags/nightly"
+          tag_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "${auth[@]}" "$tag_ref")"
+          if [[ "$tag_status" == "200" ]]; then
+            jq -n --arg sha "$COMMIT_SHA" '{sha:$sha,force:true}' > "$update_json"
+            curl --fail-with-body --silent --show-error -X PATCH "${auth[@]}" -H 'Content-Type: application/json' \
+              "$tag_ref" --data-binary "@${update_json}" > /dev/null
+          elif [[ "$tag_status" == "404" ]]; then
+            jq -n --arg ref "refs/tags/nightly" --arg sha "$COMMIT_SHA" '{ref:$ref,sha:$sha}' > "$update_json"
+            curl --fail-with-body --silent --show-error -X POST "${auth[@]}" -H 'Content-Type: application/json' \
+              "${repo_url}/git/refs" --data-binary "@${update_json}" > /dev/null
+          else
+            exit 1
+          fi
+
+          upload_url="$(jq -r '.upload_url' "$release_json" | sed 's/{?name,label}//')"
+          test -n "$upload_url"
+          for artifact in \
+            "paper/build/libs/archimedes-${RELEASE_VERSION}.jar" \
+            "paper/build/libs/archimedes-${RELEASE_VERSION}.jar.sha256" \
+            "paper/build/libs/archimedes-${RELEASE_VERSION}.provenance.jsonl"; do
+            content_type="application/octet-stream"
+            case "$artifact" in
+              *.jar) content_type="application/java-archive" ;;
+              *.sha256) content_type="text/plain" ;;
+              *.jsonl) content_type="application/json" ;;
+            esac
+            curl --fail-with-body --silent --show-error -X POST "${auth[@]}" \
+              -H "Content-Type: ${content_type}" \
+              "${upload_url}?name=$(basename "$artifact")" --data-binary "@$artifact" > /dev/null
+          done
