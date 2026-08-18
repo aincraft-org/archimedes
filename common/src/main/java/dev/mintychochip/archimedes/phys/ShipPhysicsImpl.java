@@ -14,6 +14,7 @@ import dev.mintychochip.phys.GravityForce;
 import dev.mintychochip.phys.Physics;
 import dev.mintychochip.phys.PressureSailForce;
 import dev.mintychochip.phys.QuadraticDragForce;
+import dev.mintychochip.phys.VegetationDragForce;
 import dev.mintychochip.phys.Transform;
 import dev.mintychochip.phys.World;
 import java.util.ArrayList;
@@ -274,6 +275,9 @@ public final class ShipPhysicsImpl implements ShipPhysics {
     if (force instanceof QuadraticDragForce) {
       return "Drag";
     }
+    if (force instanceof VegetationDragForce) {
+      return "Vegetation";
+    }
     if (force instanceof ShipBuoyancyForce) {
       return "Buoyancy";
     }
@@ -308,6 +312,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
     List<Force> forces = new ArrayList<>();
     forces.add(new GravityForce());
     forces.add(new ShipBuoyancyForce());
+    forces.add(new VegetationDragForce(0.8));
     if (withSails) {
       forces.add(new QuadraticDragForce(0.05));
       forces.addAll(ShipSails.forces(ship, resolver, clothKeys(ship), air, wind));

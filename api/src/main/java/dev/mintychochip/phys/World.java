@@ -49,4 +49,16 @@ public interface World {
   default boolean isChunkLoaded(int chunkX, int chunkZ) {
     return true;
   }
+
+  /**
+   * Occupancy of passable vegetation (kelp, seagrass) at a point, from 0 to 1.
+   *
+   * <p>Vegetation is not an obstacle. Callers may use this to apply drag. The default is 0.
+   *
+   * @param point world-space sample
+   * @return finite occupancy in {@code [0, 1]}
+   */
+  default double vegetation(Vector3dc point) {
+    return 0.0;
+  }
 }

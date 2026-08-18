@@ -55,15 +55,40 @@ public final class BukkitPhysicsWorld implements World {
 
   @Override
   public boolean isObstacle(Vector3dc point) {
-    int x = (int) Math.floor(point.x());
-    int y = (int) Math.floor(point.y());
-    int z = (int) Math.floor(point.z());
-    Material type = world.getBlockAt(x, y, z).getType();
-    return !type.isAir() && type != Material.WATER;
+    return !passable(blockAt(point));
+  }
+
+  @Override
+  public double vegetation(Vector3dc point) {
+    return vegetation(blockAt(point)) ? 1.0 : 0.0;
   }
 
   @Override
   public boolean isChunkLoaded(int chunkX, int chunkZ) {
     return world.isChunkLoaded(chunkX, chunkZ);
+  }
+
+  private Material blockAt(Vector3dc point) {
+    int x = (int) Math.floor(point.x());
+    int y = (int) Math.floor(point.y());
+    int z = (int) Math.floor(point.z());
+    return world.getBlockAt(x, y, z).getType();
+  }
+
+  private static boolean passable(Material type) {
+    return type == Material.AIR
+        || type == Material.CAVE_AIR
+        || type == Material.VOID_AIR
+        || type == Material.WATER
+        || type == Material.BUBBLE_COLUMN
+        || vegetation(type);
+  }
+
+  private static boolean vegetation(Material type) {
+    return type == Material.KELP
+        || type == Material.KELP_PLANT
+        || type == Material.SEAGRASS
+        || type == Material.TALL_SEAGRASS
+        || type == Material.SEA_PICKLE;
   }
 }

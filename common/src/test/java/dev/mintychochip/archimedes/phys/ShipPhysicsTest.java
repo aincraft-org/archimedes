@@ -514,6 +514,92 @@ class ShipPhysicsTest {
     assertTrue(lines.stream().anyMatch(line -> line.contains("sample=")));
   }
 
+  @Test
+  void tickStillMovesThroughVegetationInsteadOfStopping() {
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
+            List.of(new ShipBlock(new BlockPos(0, 1, 0), WHITE_WOOL)),
+            new ShipPose(0),
+            true);
+    ShipConfig config =
+        new ShipConfig(
+            2048,
+            8,
+            Set.of(),
+            Set.of(),
+            true,
+            1,
+            0.5,
+            16.0,
+            0.05,
+            1.0,
+            0.5,
+            0.9,
+            Map.of(WHITE_WOOL, 1.0),
+            1.0,
+            80.0,
+            16.0,
+            1e-6,
+            1e-3);
+    World kelp =
+        new World() {
+          public Vector3d gravity() {
+            return new Vector3d(0, 0, 0);
+          }
+
+          public FluidField fluidField() {
+            return new FluidField() {
+              public boolean isFluid(Vector3dc p) {
+                return true;
+              }
+
+              public double density(Vector3dc p) {
+                return 1000;
+              }
+            };
+          }
+
+          public double timeStep() {
+            return 0.05;
+          }
+
+          public boolean isObstacle(Vector3dc point) {
+            return false;
+          }
+
+          public double vegetation(Vector3dc point) {
+            return 1.0;
+          }
+        };
+    ShipRuntime runtime =
+        new ShipRuntime() {
+          public void spawn(Ship s) {}
+
+          public void move(Ship s, double oldY, double newY) {}
+
+          public void remove(Ship s) {}
+
+          public void removeAll(java.util.Collection<Ship> s) {}
+        };
+    ShipPhysics physics =
+        new ShipPhysicsImpl(
+            new PhysicsEngine(),
+            kelp,
+            config,
+            new BukkitLikeResolver(),
+            runtime,
+            s -> 0,
+            DensityField.uniform(1.2),
+            FlowField.uniform(new Vector3d(0, 0, 10)));
+
+    assertTrue(WaterlineResolver.isPathClear(ship, kelp, new ShipPose(0, 0, 2), config));
+    assertTrue(physics.tick(ship));
+    assertTrue(ship.pose().z() > 0);
+  }
+
   static final class BukkitLikeResolver implements MaterialKeyResolver {
     public String key(ShipBlock block) {
       return block.blockData();

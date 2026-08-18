@@ -22,7 +22,7 @@ Success looks like: a ship floats at the shallowest water it sits in, bobs gentl
 ### Out of scope / non-goals
 
 - Horizontal movement, steering, acceleration, rotation
-- Collision with terrain: blocked path cells reject movement (`pathClear` fails on non-air/non-water). No ship-vs-ship or dynamic collision modeling.
+- Collision with terrain: blocked path cells reject movement (`pathClear` fails on solid non-fluid blocks). Kelp/seagrass are not solids; they apply `VegetationDragForce`. No ship-vs-ship or dynamic collision modeling.
 - Passenger transport is separate (entity carry teleports riders; see `ship-runtime`) — but rider *mass* as dynamic load is planned (see Next)
 - Sinking below waterline by physics (manual `/ship sink` may go negative — current behavior)
 

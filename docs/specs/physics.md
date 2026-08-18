@@ -98,6 +98,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - [x] `ShipSails` maps marked structure blocks (`facing=` normal, 1 m² each) to pressure sails.
 - [x] `ShipPhysics.tick` integrates sail XZ into `ShipPose(x,y,z)` when cloth faces the wind.
 - [x] `ShipPhysics` skips tick/rise/sink when any ship chunk is unloaded (`World.isChunkLoaded`). Bukkit uses `org.bukkit.World#isChunkLoaded` (ServerChunkCache map lookup), not `getChunkAt`.
+- [x] Kelp/seagrass are passable vegetation (`World.vegetation`); they drag via `VegetationDragForce` and do not fail path clearance.
 - [x] Review: same `PressureSailForce` drives watercraft and airship compositions; ship client is still waterline-only (dry cloth falls).
 
 ### Current notes
@@ -161,6 +162,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 | 2026-08-17 | Catalog already allows watercraft and airship propulsion via force lists; plugin is still water ships | Same `PressureSailForce` + different buoyancy; `ShipBuoyancyForce` is waterline-only |
 | 2026-08-17 | Pressure sails are honest cloth and a weak airship aesthetic | One-sided `q A` cannot go upwind; wool defaults to `+Z`; no yaw; props want `MediumThrust` |
 | 2026-08-17 | Physics is skipped unless ship chunks are in the loaded-chunk cache | Unloaded `getBlockAt` would load from disk; `isChunkLoaded` is a cache probe |
+| 2026-08-17 | Seaweed is vegetation drag, not a path block | Kelp/seagrass are not hull solids; `F = −c σ |v| v` |
 
 ## Open questions
 
