@@ -723,6 +723,102 @@ class ShipServiceImplTest {
   }
 
   @Test
+  void killRemovesRuntimeAndPersistedWithoutRestoringBlocks() {
+    Fakes fakes = new Fakes();
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            OWNER,
+            fakes.origin,
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
+    fakes.persisted.put(ship.id(), ship);
+    RecordingBuoyancy physics = new RecordingBuoyancy();
+    ShipService service =
+        new ShipServiceImpl(
+            new MemoryStore(fakes),
+            (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
+            runtime(fakes),
+            fakes,
+            physics,
+            true,
+            true,
+            WORLD);
+    service.loadAll();
+    boolean ok = service.kill(ship.id(), OWNER, false);
+    assertTrue(ok);
+    assertTrue(fakes.persisted.isEmpty());
+    assertEquals(1, fakes.removedRuntime.size());
+    assertTrue(fakes.blocks.isEmpty());
+    assertTrue(physics.calls.contains(CLEAR_CALL));
+    assertTrue(service.all().isEmpty());
+  }
+
+  @Test
+  void killRejectsNonOwnerWithoutOperator() {
+    Fakes fakes = new Fakes();
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            OWNER,
+            fakes.origin,
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
+    fakes.persisted.put(ship.id(), ship);
+    ShipService service =
+        new ShipServiceImpl(
+            new MemoryStore(fakes),
+            (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
+            runtime(fakes),
+            fakes,
+            new RecordingBuoyancy(),
+            true,
+            true,
+            WORLD);
+    service.loadAll();
+    boolean ok = service.kill(ship.id(), UUID.randomUUID(), false);
+    assertFalse(ok);
+    assertEquals("You do not own this ship", service.lastError());
+    assertEquals(1, fakes.persisted.size());
+    assertTrue(fakes.removedRuntime.isEmpty());
+  }
+
+  @Test
+  void killAllRemovesEveryShipWithoutRestoring() {
+    Fakes fakes = new Fakes();
+    Ship first =
+        new Ship(
+            UUID.randomUUID(),
+            OWNER,
+            fakes.origin,
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
+    Ship second =
+        new Ship(
+            UUID.randomUUID(),
+            OWNER,
+            new ShipOrigin(WORLD, 110, 200, 310),
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
+    fakes.persisted.put(first.id(), first);
+    fakes.persisted.put(second.id(), second);
+    RecordingBuoyancy physics = new RecordingBuoyancy();
+    ShipService service =
+        new ShipServiceImpl(
+            new MemoryStore(fakes),
+            (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
+            runtime(fakes),
+            fakes,
+            physics,
+            true,
+            true,
+            WORLD);
+    service.loadAll();
+    assertEquals(2, service.killAll());
+    assertTrue(fakes.persisted.isEmpty());
+    assertEquals(2, fakes.removedRuntime.size());
+    assertTrue(fakes.blocks.isEmpty());
+    assertTrue(service.all().isEmpty());
+    assertEquals(2, physics.calls.stream().filter(CLEAR_CALL::equals).count());
+  }
+
+  @Test
   void disassembleRemovesRuntimeAndPersisted() {
     Fakes fakes = new Fakes();
     Ship ship =

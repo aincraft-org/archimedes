@@ -70,6 +70,23 @@ public interface ShipService {
   boolean disassemble(UUID shipId, UUID requesterId, boolean operator);
 
   /**
+   * Destroys a ship without restoring world blocks.
+   *
+   * @param shipId the ship identifier
+   * @param requesterId the requesting player
+   * @param operator whether the requester is an operator
+   * @return true on success
+   */
+  boolean kill(UUID shipId, UUID requesterId, boolean operator);
+
+  /**
+   * Destroys every loaded ship without restoring world blocks.
+   *
+   * @return the number of ships removed
+   */
+  int killAll();
+
+  /**
    * @return the last operation failure message
    */
   String lastError();

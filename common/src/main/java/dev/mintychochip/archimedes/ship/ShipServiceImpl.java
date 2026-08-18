@@ -325,6 +325,46 @@ public final class ShipServiceImpl implements ShipService {
   }
 
   /**
+   * Removes a ship from runtime and persistence without restoring world blocks.
+   *
+   * @return whether the ship was destroyed; {@link #lastError()} describes a rejection
+   */
+  @Override
+  public boolean kill(UUID shipId, UUID requesterId, boolean operator) {
+    Ship ship = ships.get(shipId);
+    if (ship == null) {
+      lastError = "Ship not found";
+      return false;
+    }
+    if (!operator && !ship.ownerId().equals(requesterId)) {
+      lastError = "You do not own this ship";
+      return false;
+    }
+    runtime.remove(ship);
+    shipPhysics.clear(ship);
+    ships.remove(shipId);
+    persistAll();
+    return true;
+  }
+
+  /**
+   * Removes every loaded ship from runtime and persistence without restoring world blocks.
+   *
+   * @return the number of ships destroyed
+   */
+  @Override
+  public int killAll() {
+    List<Ship> snapshot = List.copyOf(ships.values());
+    for (Ship ship : snapshot) {
+      runtime.remove(ship);
+      shipPhysics.clear(ship);
+    }
+    ships.clear();
+    persistAll();
+    return snapshot.size();
+  }
+
+  /**
    * @return the most recent user-facing failure message, or {@code null}
    */
   @Override
