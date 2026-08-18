@@ -57,6 +57,20 @@ public final class PressureSailForce implements Force {
   }
 
   /**
+   * @return body-frame unit cloth normal
+   */
+  public Vector3dc localNormal() {
+    return localNormal;
+  }
+
+  /**
+   * @return cloth area in square metres
+   */
+  public double area() {
+    return area;
+  }
+
+  /**
    * Applies one-sided pressure from apparent wind on the cloth normal.
    *
    * @param body body whose pose and velocities are sampled

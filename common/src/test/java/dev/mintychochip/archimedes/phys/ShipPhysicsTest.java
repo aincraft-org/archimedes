@@ -2,6 +2,7 @@ package dev.mintychochip.archimedes.phys;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.mintychochip.archimedes.config.ShipConfig;
@@ -504,15 +505,21 @@ class ShipPhysicsTest {
     assertTrue(byName.get("Gravity").fy() < 0);
     assertTrue(byName.containsKey("WaterDrag"));
     assertTrue(byName.containsKey("Drag"));
-    assertTrue(byName.containsKey("Sail"));
-    assertTrue(byName.get("Sail").fz() > 0);
+    ShipInspection.ForceLine sail = null;
+    for (ShipInspection.ForceLine line : report.forces()) {
+      if (line.name().startsWith("Sail +Z")) {
+        sail = line;
+      }
+    }
+    assertNotNull(sail);
+    assertTrue(sail.fz() > 0);
     assertTrue(report.netFz() > 0);
     assertEquals(0.0, ship.pose().z(), 0.0);
     java.util.List<String> lines = ShipInspectionLines.lines(report);
-    assertTrue(lines.get(0).startsWith("Arch "));
+    assertTrue(lines.get(0).contains("Arch "));
     assertTrue(lines.stream().anyMatch(line -> line.contains("Gravity")));
-    assertTrue(lines.stream().anyMatch(line -> line.contains("Sail")));
-    assertTrue(lines.stream().anyMatch(line -> line.startsWith("net ")));
+    assertTrue(lines.stream().anyMatch(line -> line.contains("Sail +Z")));
+    assertTrue(lines.stream().anyMatch(line -> line.contains("net ")));
     assertTrue(lines.stream().anyMatch(line -> line.contains("sample=")));
   }
 
@@ -600,6 +607,97 @@ class ShipPhysicsTest {
     assertTrue(WaterlineResolver.isPathClear(ship, kelp, new ShipPose(0, 0, 2), config));
     assertTrue(physics.tick(ship));
     assertTrue(ship.pose().z() > 0);
+  }
+
+  @Test
+  void inspectMergesSameFacingSailsIntoOneVector() {
+    Ship one =
+        new Ship(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
+            List.of(new ShipBlock(new BlockPos(0, 1, 0), WHITE_WOOL)),
+            new ShipPose(0),
+            true);
+    Ship four =
+        new Ship(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
+            List.of(
+                new ShipBlock(new BlockPos(0, 1, 0), WHITE_WOOL),
+                new ShipBlock(new BlockPos(1, 1, 0), WHITE_WOOL),
+                new ShipBlock(new BlockPos(0, 2, 0), WHITE_WOOL),
+                new ShipBlock(new BlockPos(1, 2, 0), WHITE_WOOL)),
+            new ShipPose(0),
+            true);
+    ShipPhysics physics = sailPhysics(mediumWorld(false, 0));
+    java.util.List<ShipInspection.ForceLine> oneSails = sailLines(physics.inspect(one));
+    java.util.List<ShipInspection.ForceLine> fourSails = sailLines(physics.inspect(four));
+    assertEquals(1, oneSails.size());
+    assertEquals(1, fourSails.size());
+    assertTrue(fourSails.get(0).name().contains("4m2"));
+    assertEquals(4.0, fourSails.get(0).fz() / oneSails.get(0).fz(), 1e-6);
+  }
+
+  @Test
+  void inspectKeepsDifferentSailFacingsAsSeparateVectors() {
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
+            List.of(
+                new ShipBlock(new BlockPos(0, 1, 0), WHITE_WOOL),
+                new ShipBlock(new BlockPos(1, 1, 0), "minecraft:white_wall_banner[facing=west]")),
+            new ShipPose(0),
+            true);
+    ShipPhysics physics =
+        new ShipPhysicsImpl(
+            new PhysicsEngine(),
+            mediumWorld(false, 0),
+            new ShipConfig(
+                2048,
+                8,
+                Set.of(),
+                Set.of(),
+                true,
+                1,
+                0.5,
+                16.0,
+                0.05,
+                1.0,
+                0.5,
+                0.9,
+                Map.of(WHITE_WOOL, 1.0, "minecraft:white_wall_banner", 1.0),
+                1.0,
+                80.0,
+                16.0,
+                1e-6,
+                1e-3),
+            block -> {
+              String data = block.blockData();
+              int bracket = data.indexOf('[');
+              return bracket < 0 ? data : data.substring(0, bracket);
+            },
+            new ShipRuntime() {
+              public void spawn(Ship s) {}
+
+              public void move(Ship s, double oldY, double newY) {}
+
+              public void remove(Ship s) {}
+
+              public void removeAll(java.util.Collection<Ship> s) {}
+            },
+            s -> 0,
+            DensityField.uniform(1.2),
+            FlowField.compose(
+                FlowField.uniform(new Vector3d(0, 0, 10)),
+                FlowField.uniform(new Vector3d(-10, 0, 0))));
+    java.util.List<ShipInspection.ForceLine> sails = sailLines(physics.inspect(ship));
+    assertEquals(2, sails.size());
+    assertTrue(sails.stream().anyMatch(line -> line.name().contains("+Z") && line.fz() > 0));
+    assertTrue(sails.stream().anyMatch(line -> line.name().contains("-X") && line.fx() < 0));
   }
 
   @Test
@@ -696,6 +794,16 @@ class ShipPhysicsTest {
         s -> 0,
         DensityField.uniform(1.2),
         FlowField.uniform(new Vector3d(0, 0, 10)));
+  }
+
+  private static java.util.List<ShipInspection.ForceLine> sailLines(ShipInspection report) {
+    java.util.List<ShipInspection.ForceLine> sails = new java.util.ArrayList<>();
+    for (ShipInspection.ForceLine line : report.forces()) {
+      if (line.name().startsWith("Sail")) {
+        sails.add(line);
+      }
+    }
+    return sails;
   }
 
   private static java.util.Map<String, ShipInspection.ForceLine> forcesByName(

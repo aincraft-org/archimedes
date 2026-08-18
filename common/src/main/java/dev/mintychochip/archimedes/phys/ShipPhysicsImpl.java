@@ -20,11 +20,14 @@ import dev.mintychochip.phys.World;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 /**
  * Default ship physics facade that steps attached forces and commits runtime movement.
@@ -226,11 +229,20 @@ public final class ShipPhysicsImpl implements ShipPhysics {
     Body body = body(ship, true);
     body.setLinearVelocity(velocity);
     List<ShipInspection.ForceLine> lines = new ArrayList<>();
+    Map<String, SailGroup> sails = new LinkedHashMap<>();
     double netX = 0;
     double netY = 0;
     double netZ = 0;
     for (Force force : body.forces()) {
       Force.Result result = force.apply(body, world);
+      netX += result.force().x();
+      netY += result.force().y();
+      netZ += result.force().z();
+      if (force instanceof PressureSailForce sail) {
+        String facing = facingLabel(sail.localNormal());
+        sails.merge(facing, SailGroup.of(result, sail.area()), SailGroup::plus);
+        continue;
+      }
       lines.add(
           new ShipInspection.ForceLine(
               lawName(force),
@@ -240,9 +252,18 @@ public final class ShipPhysicsImpl implements ShipPhysics {
               result.torque().x(),
               result.torque().y(),
               result.torque().z()));
-      netX += result.force().x();
-      netY += result.force().y();
-      netZ += result.force().z();
+    }
+    for (Map.Entry<String, SailGroup> entry : sails.entrySet()) {
+      SailGroup group = entry.getValue();
+      lines.add(
+          new ShipInspection.ForceLine(
+              "Sail " + entry.getKey() + " " + areaLabel(group.area),
+              group.fx,
+              group.fy,
+              group.fz,
+              group.tx,
+              group.ty,
+              group.tz));
     }
     long sample = System.nanoTime() - started;
     return new ShipInspection(
@@ -266,6 +287,104 @@ public final class ShipPhysicsImpl implements ShipPhysics {
         netX,
         netY,
         netZ);
+  }
+
+  /**
+   * Maps a cloth normal onto the nearest cardinal axis label.
+   *
+   * @param normal body-frame cloth normal
+   * @return {@code +X}, {@code -X}, {@code +Y}, {@code -Y}, {@code +Z}, or {@code -Z}
+   */
+  private static String facingLabel(Vector3dc normal) {
+    double ax = Math.abs(normal.x());
+    double ay = Math.abs(normal.y());
+    double az = Math.abs(normal.z());
+    if (ax >= ay && ax >= az) {
+      return normal.x() >= 0 ? "+X" : "-X";
+    }
+    if (ay >= az) {
+      return normal.y() >= 0 ? "+Y" : "-Y";
+    }
+    return normal.z() >= 0 ? "+Z" : "-Z";
+  }
+
+  /**
+   * Formats summed sail area for inspect labels.
+   *
+   * @param area cloth area in square metres
+   * @return compact area suffix such as {@code 25m2}
+   */
+  private static String areaLabel(double area) {
+    if (Math.abs(area - Math.rint(area)) < 1e-9) {
+      return String.format(Locale.ROOT, "%.0fm2", area);
+    }
+    return String.format(Locale.ROOT, "%.1fm2", area);
+  }
+
+  /** Accumulated inspect sample for one sail facing. */
+  private static final class SailGroup {
+    /** Force x. */
+    private final double fx;
+
+    /** Force y. */
+    private final double fy;
+
+    /** Force z. */
+    private final double fz;
+
+    /** Torque x. */
+    private final double tx;
+
+    /** Torque y. */
+    private final double ty;
+
+    /** Torque z. */
+    private final double tz;
+
+    /** Summed cloth area. */
+    private final double area;
+
+    private SailGroup(
+        double fx, double fy, double fz, double tx, double ty, double tz, double area) {
+      this.fx = fx;
+      this.fy = fy;
+      this.fz = fz;
+      this.tx = tx;
+      this.ty = ty;
+      this.tz = tz;
+      this.area = area;
+    }
+
+    /**
+     * @param result sampled force and torque
+     * @param area cloth area of this sail cell
+     * @return a one-cell group
+     */
+    private static SailGroup of(Force.Result result, double area) {
+      return new SailGroup(
+          result.force().x(),
+          result.force().y(),
+          result.force().z(),
+          result.torque().x(),
+          result.torque().y(),
+          result.torque().z(),
+          area);
+    }
+
+    /**
+     * @param other group facing the same way
+     * @return summed force, torque, and area
+     */
+    private SailGroup plus(SailGroup other) {
+      return new SailGroup(
+          fx + other.fx,
+          fy + other.fy,
+          fz + other.fz,
+          tx + other.tx,
+          ty + other.ty,
+          tz + other.tz,
+          area + other.area);
+    }
   }
 
   private static String lawName(Force force) {
