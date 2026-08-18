@@ -111,7 +111,7 @@ class BukkitShipEntityCarrierTest {
   }
 
   @Test
-  void carryUsesVelocityInsteadOfTeleportForPlayers() throws Exception {
+  void carryTeleportsPlayersByTheShipDelta() throws Exception {
     Location current = new Location(null, 12.5, 64.0, -3.25, 90.0f, 10.0f);
     org.bukkit.util.Vector currentVelocity = new org.bukkit.util.Vector(0.2, 0.42, -0.1);
     AtomicReference<Location> destination = new AtomicReference<>();
@@ -145,29 +145,34 @@ class BukkitShipEntityCarrierTest {
     carryEntity.setAccessible(true);
     carryEntity.invoke(null, player, 0.0, 0.125, 0.0, "ship-id");
 
-    assertNull(destination.get());
-    assertEquals(new org.bukkit.util.Vector(0.2, 0.545, -0.1), velocity.get());
+    Location moved = destination.get();
+    assertNotNull(moved);
+    assertEquals(12.5, moved.getX(), 1e-9);
+    assertEquals(64.125, moved.getY(), 1e-9);
+    assertEquals(-3.25, moved.getZ(), 1e-9);
+    assertNull(velocity.get());
   }
 
   @Test
   void carryAppliesHorizontalDeltaToPlayers() throws Exception {
-    org.bukkit.util.Vector currentVelocity = new org.bukkit.util.Vector(0.2, 0.0, -0.1);
-    AtomicReference<org.bukkit.util.Vector> velocity = new AtomicReference<>();
+    Location current = new Location(null, 12.5, 64.0, -3.25, 90.0f, 10.0f);
+    AtomicReference<Location> destination = new AtomicReference<>();
     Player player =
         (Player)
             Proxy.newProxyInstance(
                 Player.class.getClassLoader(),
                 new Class<?>[] {Player.class},
                 (proxy, method, args) -> {
-                  if (method.getName().equals("getVelocity")) {
-                    return currentVelocity.clone();
-                  }
-                  if (method.getName().equals("setVelocity")) {
-                    velocity.set(((org.bukkit.util.Vector) args[0]).clone());
-                    return null;
+                  if (method.getName().equals("getLocation") && method.getParameterCount() == 0) {
+                    return current;
                   }
                   if (method.getName().equals("teleport")) {
-                    throw new AssertionError("players must stay on velocity carry");
+                    destination.set((Location) args[0]);
+                    return true;
+                  }
+                  if (method.getName().equals("setVelocity")) {
+                    throw new AssertionError(
+                        "players must teleport with the hull, not stack velocity");
                   }
                   throw new AssertionError("Unexpected player method: " + method);
                 });
@@ -178,10 +183,11 @@ class BukkitShipEntityCarrierTest {
     carryEntity.setAccessible(true);
     carryEntity.invoke(null, player, 0.4, 0.0, 1.25, "ship-id");
 
-    assertEquals(
-        new org.bukkit.util.Vector(0.4, 0.0, 1.25),
-        velocity.get(),
-        "ship XZ must replace walk so the player cannot outrun the hull");
+    Location moved = destination.get();
+    assertNotNull(moved);
+    assertEquals(12.9, moved.getX(), 1e-9);
+    assertEquals(64.0, moved.getY(), 1e-9);
+    assertEquals(-2.0, moved.getZ(), 1e-9);
   }
 
   @Test

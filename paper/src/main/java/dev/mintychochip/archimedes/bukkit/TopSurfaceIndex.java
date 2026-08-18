@@ -26,11 +26,10 @@ final class TopSurfaceIndex {
   private static final double LOWER_MARGIN = 0.05;
 
   /**
-   * Small contact margin above the top surface. Must be enough to keep a walking player on a
-   * bobbing ship, but smaller than the ~0.42 blocks/tick of an initial jump so jumping entities are
-   * not carried.
+   * Contact margin above the top surface. Tall enough that a normal jump (~1.25) stays on the ship;
+   * walking off the deck in XZ still leaves the rider set.
    */
-  private static final double UPPER_MARGIN = 0.35;
+  private static final double UPPER_MARGIN = 1.5;
 
   /**
    * Tolerance used to avoid spuriously including an adjacent cell when an AABB max sits exactly on

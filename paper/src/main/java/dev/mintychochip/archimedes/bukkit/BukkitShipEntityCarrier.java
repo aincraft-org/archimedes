@@ -11,7 +11,6 @@ import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.persistence.PersistentDataType;
 
@@ -22,8 +21,9 @@ import org.bukkit.persistence.PersistentDataType;
  * <p>Carry is best-effort: invalid, dead, or world-mismatched entities are skipped, and an entity
  * whose teleport returns false is ignored.
  *
- * <p>Riders are maintained by a {@link BukkitShipRiderTracker}, so a move only teleports the
- * already-known on-board entities instead of scanning nearby entities on every move.
+ * <p>Players and other riders are teleported by the same pose delta as the hull so standing still
+ * stays on the deck and a jump is not cancelled. Riders are maintained by a {@link
+ * BukkitShipRiderTracker}.
  */
 public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
   /** World the ship exists in. */
@@ -151,7 +151,7 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
       return;
     }
 
-    tracker.updatePoseBasis(ship, from);
+    tracker.updatePoseBasis(ship, to);
     String shipId = ship.id().toString();
     Set<UUID> riders = tracker.riders(ship);
     if (riders.isEmpty()) {
@@ -173,6 +173,7 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
         continue;
       }
       carryEntity(entity, dx, dy, dz, shipId);
+      tracker.retain(ship, entityId);
     }
   }
 
@@ -188,8 +189,7 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
   }
 
   /**
-   * Applies one carry step. Players take the ship's XZ delta as their horizontal velocity so walk
-   * input cannot outrun the hull; other entities teleport by the same delta.
+   * Applies one carry step by teleporting the rider the same pose delta as the hull.
    *
    * @param entity rider to move
    * @param dx ship pose delta x
@@ -198,15 +198,6 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
    * @param shipId ship id for log context
    */
   private static void carryEntity(Entity entity, double dx, double dy, double dz, String shipId) {
-    if (entity instanceof Player) {
-      org.bukkit.util.Vector velocity = entity.getVelocity();
-      if (dx == 0.0 && dz == 0.0) {
-        entity.setVelocity(velocity.add(new org.bukkit.util.Vector(0.0, dy, 0.0)));
-      } else {
-        entity.setVelocity(new org.bukkit.util.Vector(dx, velocity.getY() + dy, dz));
-      }
-      return;
-    }
     Location current = entity.getLocation();
     Location dest =
         new Location(

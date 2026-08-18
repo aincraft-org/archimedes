@@ -139,6 +139,17 @@ public final class BukkitShipRiderTracker implements Listener {
   }
 
   /**
+   * Keeps the entity in the ship's rider set after a carry teleport, which would otherwise look
+   * like a leave.
+   *
+   * @param ship ship the entity is riding
+   * @param entityId rider to keep
+   */
+  public void retain(Ship ship, UUID entityId) {
+    addRider(ship.id(), entityId);
+  }
+
+  /**
    * Returns the set of entity ids currently on board the ship.
    *
    * @param ship the ship to query

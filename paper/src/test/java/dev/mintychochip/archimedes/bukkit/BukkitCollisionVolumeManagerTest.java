@@ -121,19 +121,20 @@ class BukkitCollisionVolumeManagerTest {
 
     ship.setPose(new dev.mintychochip.archimedes.model.ShipPose(-1.25));
     manager.move(ship);
-    assertEquals(0, oneTeleports.size());
-    assertEquals(0, twoTeleports.size());
+    assertEquals(1, oneTeleports.size(), "fractional pose must move the solid deck");
+    assertEquals(1, twoTeleports.size());
+    assertEquals(-1.25, oneTeleports.get(0).getY(), 1e-9);
 
     ship.setPose(new dev.mintychochip.archimedes.model.ShipPose(-0.75));
     manager.move(ship);
-    assertEquals(1, oneTeleports.size());
-    assertEquals(1, twoTeleports.size());
-    assertEquals(0.5, oneTeleports.get(0).getX());
-    assertEquals(-0.75, oneTeleports.get(0).getY());
-    assertEquals(0.5, oneTeleports.get(0).getZ());
-    assertEquals(1.5, twoTeleports.get(0).getX());
-    assertEquals(-0.75, twoTeleports.get(0).getY());
-    assertEquals(0.5, twoTeleports.get(0).getZ());
+    assertEquals(2, oneTeleports.size());
+    assertEquals(2, twoTeleports.size());
+    assertEquals(0.5, oneTeleports.get(1).getX());
+    assertEquals(-0.75, oneTeleports.get(1).getY());
+    assertEquals(0.5, oneTeleports.get(1).getZ());
+    assertEquals(1.5, twoTeleports.get(1).getX());
+    assertEquals(-0.75, twoTeleports.get(1).getY());
+    assertEquals(0.5, twoTeleports.get(1).getZ());
   }
 
   @Test

@@ -120,9 +120,9 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
   }
 
   /**
-   * Moves registered volumes to their model collision anchors. Only changes in the anchor's block
-   * y-coordinate are applied; if a later move fails, earlier moves are restored to their prior
-   * locations.
+   * Moves registered volumes to their model collision anchors, including fractional pose. The solid
+   * deck must track the picture or a standing player is left behind. If a later move fails, earlier
+   * moves are restored to their prior locations.
    *
    * @param ship ship whose registered volumes are moved
    */
@@ -142,11 +142,6 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
         ShipTransform.CollisionAnchor oldAnchor =
             new ShipTransform.CollisionAnchor(location.getX(), location.getY(), location.getZ());
         ShipTransform.CollisionAnchor anchor = ShipTransform.collisionAnchor(ship, entry.getKey());
-        if (Math.floor(oldAnchor.x()) == Math.floor(anchor.x())
-            && Math.floor(oldAnchor.y()) == Math.floor(anchor.y())
-            && Math.floor(oldAnchor.z()) == Math.floor(anchor.z())) {
-          continue;
-        }
         previous.put(volume, oldAnchor);
         volume.move(anchor.x(), anchor.y(), anchor.z());
       }

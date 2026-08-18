@@ -61,8 +61,8 @@ class TopSurfaceIndexTest {
 
     TopSurfaceIndex index = TopSurfaceIndex.build(List.of(new BlockPos(0, 0, 0)), ship);
 
-    // Player mid-jump, feet one block above the top surface.
-    BoundingBox jumping = new BoundingBox(100.25, 202.0, 300.25, 100.75, 203.8, 300.75);
+    // Player has jumped clear of the deck (above a normal jump).
+    BoundingBox jumping = new BoundingBox(100.25, 203.0, 300.25, 100.75, 204.8, 300.75);
     assertFalse(index.overlaps(jumping, 0.0));
   }
 
@@ -83,7 +83,7 @@ class TopSurfaceIndexTest {
   }
 
   @Test
-  void noOverlapWhenEntityIsJumpingOffTheTopBlock() {
+  void overlapWhenEntityIsJumpingOnTheDeck() {
     Ship ship =
         new Ship(
             UUID.randomUUID(),
@@ -93,9 +93,8 @@ class TopSurfaceIndexTest {
 
     TopSurfaceIndex index = TopSurfaceIndex.build(List.of(new BlockPos(0, 0, 0)), ship);
 
-    // Player at the start of a jump; their feet are above the upper contact margin.
     BoundingBox jumping = new BoundingBox(100.25, 201.4, 300.25, 100.75, 203.2, 300.75);
-    assertFalse(index.overlaps(jumping, 0.0));
+    assertTrue(index.overlaps(jumping, 0.0), "a normal jump must stay on the ship");
   }
 
   @Test
