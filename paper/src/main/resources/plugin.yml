@@ -5,9 +5,10 @@ description: Build persistent display-and-collision ships
 api-version: '26.2'
 author: jlo
 commands:
-  ship:
-    description: Build and manage ships
-    usage: /ship assemble|inspect|disassemble|buoyancy|sink|sail
+  arch:
+    description: Archimedes ships
+    usage: /arch assemble|inspect|disassemble|buoyancy|sink|sail
+    aliases: [ship]
     permission: archimedes.command
 permissions:
   archimedes.command:

@@ -6,7 +6,7 @@
 
 ## Intent
 
-Expose ship operations to players through `/ship`. The command layer is thin: parse, target, authorize, delegate to services, report errors. All state transitions live in services; commands never own them.
+Expose ship operations to players through `/arch` (`/ship` remains an alias). The command layer is thin: parse, target, authorize, delegate to services, report errors. All state transitions live in services; commands never own them.
 
 Success looks like: every subcommand has a permission, explicit error messages for every failure mode, tab completion that matches reality, and player-only enforcement. Known gaps are tracked under Next (test coverage, sink arity, tab completion).
 
@@ -29,12 +29,12 @@ Success looks like: every subcommand has a permission, explicit error messages f
 
 | Command | Permission | Behavior |
 |---------|-----------|----------|
-| `/ship assemble` | `archimedes.assemble` | Target block → `service.assembleAt` |
-| `/ship inspect` | `archimedes.inspect` | `findOwnedInWorld`; reports ship ID prefix + block count |
-| `/ship disassemble` | `archimedes.disassemble` | Owner or operator only |
-| `/ship buoyancy` | `archimedes.buoyancy` | Toggle for the requester's owned ship in the current world (`toggleBuoyancy(requester, world)` — not line-of-sight-targeted) |
-| `/ship sink <n>` | `archimedes.sink` | Positive integer parse; extra args silently ignored (no arity validation); delegates to service |
-| `/ship sail` | `archimedes.sail` | Spawns a predetermined 3×3 deck / 4-high mast / 3×3 wool sail 3 blocks in front of the player via `service.spawnSail`. No scan, no world-block clear. A dry or blocked `rise` is ignored so land spawns stay in the world. |
+| `/arch assemble` | `archimedes.assemble` | Target block → `service.assembleAt` |
+| `/arch inspect` | `archimedes.inspect` | `findOwnedInWorld` then `ShipPhysics.inspect`: pose, vel, mass, riders, cloth, submerged, chunk loaded, last-tick/sample ms, each force/torque, net force |
+| `/arch disassemble` | `archimedes.disassemble` | Owner or operator only |
+| `/arch buoyancy` | `archimedes.buoyancy` | Toggle for the requester's owned ship in the current world (`toggleBuoyancy(requester, world)` — not line-of-sight-targeted) |
+| `/arch sink <n>` | `archimedes.sink` | Positive integer parse; extra args silently ignored (no arity validation); delegates to service |
+| `/arch sail` | `archimedes.sail` | Spawns a predetermined 3×3 deck / 4-high mast / 3×3 wool sail 3 blocks in front of the player via `service.spawnSail`. No scan, no world-block clear. A dry or blocked `rise` is ignored so land spawns stay in the world. |
 
 - Assembly delegates only after service world policy: non-bound targets fail first with `Ship assembly is not permitted in this world`; the configured primary world then fails with `Ship assembly is disabled in this world` when disabled. Both failures occur before scanner or world mutation.
 - Player-facing assembly errors retain the service reason after the command's `Cannot assemble: ` prefix.
@@ -48,7 +48,8 @@ Success looks like: every subcommand has a permission, explicit error messages f
 ## Current
 
 - [x] Six subcommands routed with six per-subcommand checks, plus the Bukkit-enforced parent `archimedes.command` (`plugin.yml` `permission:` field) — seven effective nodes, all `default: true`
-- [x] `/ship sail` spawns a fixed-size demo sail ship in front of the player (`SailShipTemplate`: 3×3 oak deck, 4-high mast, 3×3 white wool)
+- [x] `/arch` is the command (`/ship` alias); `/arch sail` spawns a fixed-size demo sail
+- [x] `/arch inspect` reports pose, velocity, mass factors, chunk/submerged state, tick/sample timing, and each sampled force
 - [x] Player-only enforcement: single entry check gates all subcommands with one generic message (`Only players can build ships.`)
 - [x] Line-of-sight targeting capped at `target-distance` — assemble only
 - [x] Tab completion of subcommands
@@ -56,7 +57,7 @@ Success looks like: every subcommand has a permission, explicit error messages f
 
 ### Current notes
 
-- `/ship inspect` reports `Ship <8-char id> | blocks=<count>` only — the dated design doc claimed owner and origin; implementation is minimal (no owner/origin output).
+- `/arch inspect` is a multi-line physics snapshot; `/ship` still works as an alias.
 
 ## Next
 
@@ -78,6 +79,7 @@ Success looks like: every subcommand has a permission, explicit error messages f
 | 2026-08-16 | Runtime is bound to the primary Bukkit world; cross-world support remains Future | Current assembly/runtime wiring uses the primary world |
 | 2026-08-14 | `/ship collision-test` debug fixture added behind op permission; kept isolated from production persistence | Spike acceptance; fixture since removed from code (verified 2026-08-16) |
 | 2026-08-17 | `/ship sail` spawns a predetermined template via `spawnSail` | User asked for one command that drops a fixed-size sail without building |
+| 2026-08-17 | Command is `/arch` with `/ship` alias; inspect samples live forces | User asked for arch prefix and force/performance metrics |
 
 ## Open questions
 

@@ -83,6 +83,8 @@ class ArchimedesPluginTest {
       assertTrue(text.contains("name: Archimedes"));
       assertTrue(text.contains("main: dev.mintychochip.archimedes.ArchimedesPlugin"));
       assertTrue(text.contains("api-version: '26.2'"));
+      assertTrue(text.contains("arch:"));
+      assertTrue(text.contains("aliases: [ship]"));
     }
   }
 }

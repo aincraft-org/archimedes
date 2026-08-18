@@ -40,4 +40,12 @@ public interface ShipPhysics {
    * @param ship ship whose transient physics state is removed
    */
   void clear(Ship ship);
+
+  /**
+   * Samples pose, mass factors, last-tick cost, and each attached force without moving the ship.
+   *
+   * @param ship ship to inspect
+   * @return diagnostic snapshot
+   */
+  ShipInspection inspect(Ship ship);
 }

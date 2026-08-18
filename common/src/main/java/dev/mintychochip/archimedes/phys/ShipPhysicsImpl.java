@@ -4,6 +4,7 @@ import dev.mintychochip.archimedes.config.ShipConfig;
 import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipPose;
+import dev.mintychochip.archimedes.sail.SailMesh;
 import dev.mintychochip.archimedes.ship.ShipRuntime;
 import dev.mintychochip.phys.Body;
 import dev.mintychochip.phys.DensityField;
@@ -11,6 +12,7 @@ import dev.mintychochip.phys.FlowField;
 import dev.mintychochip.phys.Force;
 import dev.mintychochip.phys.GravityForce;
 import dev.mintychochip.phys.Physics;
+import dev.mintychochip.phys.PressureSailForce;
 import dev.mintychochip.phys.QuadraticDragForce;
 import dev.mintychochip.phys.Transform;
 import dev.mintychochip.phys.World;
@@ -56,6 +58,9 @@ public final class ShipPhysicsImpl implements ShipPhysics {
 
   /** Per-ship retained linear velocity. */
   private final Map<UUID, Vector3d> velocities = new HashMap<>();
+
+  /** Per-ship last tick duration in nanoseconds. */
+  private final Map<UUID, Long> lastTickNanos = new HashMap<>();
 
   /**
    * Creates a ship physics facade with still air (no sail drive).
@@ -126,7 +131,10 @@ public final class ShipPhysicsImpl implements ShipPhysics {
   public boolean tick(Ship ship) {
     if (!ship.buoyancyEnabled()) return false;
     if (!chunksLoaded(ship)) return false;
-    return integrate(ship, 1, true);
+    long started = System.nanoTime();
+    boolean moved = integrate(ship, 1, true);
+    lastTickNanos.put(ship.id(), System.nanoTime() - started);
+    return moved;
   }
 
   /**
@@ -169,6 +177,114 @@ public final class ShipPhysicsImpl implements ShipPhysics {
   @Override
   public void clear(Ship ship) {
     velocities.remove(ship.id());
+    lastTickNanos.remove(ship.id());
+  }
+
+  /**
+   * Samples attached forces and ship factors without committing a move.
+   *
+   * @param ship ship to inspect
+   * @return diagnostic snapshot
+   */
+  @Override
+  public ShipInspection inspect(Ship ship) {
+    int cloth = 0;
+    for (ShipBlock block : ship.blocks()) {
+      if (SailMesh.isCloth(block.blockData())) {
+        cloth++;
+      }
+    }
+    int riders = riderCount.count(ship);
+    Vector3d velocity = velocities.getOrDefault(ship.id(), new Vector3d());
+    long lastTick = lastTickNanos.getOrDefault(ship.id(), 0L);
+    boolean loaded = chunksLoaded(ship);
+    if (!loaded) {
+      return new ShipInspection(
+          ship.id(),
+          ship.blockCount(),
+          cloth,
+          riders,
+          ShipMassModel.mass(ship, resolver, config, riders),
+          ship.buoyancyEnabled(),
+          false,
+          ship.pose().x(),
+          ship.pose().y(),
+          ship.pose().z(),
+          velocity.x(),
+          velocity.y(),
+          velocity.z(),
+          0,
+          lastTick,
+          0L,
+          List.of(),
+          0,
+          0,
+          0);
+    }
+    long started = System.nanoTime();
+    Body body = body(ship, true);
+    body.setLinearVelocity(velocity);
+    List<ShipInspection.ForceLine> lines = new ArrayList<>();
+    double netX = 0;
+    double netY = 0;
+    double netZ = 0;
+    for (Force force : body.forces()) {
+      Force.Result result = force.apply(body, world);
+      lines.add(
+          new ShipInspection.ForceLine(
+              lawName(force),
+              result.force().x(),
+              result.force().y(),
+              result.force().z(),
+              result.torque().x(),
+              result.torque().y(),
+              result.torque().z()));
+      netX += result.force().x();
+      netY += result.force().y();
+      netZ += result.force().z();
+    }
+    long sample = System.nanoTime() - started;
+    return new ShipInspection(
+        ship.id(),
+        ship.blockCount(),
+        cloth,
+        riders,
+        body.mass(),
+        ship.buoyancyEnabled(),
+        true,
+        ship.pose().x(),
+        ship.pose().y(),
+        ship.pose().z(),
+        velocity.x(),
+        velocity.y(),
+        velocity.z(),
+        WaterlineResolver.submergedVolume(body, world),
+        lastTick,
+        sample,
+        List.copyOf(lines),
+        netX,
+        netY,
+        netZ);
+  }
+
+  private static String lawName(Force force) {
+    if (force instanceof PressureSailForce) {
+      return "Sail";
+    }
+    if (force instanceof QuadraticDragForce) {
+      return "Drag";
+    }
+    if (force instanceof ShipBuoyancyForce) {
+      return "Buoyancy";
+    }
+    if (force instanceof GravityForce) {
+      return "Gravity";
+    }
+    String name = force.getClass().getSimpleName();
+    if (name.endsWith("Force")) {
+      return name.substring(0, name.length() - "Force".length());
+    }
+    return name;
   }
 
   /**

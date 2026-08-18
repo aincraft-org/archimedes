@@ -40,6 +40,9 @@ public final class ArchimedesPlugin extends JavaPlugin {
   /** Active ship service. */
   private ShipService service;
 
+  /** Active physics facade. */
+  private ShipPhysics shipPhysics;
+
   /**
    * Enables the plugin by loading configuration, constructing the Bukkit-backed ship runtime, and
    * starting the ship service. Invalid configuration disables the plugin; other startup failures
@@ -78,7 +81,7 @@ public final class ArchimedesPlugin extends JavaPlugin {
       BukkitFluidField fluidField = new BukkitFluidField(world, config.waterDensity());
       BukkitMaterialKeyResolver materialResolver = new BukkitMaterialKeyResolver();
       World physicsWorld = new BukkitPhysicsWorld(world, config, fluidField);
-      ShipPhysics shipPhysics =
+      shipPhysics =
           new ShipPhysicsImpl(
               new PhysicsEngine(),
               physicsWorld,
@@ -201,22 +204,23 @@ public final class ArchimedesPlugin extends JavaPlugin {
   }
 
   /**
-   * Registers the {@code /ship} command executor and tab completer if the command is declared in
+   * Registers the {@code /arch} command executor and tab completer if the command is declared in
    * the plugin configuration.
    *
    * @param config loaded ship configuration
    */
   private void registerCommand(ShipConfig config) {
-    PluginCommand command = getCommand("ship");
+    PluginCommand command = getCommand("arch");
     if (command == null) {
-      getLogger().warning("ship command not registered in plugin.yml");
+      getLogger().warning("arch command not registered in plugin.yml");
       return;
     }
     ShipCommand executor =
         new ShipCommand(
             service,
             config,
-            new dev.mintychochip.archimedes.command.BukkitTargetResolver(config.targetDistance()));
+            new dev.mintychochip.archimedes.command.BukkitTargetResolver(config.targetDistance()),
+            shipPhysics);
     command.setExecutor(executor);
     command.setTabCompleter(new ShipTabCompleter());
   }

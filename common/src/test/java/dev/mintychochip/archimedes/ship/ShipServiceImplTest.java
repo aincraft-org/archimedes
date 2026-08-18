@@ -12,6 +12,7 @@ import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
 import dev.mintychochip.archimedes.model.ShipPose;
+import dev.mintychochip.archimedes.phys.ShipInspection;
 import dev.mintychochip.archimedes.sail.SailShipTemplate;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -127,6 +128,31 @@ class ShipServiceImplTest {
     @Override
     public void clear(Ship ship) {
       calls.add(CLEAR_CALL);
+    }
+
+    @Override
+    public ShipInspection inspect(Ship ship) {
+      return new ShipInspection(
+          ship.id(),
+          ship.blockCount(),
+          0,
+          0,
+          0,
+          ship.buoyancyEnabled(),
+          true,
+          ship.pose().x(),
+          ship.pose().y(),
+          ship.pose().z(),
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          List.of(),
+          0,
+          0,
+          0);
     }
   }
 

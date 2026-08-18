@@ -414,6 +414,106 @@ class ShipPhysicsTest {
     assertTrue(chunkQueries.contains("2,0"), "origin 32 is chunk 2");
   }
 
+  @Test
+  void inspectReportsMassFactorsAndSampledForces() {
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(UUID.randomUUID(), 0, 10, 0),
+            List.of(new ShipBlock(new BlockPos(0, 1, 0), WHITE_WOOL)),
+            new ShipPose(0, 0, 0),
+            true);
+    ShipConfig config =
+        new ShipConfig(
+            2048,
+            8,
+            Set.of(),
+            Set.of(),
+            true,
+            1,
+            0.5,
+            16.0,
+            0.05,
+            1.0,
+            0.5,
+            0.9,
+            Map.of(WHITE_WOOL, 1.0),
+            1.0,
+            80.0,
+            16.0,
+            1e-6,
+            1e-3);
+    World world =
+        new World() {
+          public Vector3d gravity() {
+            return new Vector3d(0, -10, 0);
+          }
+
+          public FluidField fluidField() {
+            return new FluidField() {
+              public boolean isFluid(Vector3dc p) {
+                return false;
+              }
+
+              public double density(Vector3dc p) {
+                return 0;
+              }
+            };
+          }
+
+          public double timeStep() {
+            return 0.05;
+          }
+        };
+    ShipRuntime runtime =
+        new ShipRuntime() {
+          public void spawn(Ship s) {}
+
+          public void move(Ship s, double oldY, double newY) {}
+
+          public void remove(Ship s) {}
+
+          public void removeAll(java.util.Collection<Ship> s) {}
+        };
+    ShipPhysics physics =
+        new ShipPhysicsImpl(
+            new PhysicsEngine(),
+            world,
+            config,
+            new BukkitLikeResolver(),
+            runtime,
+            s -> 2,
+            DensityField.uniform(1.2),
+            FlowField.uniform(new Vector3d(0, 0, 10)));
+
+    ShipInspection report = physics.inspect(ship);
+
+    assertEquals(1, report.blocks());
+    assertEquals(1, report.cloth());
+    assertEquals(2, report.riders());
+    assertTrue(report.mass() > 0);
+    assertTrue(report.chunksLoaded());
+    assertEquals(0, report.submerged());
+    assertTrue(report.sampleNanos() >= 0);
+    java.util.Map<String, ShipInspection.ForceLine> byName = new java.util.HashMap<>();
+    for (ShipInspection.ForceLine line : report.forces()) {
+      byName.put(line.name(), line);
+    }
+    assertTrue(byName.containsKey("Gravity"));
+    assertTrue(byName.get("Gravity").fy() < 0);
+    assertTrue(byName.containsKey("Sail"));
+    assertTrue(byName.get("Sail").fz() > 0);
+    assertTrue(report.netFz() > 0);
+    assertEquals(0.0, ship.pose().z(), 0.0);
+    java.util.List<String> lines = ShipInspectionLines.lines(report);
+    assertTrue(lines.get(0).startsWith("Arch "));
+    assertTrue(lines.stream().anyMatch(line -> line.contains("Gravity")));
+    assertTrue(lines.stream().anyMatch(line -> line.contains("Sail")));
+    assertTrue(lines.stream().anyMatch(line -> line.startsWith("net ")));
+    assertTrue(lines.stream().anyMatch(line -> line.contains("sample=")));
+  }
+
   static final class BukkitLikeResolver implements MaterialKeyResolver {
     public String key(ShipBlock block) {
       return block.blockData();

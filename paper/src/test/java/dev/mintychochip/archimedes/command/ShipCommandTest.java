@@ -9,6 +9,8 @@ import dev.mintychochip.archimedes.model.BlockPos;
 import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
+import dev.mintychochip.archimedes.phys.ShipInspection;
+import dev.mintychochip.archimedes.phys.ShipPhysics;
 import dev.mintychochip.archimedes.ship.ShipService;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
@@ -24,7 +26,7 @@ import org.junit.jupiter.api.Test;
 /** Behavior tests for the {@code /ship} command executor. */
 class ShipCommandTest {
   /** Common subcommand label. */
-  private static final String SHIP = "ship";
+  private static final String SHIP = "arch";
 
   /** Assemble subcommand label. */
   private static final String SUB_ASSEMBLE = "assemble";
@@ -227,7 +229,7 @@ class ShipCommandTest {
 
   /** Concrete command instance for executor invocation. */
   private static final org.bukkit.command.Command CMD =
-      new org.bukkit.command.Command("ship") {
+      new org.bukkit.command.Command("arch") {
         @Override
         public boolean execute(
             org.bukkit.command.CommandSender sender, String commandLabel, String[] args) {
@@ -236,7 +238,54 @@ class ShipCommandTest {
       };
 
   private static ShipCommand command(RecordingService service, TargetResolver resolver) {
-    return new ShipCommand(service, config(), resolver);
+    return new ShipCommand(service, config(), resolver, unusedPhysics());
+  }
+
+  private static ShipPhysics unusedPhysics() {
+    return new ShipPhysics() {
+      @Override
+      public boolean tick(dev.mintychochip.archimedes.model.Ship ship) {
+        return false;
+      }
+
+      @Override
+      public boolean rise(dev.mintychochip.archimedes.model.Ship ship) {
+        return true;
+      }
+
+      @Override
+      public boolean sink(dev.mintychochip.archimedes.model.Ship ship, int blocks) {
+        return false;
+      }
+
+      @Override
+      public void clear(dev.mintychochip.archimedes.model.Ship ship) {}
+
+      @Override
+      public ShipInspection inspect(dev.mintychochip.archimedes.model.Ship ship) {
+        return new ShipInspection(
+            ship.id(),
+            ship.blockCount(),
+            0,
+            0,
+            12.5,
+            ship.buoyancyEnabled(),
+            true,
+            ship.pose().x(),
+            ship.pose().y(),
+            ship.pose().z(),
+            0,
+            0,
+            0,
+            0,
+            0,
+            1_000_000L,
+            List.of(new ShipInspection.ForceLine("Gravity", 0, -10, 0, 0, 0, 0)),
+            0,
+            -10,
+            0);
+      }
+    };
   }
 
   private static ShipCommand commandNoTarget(RecordingService service) {
@@ -278,8 +327,9 @@ class ShipCommandTest {
   void rejectsMissingArgs() {
     RecordingService service = new RecordingService();
     Player player = player(service, true);
-    commandNoTarget(service).onCommand(player, CMD, "ship", new String[0]);
+    commandNoTarget(service).onCommand(player, CMD, "arch", new String[0]);
     assertTrue(service.messages.get(0).contains("Usage"));
+    assertTrue(service.messages.get(0).contains("/arch"));
     assertTrue(service.calls.isEmpty());
   }
 
@@ -362,8 +412,13 @@ class ShipCommandTest {
     service.owned = ship();
     Player player = player(service, true);
     commandNoTarget(service).onCommand(player, CMD, SHIP, new String[] {SUB_INSPECT});
-    assertTrue(service.messages.get(0).contains("Ship "));
-    assertTrue(service.messages.get(0).contains("blocks=1"));
+    String joined = String.join("\n", service.messages);
+    assertTrue(joined.contains("Arch "));
+    assertTrue(joined.contains("blocks=1"));
+    assertTrue(joined.contains("mass="));
+    assertTrue(joined.contains("Gravity"));
+    assertTrue(joined.contains("sample="));
+    assertTrue(joined.contains("net "));
   }
 
   @Test

@@ -2,6 +2,9 @@ package dev.mintychochip.archimedes.command;
 
 import dev.mintychochip.archimedes.config.ShipConfig;
 import dev.mintychochip.archimedes.model.Ship;
+import dev.mintychochip.archimedes.phys.ShipInspection;
+import dev.mintychochip.archimedes.phys.ShipInspectionLines;
+import dev.mintychochip.archimedes.phys.ShipPhysics;
 import dev.mintychochip.archimedes.ship.ShipService;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -20,21 +23,27 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
   /** Target resolver. */
   private final TargetResolver targetResolver;
 
+  /** Physics facade used by inspect. */
+  private final ShipPhysics physics;
+
   /**
    * Creates a command executor backed by the ship service and target resolver.
    *
    * @param service service performing ship operations
    * @param config command configuration
    * @param targetResolver resolves the block targeted by the player
+   * @param physics physics facade for inspect snapshots
    */
-  public ShipCommand(ShipService service, ShipConfig config, TargetResolver targetResolver) {
+  public ShipCommand(
+      ShipService service, ShipConfig config, TargetResolver targetResolver, ShipPhysics physics) {
     this.service = service;
     this.config = config;
     this.targetResolver = targetResolver;
+    this.physics = physics;
   }
 
   /**
-   * Dispatches a {@code /ship} subcommand.
+   * Dispatches a {@code /arch} subcommand.
    *
    * <p>Only players may execute ship operations; recognized subcommands are delegated to the
    * corresponding service operation and unknown or malformed input receives a usage/error message.
@@ -57,7 +66,10 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
     }
     if (args.length == 0) {
       player.sendMessage(
-          ChatColor.RED + "Usage: /ship assemble|inspect|disassemble|buoyancy|sink|sail");
+          ChatColor.RED
+              + "Usage: /"
+              + commandLabel
+              + " assemble|inspect|disassemble|buoyancy|sink|sail");
       return true;
     }
     switch (args[0].toLowerCase(java.util.Locale.ROOT)) {
@@ -117,12 +129,10 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
       player.sendMessage(ChatColor.RED + "No ship in this world.");
       return true;
     }
-    player.sendMessage(
-        ChatColor.GOLD
-            + "Ship "
-            + ship.id().toString().substring(0, 8)
-            + " | blocks="
-            + ship.blockCount());
+    ShipInspection report = physics.inspect(ship);
+    for (String line : ShipInspectionLines.lines(report)) {
+      player.sendMessage(ChatColor.GOLD + line);
+    }
     return true;
   }
 
@@ -151,7 +161,7 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
 
   private boolean sink(Player player, String[] args) {
     if (args.length < 2) {
-      player.sendMessage(ChatColor.RED + "Usage: /ship sink <blocks>");
+      player.sendMessage(ChatColor.RED + "Usage: /arch sink <blocks>");
       return true;
     }
     int blocks;

@@ -5,14 +5,14 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 
-/** Tab completion for {@code /ship}. */
+/** Tab completion for {@code /arch}. */
 public final class ShipTabCompleter implements org.bukkit.command.TabCompleter {
   /** Known ship subcommands. */
   private static final List<String> SUBCOMMANDS =
       List.of("assemble", "inspect", "disassemble", "buoyancy", "sink", "sail");
 
   /**
-   * Completes the first {@code /ship} argument from the known subcommands.
+   * Completes the first {@code /arch} argument from the known subcommands.
    *
    * <p>Only the first argument is completed; later arguments return an empty list.
    *
