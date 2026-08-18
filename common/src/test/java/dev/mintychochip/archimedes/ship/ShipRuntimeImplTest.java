@@ -9,6 +9,7 @@ import dev.mintychochip.archimedes.model.BlockPos;
 import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
+import dev.mintychochip.archimedes.model.ShipPose;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -157,20 +158,31 @@ class ShipRuntimeImplTest {
     RecordingCollision collision = new RecordingCollision();
     collision.moveFailure = true;
     Ship ship = ship();
-    ship.setPose(new dev.mintychochip.archimedes.model.ShipPose(3, 7, 9));
+    ship.setPose(new ShipPose(3, 7, 9));
     ShipRuntime runtime = new ShipRuntimeImpl(new RecordingRenderer(), collision);
 
     assertThrows(
         ShipRuntimeException.class,
-        () ->
-            runtime.move(
-                ship,
-                new dev.mintychochip.archimedes.model.ShipPose(1, 4, 2),
-                new dev.mintychochip.archimedes.model.ShipPose(3, 7, 9)));
+        () -> runtime.move(ship, new ShipPose(1, 4, 2), new ShipPose(3, 7, 9)));
 
     assertEquals(1.0, ship.pose().x());
     assertEquals(4.0, ship.pose().y());
     assertEquals(2.0, ship.pose().z());
+  }
+
+  @Test
+  void xzOnlyMoveStillCarriesRiders() {
+    RecordingCarrier carrier = new RecordingCarrier();
+    Ship ship = ship();
+    ship.setPose(new ShipPose(0, 5, 2));
+    ShipRuntime runtime =
+        new ShipRuntimeImpl(new RecordingRenderer(), new RecordingCollision(), carrier);
+
+    runtime.move(ship, new ShipPose(0, 5, 0), new ShipPose(0, 5, 2));
+
+    assertEquals(1, carrier.carryCount);
+    assertEquals(0.0, carrier.carriedOldZ);
+    assertEquals(2.0, carrier.carriedNewZ);
   }
 
   @Test
@@ -381,6 +393,10 @@ class ShipRuntimeImplTest {
     double trackedPoseY = Double.NaN;
     double carriedOldY;
     double carriedNewY;
+    double carriedOldX;
+    double carriedNewX;
+    double carriedOldZ;
+    double carriedNewZ;
     double poseBasis = Double.NaN;
     private final List<String> operations;
 
@@ -416,12 +432,21 @@ class ShipRuntimeImplTest {
 
     @Override
     public void carry(Ship ship, double oldY, double newY) {
+      carry(ship, new ShipPose(oldY), new ShipPose(newY));
+    }
+
+    @Override
+    public void carry(Ship ship, ShipPose from, ShipPose to) {
       carryCount++;
-      operations.add("carrier:" + oldY + "->" + newY);
-      carriedOldY = oldY;
-      carriedNewY = newY;
+      operations.add("carrier:" + from.y() + "->" + to.y());
+      carriedOldY = from.y();
+      carriedNewY = to.y();
+      carriedOldX = from.x();
+      carriedNewX = to.x();
+      carriedOldZ = from.z();
+      carriedNewZ = to.z();
       if (recordCarryBasis) {
-        poseBasis = oldY;
+        poseBasis = from.y();
       }
     }
   }

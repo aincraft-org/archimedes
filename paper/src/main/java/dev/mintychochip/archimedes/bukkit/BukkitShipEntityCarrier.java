@@ -68,6 +68,12 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
     tracker.track(ship, poseY);
   }
 
+  /**
+   * Starts tracking entities for a ship and records its current pose basis.
+   *
+   * @param ship the ship whose riders are tracked
+   * @param pose the ship's current pose
+   */
   @Override
   public void track(Ship ship, ShipPose pose) {
     tracker.track(ship, pose);
@@ -100,6 +106,12 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
     tracker.updatePoseBasis(ship, poseY);
   }
 
+  /**
+   * Updates the remembered pose basis without carrying entities.
+   *
+   * @param ship the ship whose basis is updated
+   * @param pose the new pose basis
+   */
   @Override
   public void updatePoseBasis(Ship ship, ShipPose pose) {
     tracker.updatePoseBasis(ship, pose);

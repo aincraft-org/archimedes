@@ -384,12 +384,6 @@ public final class BukkitShipRiderTracker implements Listener {
   }
 
   /**
-   * Returns the cached top-surface index for the given ship, lazily building it if absent.
-   *
-   * @param ship the ship to index
-   * @return the top-surface index for the ship
-   */
-  /**
    * @param ship ship whose stored pose basis is needed
    * @return the last committed pose basis, or a zero pose when none is stored
    */
@@ -397,6 +391,12 @@ public final class BukkitShipRiderTracker implements Listener {
     return poseBasisByShip.getOrDefault(ship.id(), new ShipPose(0));
   }
 
+  /**
+   * Returns the cached top-surface index for the given ship, lazily building it if absent.
+   *
+   * @param ship the ship to index
+   * @return the top-surface index for the ship
+   */
   private TopSurfaceIndex indexFor(Ship ship) {
     return indices.computeIfAbsent(
         ship.id(), k -> TopSurfaceIndex.build(CollisionHull.topExposedBlocks(ship), ship));
