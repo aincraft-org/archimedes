@@ -42,7 +42,7 @@ bob-amplitude: 0.5
 max-rise: 16.0
 
 # Physics constants.
-gravity: 0.05
+gravity: 0.5
 water-density: 1.0
 block-density: 0.5
 buoyancy:

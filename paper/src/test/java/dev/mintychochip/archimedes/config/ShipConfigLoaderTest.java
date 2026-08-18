@@ -51,7 +51,7 @@ class ShipConfigLoaderTest {
     assertEquals(1, loaded.physicsTicks());
     assertEquals(0.5, loaded.bobAmplitude());
     assertEquals(16.0, loaded.maxRise());
-    assertEquals(0.05, loaded.gravity());
+    assertEquals(0.5, loaded.gravity());
     assertEquals(1.0, loaded.waterDensity());
     assertEquals(0.5, loaded.blockDensity());
     assertEquals(0.9, loaded.damping());

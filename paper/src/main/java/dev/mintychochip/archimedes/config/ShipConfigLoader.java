@@ -92,7 +92,7 @@ public final class ShipConfigLoader {
     if (!Double.isFinite(maxRise) || maxRise < 0) {
       throw new IllegalArgumentException("max-rise must be a finite non-negative number");
     }
-    double gravity = configuration.getDouble(GRAVITY_KEY, 0.05);
+    double gravity = configuration.getDouble(GRAVITY_KEY, 0.5);
     if (!Double.isFinite(gravity) || gravity <= 0) {
       throw new IllegalArgumentException("gravity must be a finite positive number");
     }
