@@ -15,14 +15,15 @@ Success looks like: every subcommand has a permission, explicit error messages f
 ### In scope
 
 - `ShipCommand`, `ShipTabCompleter`
-- `TargetResolver` / `BukkitTargetResolver` (line-of-sight targeting, config distance) — assemble only; other operations target the requester's owned ship in the current world
+- `TargetResolver` / `BukkitTargetResolver` (line-of-sight targeting, config distance) — assemble only
+- `ShipTargeting` — inspect / disassemble / kill pick the hull whose volume (deck + 1.5 standing margin) is nearest the player, within `target-distance`
 - `plugin.yml` command + permission declarations
 - User-facing outcome messages (success/error per operation)
 
 ### Out of scope / non-goals
 
-- Command implementation of ship logic (assembly, disassembly, buoyancy — delegate to `ShipService`)
-- Permissions beyond the seven declared nodes (`archimedes.command` parent + six subnodes)
+- Command implementation of ship logic (assembly, disassembly, buoyancy, kill — delegate to `ShipService`)
+- Permissions beyond the eight declared nodes (`archimedes.command` parent + seven subnodes)
 - Console execution (player-only by design)
 
 ## Commands
@@ -30,8 +31,9 @@ Success looks like: every subcommand has a permission, explicit error messages f
 | Command | Permission | Behavior |
 |---------|-----------|----------|
 | `/arch assemble` | `archimedes.assemble` | Target block → `service.assembleAt` |
-| `/arch inspect` | `archimedes.inspect` | `findOwnedInWorld` then `ShipPhysics.inspect`: pose, vel, mass, riders, cloth, submerged, chunk loaded, last-tick/sample ms, each force/torque, net force. Sail cells that share a facing collapse to one vector (`Sail +Z 25m2`) with summed area and force. Vector components are color-coded (X red, Y green, Z aqua). |
-| `/arch disassemble` | `archimedes.disassemble` | Owner or operator only |
+| `/arch inspect` | `archimedes.inspect` | `ShipTargeting.nearest` (standing-on / nearby hull, any owner) then `ShipPhysics.inspect`: pose, vel, mass, riders, cloth, submerged, chunk loaded, last-tick/sample ms, each force/torque, net force. Sail cells that share a facing collapse to one vector (`Sail +Z 25m2`) with summed area and force. Vector components are color-coded (X red, Y green, Z aqua). |
+| `/arch disassemble` | `archimedes.disassemble` | Nearby hull via `ShipTargeting`; owner or operator only; restores world blocks then removes runtime |
+| `/arch kill [all]` | `archimedes.kill` | Nearby hull: destroy runtime + persistence without restoring blocks (owner or operator). `/arch kill all` wipes every loaded ship and requires operator. |
 | `/arch buoyancy` | `archimedes.buoyancy` | Toggle for the requester's owned ship in the current world (`toggleBuoyancy(requester, world)` — not line-of-sight-targeted) |
 | `/arch sink <n>` | `archimedes.sink` | Positive integer parse; extra args silently ignored (no arity validation); delegates to service |
 | `/arch sail [small\|medium\|large]` | `archimedes.sail` | Spawns a predetermined sail 3 blocks in front of the player via `service.spawnSail`. Default is `medium` (5×5 deck / 5×5 wool). Each wool block is 1 m² of pressure sail, so larger sizes produce more drive. No scan, no world-block clear. A dry or blocked `rise` is ignored so land spawns stay in the world. |
@@ -41,16 +43,19 @@ Success looks like: every subcommand has a permission, explicit error messages f
 
 ## Implementation guidance
 
-- `TargetResolver` lives in `:api` (Bukkit `Player` leak via `compileOnly` `paper-api`); `ShipCommand`, `ShipTabCompleter`, and `BukkitTargetResolver` live in `:paper`. Tests inject fakes (no live player).
-- Tab completion: first argument is the subcommand list; `/arch sail` also completes `small|medium|large`. No permission filtering. Other later arguments still return `List.of()`.
- - Messages: user-facing and terse. Service failures are reason-only and command-owned prefixes render (`Cannot assemble: <lastError()>`, `Cannot disassemble: <lastError()>`, `Cannot toggle buoyancy: <lastError()>`, `Cannot lower ship: <lastError()>`).
+- `TargetResolver` lives in `:api` (Bukkit `Player` leak via `compileOnly` `paper-api`); `ShipTargeting` is Paper-free in `:api` and scores hull AABBs (visual corners, +1.5 standing margin on +Y). `ShipCommand`, `ShipTabCompleter`, and `BukkitTargetResolver` live in `:paper`. Tests inject fakes (no live player).
+- Assembled ships have no world blocks, so inspect / disassemble / kill cannot use block line-of-sight. They pick the nearest hull AABB in the player's world within `target-distance`. A player standing on a deck has distance 0.
+- Tab completion: first argument is the subcommand list; `/arch sail` also completes `small|medium|large`; `/arch kill` completes `all`. No permission filtering. Other later arguments still return `List.of()`.
+- Messages: user-facing and terse. Service failures are reason-only and command-owned prefixes render (`Cannot assemble: <lastError()>`, `Cannot disassemble: <lastError()>`, `Cannot kill: <lastError()>`, `Cannot toggle buoyancy: <lastError()>`, `Cannot lower ship: <lastError()>`). Missing spatial target is `No ship nearby.`
 
 ## Current
 
-- [x] Six subcommands routed with six per-subcommand checks, plus the Bukkit-enforced parent `archimedes.command` (`plugin.yml` `permission:` field) — seven effective nodes, all `default: true`
+- [x] Seven subcommands routed with seven per-subcommand checks, plus the Bukkit-enforced parent `archimedes.command` (`plugin.yml` `permission:` field) — eight effective nodes, all `default: true`
 - [x] `/arch` is the command (`/ship` alias); `/arch sail [small|medium|large]` spawns a named-size demo sail (default medium)
 - [x] `/arch inspect` reports pose, velocity, mass factors, chunk/submerged state, tick/sample timing, and each sampled force
 - [x] Inspect sail lines are one vector per facing (summed area/force); force vectors are RGB-colored (X/Y/Z)
+- [x] Inspect / disassemble / kill target the nearby hull (standing-on or nearest AABB), not `findOwnedInWorld`'s first owned ship
+- [x] `/arch kill` destroys a nearby ship without restoring blocks; `/arch kill all` wipes every loaded ship (operator)
 - [x] Player-only enforcement: single entry check gates all subcommands with one generic message (`Only players can build ships.`)
 - [x] Line-of-sight targeting capped at `target-distance` — assemble only
 - [x] Tab completion of subcommands
@@ -59,6 +64,7 @@ Success looks like: every subcommand has a permission, explicit error messages f
 ### Current notes
 
 - `/arch inspect` is a multi-line physics snapshot; `/ship` still works as an alias.
+- Leftover persisted hulls made `findOwnedInWorld` (first match) inspect the wrong ship. Spatial targeting replaces that for inspect / disassemble / kill.
 
 ## Next
 
@@ -84,6 +90,8 @@ Success looks like: every subcommand has a permission, explicit error messages f
 | 2026-08-17 | Command is `/arch` with `/ship` alias; inspect samples live forces | User asked for arch prefix and force/performance metrics |
 | 2026-08-17 | `/arch sail` accepts `small`/`medium`/`large`; default is medium | User asked for bigger hulls and named size variants |
 | 2026-08-17 | Inspect merges same-facing sails and color-codes vector XYZ | User asked for one sail vector per direction and readable force colors |
+| 2026-08-17 | Inspect / disassemble / kill use nearest hull AABB, not first owned ship | `findOwnedInWorld` returned leftover distant hulls; assembled ships have no LOS blocks |
+| 2026-08-17 | `/arch kill` destroys without restore; `/arch kill all` is operator-only | User asked for a wipe that does not put blocks back |
 
 ## Open questions
 
