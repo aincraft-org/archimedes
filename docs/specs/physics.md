@@ -67,6 +67,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - Support and Coulomb friction share a `ContactPlane`. Support cancels the compressive gravity load along the normal when the body is in contact; it is not a penetration constraint. Friction uses that same gravity-derived `N`: kinetic is `−μ_k N v̂_t`; static cancels sibling tangent load when `|T| ≤ μ_s N` at rest. `N = 0` off the plane.
 - Viscous linear drag is `F = −c v`, distinct from quadratic `−c |v| v`. Angular drag is `τ = −c ω`. Neither is applied to Archimedes ships.
 - Put Bukkit-specific material/world parsing behind interfaces and implement them only in `:paper`.
+- Gate ship physics on `World.isChunkLoaded`. Bukkit implementation must call `org.bukkit.World#isChunkLoaded` (Paper: `ServerChunkCache` / `ChunkMap.getUpdatingChunkIfPresent`). Never `getChunkAt` or `loadChunk` for this probe.
 - The ship client is responsible for turning a `Ship` into a `Body` and for driving `ShipRuntime` after integration.
 - Reuse existing `ShipRuntime` transaction semantics; do not re-implement rollback in physics.
 - Write tests for the generic core first, then the ship client. Composition tests must call real `Force.apply` and `Physics.step`. Every shipped catalog force must also have a real-step assertion, not `apply` alone.
@@ -96,15 +97,19 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - [x] `PressureSailForce`: rest-in-breeze moves; still air and edge-on sheet do not; offset yaws.
 - [x] `ShipSails` maps marked structure blocks (`facing=` normal, 1 m² each) to pressure sails.
 - [x] `ShipPhysics.tick` integrates sail XZ into `ShipPose(x,y,z)` when cloth faces the wind.
+- [x] `ShipPhysics` skips tick/rise/sink when any ship chunk is unloaded (`World.isChunkLoaded`). Bukkit uses `org.bukkit.World#isChunkLoaded` (ServerChunkCache map lookup), not `getChunkAt`.
+- [x] Review: same `PressureSailForce` drives watercraft and airship compositions; ship client is still waterline-only (dry cloth falls).
 
 ### Current notes
 
 - Dated design: `docs/superpowers/specs/2026-08-16-physics-library-design.md` (math types later moved to JOML).
 - Medium thrust / density drag contract: `docs/superpowers/specs/2026-08-17-medium-propulsion-design.md`.
 - Sail ideas (not an implementation contract): `docs/superpowers/specs/2026-08-17-sail-propulsion-ideas.md`.
+- Ships / airships / sail-aesthetics review: `docs/superpowers/specs/2026-08-17-physics-models-review.md`.
 - `docs/specs/buoyancy.md` remains the ship-client vertical contract.
-- Generic 6DOF is available to any caller; Archimedes `ShipPose` is still Y-only.
+- Generic 6DOF is available to any caller. Archimedes `ShipPose` stores `x,y,z`; yaw is still out. `ShipBody` is rebuilt at identity orientation every tick, so sail torque never becomes heading.
 - `archimedes.phys` review (2026-08-17): `Body` is the per-step physics object. `ShipPhysics` is the ship facade (rebuild body, clamp, path, `ShipRuntime`). `RiderCount` and `MaterialKeyResolver` are one-method seams so `:common` stays off Bukkit; they are not unused. No type in that package is a pass-through.
+- Propulsion split from the 2026-08-17 review: watercraft stay liquid buoyancy + sails (lifting sails later); airships should hover on `FluidBuoyancy(uniform ρ_air)` and drive with `MediumThrustForce` once that unit exists. Pressure sails on airships are optional flavor, not the look.
 
 ## Next
 
@@ -153,7 +158,11 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 | 2026-08-17 | `FlowField` is constructor-injected; multiple winds via `compose` or per-force fields | Same reason as no `World.densityField()`: two bodies can share a world and differ by attached flow |
 | 2026-08-17 | `PressureSailForce` is one-sided `q A` cloth; structure hook is `ShipSails` | User asked to wire sails and attach them to the build; not `ShipPhysics` 6DOF |
 | 2026-08-17 | `ShipPhysics.tick` applies sail XZ into `ShipPose`; default plugin wind is `+Z` | User: ships still did not move forward after the catalog-only sail |
+| 2026-08-17 | Catalog already allows watercraft and airship propulsion via force lists; plugin is still water ships | Same `PressureSailForce` + different buoyancy; `ShipBuoyancyForce` is waterline-only |
+| 2026-08-17 | Pressure sails are honest cloth and a weak airship aesthetic | One-sided `q A` cannot go upwind; wool defaults to `+Z`; no yaw; props want `MediumThrust` |
+| 2026-08-17 | Physics is skipped unless ship chunks are in the loaded-chunk cache | Unloaded `getBlockAt` would load from disk; `isChunkLoaded` is a cache probe |
 
 ## Open questions
 
-None currently.
+- [x] Can the shipped catalog drive both ships and airships? Yes, as force lists. Proof: `VehiclePropulsionCompositionTest`.
+- [x] Will pressure sails look right as the main airship drive? No. Downwind plate + no heading. Use aerostatic hover + props for that look; keep cloth as flavor or wait for `LiftingSailForce`.

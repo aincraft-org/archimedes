@@ -125,6 +125,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
   @Override
   public boolean tick(Ship ship) {
     if (!ship.buoyancyEnabled()) return false;
+    if (!chunksLoaded(ship)) return false;
     return integrate(ship, 1, true);
   }
 
@@ -137,6 +138,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
   @Override
   public boolean rise(Ship ship) {
     if (!ship.buoyancyEnabled()) return true;
+    if (!chunksLoaded(ship)) return false;
     Body probe = body(ship, false);
     if (WaterlineResolver.submergedVolume(probe, world) == 0) return false;
     velocities.put(ship.id(), new Vector3d());
@@ -153,6 +155,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
   @Override
   public boolean sink(Ship ship, int blocks) {
     if (!ship.buoyancyEnabled() || blocks <= 0) return false;
+    if (!chunksLoaded(ship)) return false;
     ShipPose old = ship.pose();
     double targetY = Math.max(-config.maxFall(), old.y() - blocks);
     return moveDirect(ship, old, new ShipPose(old.x(), targetY, old.z()));
@@ -166,6 +169,23 @@ public final class ShipPhysicsImpl implements ShipPhysics {
   @Override
   public void clear(Ship ship) {
     velocities.remove(ship.id());
+  }
+
+  /**
+   * True when every chunk occupied by a ship block is in the world's loaded-chunk cache.
+   *
+   * @param ship ship whose cells are mapped to chunk coordinates
+   * @return whether physics sampling is safe
+   */
+  private boolean chunksLoaded(Ship ship) {
+    for (ShipBlock block : ship.blocks()) {
+      int worldX = ship.origin().x() + ship.pose().anchorDx() + block.pos().x();
+      int worldZ = ship.origin().z() + ship.pose().anchorDz() + block.pos().z();
+      if (!world.isChunkLoaded(worldX >> 4, worldZ >> 4)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private Body body(Ship ship, boolean withSails) {

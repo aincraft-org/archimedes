@@ -15,6 +15,7 @@ import dev.mintychochip.archimedes.phys.ShipPhysics;
 import dev.mintychochip.archimedes.phys.ShipPhysicsImpl;
 import dev.mintychochip.archimedes.phys.bukkit.BukkitFluidField;
 import dev.mintychochip.archimedes.phys.bukkit.BukkitMaterialKeyResolver;
+import dev.mintychochip.archimedes.phys.bukkit.BukkitPhysicsWorld;
 import dev.mintychochip.archimedes.render.RenderSurface;
 import dev.mintychochip.archimedes.ship.ShipRuntime;
 import dev.mintychochip.archimedes.ship.ShipRuntimeImpl;
@@ -23,7 +24,6 @@ import dev.mintychochip.archimedes.ship.ShipServiceImpl;
 import dev.mintychochip.archimedes.store.ShipStore;
 import dev.mintychochip.phys.DensityField;
 import dev.mintychochip.phys.FlowField;
-import dev.mintychochip.phys.FluidField;
 import dev.mintychochip.phys.PhysicsEngine;
 import dev.mintychochip.phys.World;
 import java.util.Collection;
@@ -77,28 +77,7 @@ public final class ArchimedesPlugin extends JavaPlugin {
       ShipRuntime runtime = new ShipRuntimeImpl(renderer, collisions, carrier);
       BukkitFluidField fluidField = new BukkitFluidField(world, config.waterDensity());
       BukkitMaterialKeyResolver materialResolver = new BukkitMaterialKeyResolver();
-      World physicsWorld =
-          new World() {
-            public org.joml.Vector3dc gravity() {
-              return new org.joml.Vector3d(0, -config.gravity(), 0);
-            }
-
-            public FluidField fluidField() {
-              return fluidField;
-            }
-
-            public double timeStep() {
-              return config.physicsTicks() * 0.05;
-            }
-
-            public boolean isObstacle(org.joml.Vector3dc point) {
-              int x = (int) Math.floor(point.x());
-              int y = (int) Math.floor(point.y());
-              int z = (int) Math.floor(point.z());
-              org.bukkit.Material type = world.getBlockAt(x, y, z).getType();
-              return !type.isAir() && type != org.bukkit.Material.WATER;
-            }
-          };
+      World physicsWorld = new BukkitPhysicsWorld(world, config, fluidField);
       ShipPhysics shipPhysics =
           new ShipPhysicsImpl(
               new PhysicsEngine(),
