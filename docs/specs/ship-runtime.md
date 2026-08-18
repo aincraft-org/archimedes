@@ -35,7 +35,7 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 
 - Displays use **visual** projection: `origin + pose.y + relative`, exact block corner — no implicit `+0.5`.
 - Hulls spawn at `collisionAnchor` (visual corner + 0.5 on X/Z). Collision volumes follow the fractional pose so the solid deck matches the picture. Rollback restores every moved volume to the old anchor.
-- `ShipRuntimeImpl` field order is renderer, collisions, carrier; **spawn order is collisions first, then renderer**. Operation order on move: upward repositions displays, carries riders, then moves collisions; downward/equal repositions displays, moves collisions, then carries riders. Carry uses the full pose delta `(dx,dy,dz)`. Rollback restores the full previous pose, not Y-only.
+- `ShipRuntimeImpl` field order is renderer, collisions, carrier; **spawn order is collisions first, then renderer**. Operation order on move: reposition displays, carry riders by the full pose delta `(dx,dy,dz)`, then move collisions. Sliding the Shulker hull first on XZ/down ticks shoves standees off the deck before carry can glue them. Rollback reverse-carries and restores the full previous pose, not Y-only.
 - Adapter failures in renderer and collision operations are normalized to `ShipRuntimeException` with operation and ship context where available; existing `ShipRuntimeException` instances are preserved. Only `RuntimeException` is normalized; `Error` remains uncaught.
 - Carrier tracking is explicit: successful spawn tracks at the committed pose, remove untracks, and every runtime cleanup path clears tracker state.
 - Rider seed and overlap checks use the move transaction's supplied pose basis `(x,y,z)`; the top-surface index is stored at pose zero and shifted by that basis. Tracker updates do not read a concurrently changing pose for that transaction.
@@ -58,6 +58,7 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 - [x] Production Shulker hull attached to spawn/move/remove lifecycle
 - [x] Transactional spawn and direction-ordered move rollback
 - [x] Persistent rider tracking and best-effort XYZ carry (players and other entities teleport by the hull delta; a normal jump stays on the deck)
+- [x] Carry runs before collision on every move so a sailing hull cannot shove standees off the deck
 - [x] Adapter/runtime normalization and continued multi-entity cleanup
 - [x] Restart reconciliation: store load, initial tagged-entity sweep, and deterministic spawn are one `RuntimeException` boundary. On failure, every spawned ship is removed, a final tagged-entity sweep is attempted, the model registry is cleared even when individual cleanup actions fail, and cleanup failures are normalized to `ShipRuntimeException` and suppressed on the primary cause. One `IllegalStateException` identifies the failing phase and ship (`unknown` if none is active). `Error` remains uncaught. Store-load failures follow the same cleanup boundary.
 - [x] Plugin disable independently attempts registered-runtime removal and tagged-entity removal, logs each failure, and never saves persistence during disable.
@@ -90,6 +91,7 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 | 2026-08-15 | Carry is vertical and best-effort | Preserve rider momentum without turning transport into transaction failure |
 | 2026-08-17 | Carry is XYZ and best-effort | User: standing on a sailing ship must stay on it like a vehicle |
 | 2026-08-17 | Players teleport with the hull; jump stays a rider; shulkers follow fractional pose | Velocity carry left standers behind and cancelled jumping; integer-only hulls slid out from under feet |
+| 2026-08-17 | Every move carries riders before collision volumes | XZ/down used to slide Shulkers first; vanilla unstuck unboarded standees and they fell off |
 | 2026-08-14 | Shulker hulls integrated despite blocked live spike evidence | Acceptance gap remains recorded |
 | 2026-08-17 | No GPU mesh upload; hull stays voxel `BlockDisplay`; curves are Future overlays | Paper protocol has no triangle-mesh packet; the ship is the scanned build |
 | 2026-08-17 | Cloth sails are tessellated `BlockDisplay` plates from the captured region | User asked for a series of block displays from a 3D cloth region before any resource pack |

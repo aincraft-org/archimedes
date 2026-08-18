@@ -99,23 +99,16 @@ public final class ShipRuntimeImpl implements ShipRuntime {
    */
   @Override
   public void move(Ship ship, ShipPose from, ShipPose to) {
-    boolean rising = to.y() > from.y();
     boolean rendererStarted = false;
     boolean carrierStarted = false;
     boolean collisionsStarted = false;
     try {
       rendererStarted = true;
       renderer.reposition(ship, from.y(), to.y());
-      if (rising) {
-        carrierStarted = true;
-        carrier.carry(ship, from, to);
-      }
+      carrierStarted = true;
+      carrier.carry(ship, from, to);
       collisionsStarted = true;
       collisions.move(ship);
-      if (!rising) {
-        carrierStarted = true;
-        carrier.carry(ship, from, to);
-      }
       carrier.updatePoseBasis(ship, to);
     } catch (ShipRuntimeException failure) {
       if (collisionsStarted) {
@@ -126,14 +119,12 @@ public final class ShipRuntimeImpl implements ShipRuntime {
         }
       }
       ship.setPose(from);
-      if (rising && carrierStarted) {
+      if (carrierStarted) {
         try {
           carrier.carry(ship, to, from);
         } catch (ShipRuntimeException cleanup) {
           failure.addSuppressed(cleanup);
         }
-      }
-      if (carrierStarted) {
         carrier.updatePoseBasis(ship, from);
       }
       if (rendererStarted) {

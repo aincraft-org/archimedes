@@ -140,7 +140,7 @@ class ShipRuntimeImplTest {
   }
 
   @Test
-  void downwardMoveMovesCollisionBeforeCarrier() {
+  void downwardMoveCarriesBeforeCollision() {
     List<String> operations = new ArrayList<>();
     RecordingRenderer renderer = new RecordingRenderer(operations);
     RecordingCollision collision = new RecordingCollision(operations);
@@ -150,7 +150,7 @@ class ShipRuntimeImplTest {
     ship.setPose(new dev.mintychochip.archimedes.model.ShipPose(4));
     runtime.move(ship, 7, 4);
 
-    assertEquals(List.of("renderer:7.0->4.0", COLLISION_MOVE, "carrier:7.0->4.0"), operations);
+    assertEquals(List.of("renderer:7.0->4.0", "carrier:7.0->4.0", COLLISION_MOVE), operations);
   }
 
   @Test
@@ -171,6 +171,21 @@ class ShipRuntimeImplTest {
   }
 
   @Test
+  void horizontalMoveCarriesBeforeCollision() {
+    List<String> operations = new ArrayList<>();
+    RecordingRenderer renderer = new RecordingRenderer(operations);
+    RecordingCollision collision = new RecordingCollision(operations);
+    RecordingCarrier carrier = new RecordingCarrier(operations);
+    Ship ship = ship();
+    ship.setPose(new ShipPose(0, 5, 2));
+    ShipRuntime runtime = new ShipRuntimeImpl(renderer, collision, carrier);
+
+    runtime.move(ship, new ShipPose(0, 5, 0), new ShipPose(0, 5, 2));
+
+    assertEquals(List.of("renderer:5.0->5.0", "carrier:5.0->5.0", COLLISION_MOVE), operations);
+  }
+
+  @Test
   void xzOnlyMoveStillCarriesRiders() {
     RecordingCarrier carrier = new RecordingCarrier();
     Ship ship = ship();
@@ -186,7 +201,7 @@ class ShipRuntimeImplTest {
   }
 
   @Test
-  void downwardCollisionFailureDoesNotCarry() {
+  void downwardCollisionFailureReversesCarry() {
     RecordingRenderer renderer = new RecordingRenderer();
     RecordingCollision collision = new RecordingCollision();
     collision.moveFailure = true;
@@ -197,7 +212,8 @@ class ShipRuntimeImplTest {
     assertThrows(
         ShipRuntimeException.class,
         () -> new ShipRuntimeImpl(renderer, collision, carrier).move(ship, 7, 4));
-    assertEquals(0, carrier.carryCount);
+    assertEquals(2, carrier.carryCount);
+    assertEquals(7.0, carrier.carriedNewY);
     assertEquals(7.0, ship.pose().y());
   }
 
