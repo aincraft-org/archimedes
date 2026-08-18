@@ -102,7 +102,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - [x] Review: same `PressureSailForce` drives watercraft and airship compositions; ship client is still waterline-only (dry cloth falls).
 - [x] `QuadraticDragForce(c, DensityField)` is `−c · ρ · |v| v`; the one-arg constructor stays lumped. `ShipPhysics` attaches the density form as `WaterDrag` (`DensityField.liquid`) plus a small lumped air `Drag` with sails.
 - [x] Default plugin gravity is `10` blocks/s² (same scale as the generic engine). `0.05`/`0.5` plus 0.9 damping made airborne sails glide.
-- [x] Plugin hull/water densities are ~10× the old `water=1` table (`water=10`, oak `6`, default `10`) so weight exceeds rest sail force. Wood still floats (oak/water = 0.6).
+- [x] Plugin hull/water densities are ~10× the old `water=1` table (`water=10`, oak `6`, log `7`, wool `1`, default `10`) so weight exceeds rest sail force and a wooden deck can still float the cloth.
 
 ### Current notes
 
@@ -170,6 +170,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 | 2026-08-17 | Ship water drag is density-scaled; default gravity is `0.5` | Lumped drag made water and air feel the same; `g=0.05` plus damping hid airborne fall |
 | 2026-08-17 | Default gravity is `10` blocks/s² | `g=0.5` plus 0.9/tick damping terminals at ~0.2 blk/s, so sails still look like a glide |
 | 2026-08-17 | Plugin water/hull densities scale to `10`/`6` | Sail `qA` is SI-ish; old `water=1` hulls were ~47 mass and lighter than the sail force |
+| 2026-08-17 | Cloth is light; `rise` damps each step; buoyancy uses wet-cell density | Wool at water density plus 80 undamped rise steps slammed a surface spawn ~11 blocks down |
 
 ## Open questions
 

@@ -21,9 +21,8 @@ public final class ShipBuoyancyForce implements Force {
    */
   @Override
   public Result apply(Body body, World world) {
-    int submerged = WaterlineResolver.submergedVolume(body, world);
     double gMag = Math.abs(world.gravity().y());
-    double density = world.fluidField().density(body.transform().position());
-    return new Result(new Vector3d(0, submerged * density * gMag, 0), new Vector3d());
+    double displaced = WaterlineResolver.displacedMass(body, world);
+    return new Result(new Vector3d(0, displaced * gMag, 0), new Vector3d());
   }
 }

@@ -32,19 +32,60 @@ public final class WaterlineResolver {
   public static int submergedVolume(Body body, World world) {
     int count = 0;
     for (Collider c : body.colliders()) {
-      Bounds b = c.shape().bounds(transform(body, c));
-      int bottom = (int) Math.floor(b.min().y());
-      Vector3d center =
-          new Vector3d(
-              (b.min().x() + b.max().x()) / 2.0,
-              (b.min().y() + b.max().y()) / 2.0,
-              (b.min().z() + b.max().z()) / 2.0);
-      int ax = (int) Math.floor(center.x());
-      int az = (int) Math.floor(center.z());
-      int surface = columnWaterSurface(world, ax, bottom, az);
-      if (surface != NO_WATER && bottom <= surface) count++;
+      if (submerged(body, c, world) != NO_WATER) {
+        count++;
+      }
     }
     return count;
+  }
+
+  /**
+   * Sums fluid density of each waterline-submerged collider.
+   *
+   * <p>Density is sampled at the water column, not the body origin, so a deck that sits in water
+   * still lifts when the origin corner is in air.
+   *
+   * @param body body whose colliders are sampled
+   * @param world world supplying fluid
+   * @return displaced mass in the same units as {@link World#fluidField()} density
+   */
+  public static double displacedMass(Body body, World world) {
+    double mass = 0;
+    for (Collider c : body.colliders()) {
+      int surface = submerged(body, c, world);
+      if (surface == NO_WATER) {
+        continue;
+      }
+      Bounds b = c.shape().bounds(transform(body, c));
+      Vector3d wet =
+          new Vector3d(
+              (b.min().x() + b.max().x()) / 2.0, surface + 0.5, (b.min().z() + b.max().z()) / 2.0);
+      mass += world.fluidField().density(wet);
+    }
+    return mass;
+  }
+
+  /**
+   * @param body body supplying the world transform
+   * @param collider hull cell
+   * @param world fluid and obstacle map
+   * @return column surface Y when this cell is submerged, otherwise {@link #NO_WATER}
+   */
+  private static int submerged(Body body, Collider collider, World world) {
+    Bounds b = collider.shape().bounds(transform(body, collider));
+    int bottom = (int) Math.floor(b.min().y());
+    Vector3d center =
+        new Vector3d(
+            (b.min().x() + b.max().x()) / 2.0,
+            (b.min().y() + b.max().y()) / 2.0,
+            (b.min().z() + b.max().z()) / 2.0);
+    int surface =
+        columnWaterSurface(
+            world, (int) Math.floor(center.x()), bottom, (int) Math.floor(center.z()));
+    if (surface == NO_WATER || bottom > surface) {
+      return NO_WATER;
+    }
+    return surface;
   }
 
   /**

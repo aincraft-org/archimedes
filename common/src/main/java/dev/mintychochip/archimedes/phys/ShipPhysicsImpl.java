@@ -472,8 +472,11 @@ public final class ShipPhysicsImpl implements ShipPhysics {
     for (int i = 0; i < steps; i++) {
       physics.step(world, List.of(body));
       newY = clamp(ship, old.y(), body);
-      if (!withSails && Math.abs(body.linearVelocity().y()) < config.draftTolerance()) {
-        break;
+      if (!withSails) {
+        body.setLinearVelocity(new Vector3d(body.linearVelocity()).mul(config.damping()));
+        if (Math.abs(body.linearVelocity().y()) < config.draftTolerance()) {
+          break;
+        }
       }
     }
     velocities.put(ship.id(), new Vector3d(body.linearVelocity()).mul(config.damping()));

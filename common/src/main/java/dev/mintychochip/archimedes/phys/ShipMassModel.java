@@ -28,9 +28,38 @@ public final class ShipMassModel {
     double total = riderCount * config.playerMass();
     for (ShipBlock block : ship.blocks()) {
       String key = resolver.key(block);
-      Double density = config.materialDensities().get(key);
-      total += density != null ? density : config.defaultMaterialDensity();
+      total += densityOf(key, config);
     }
     return total;
+  }
+
+  /**
+   * Resolves a block's mass density. Cloth without its own table entry uses the white-wool value so
+   * sails stay light enough for a wooden deck to float.
+   *
+   * @param key resolved material key
+   * @param config density table
+   * @return positive density
+   */
+  private static double densityOf(String key, ShipConfig config) {
+    Double density = config.materialDensities().get(key);
+    if (density != null) {
+      return density;
+    }
+    if (isCloth(key)) {
+      Double cloth = config.materialDensities().get("minecraft:white_wool");
+      if (cloth != null) {
+        return cloth;
+      }
+    }
+    return config.defaultMaterialDensity();
+  }
+
+  /**
+   * @param key resolved material key
+   * @return whether the key is wool or banner cloth
+   */
+  private static boolean isCloth(String key) {
+    return key.endsWith("_wool") || key.endsWith("_banner") || key.endsWith("_wall_banner");
   }
 }

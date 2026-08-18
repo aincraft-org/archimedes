@@ -52,6 +52,8 @@ block-density: 0.5
 buoyancy:
   material-densities:
     minecraft:oak_planks: 6.0
+    minecraft:oak_log: 7.0
+    minecraft:white_wool: 1.0
   default-material-density: 10.0
   player-mass: 80.0
   max-fall: 16.0

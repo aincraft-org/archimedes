@@ -250,6 +250,79 @@ class ShipPhysicsTest {
   }
 
   @Test
+  void riseDoesNotTeleportASurfaceSailIntoTheWater() {
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(UUID.randomUUID(), 0, 10, 0),
+            SailShipTemplate.blocks(),
+            new ShipPose(0),
+            true);
+    ShipConfig config =
+        new ShipConfig(
+            2048,
+            8,
+            Set.of(),
+            Set.of(),
+            true,
+            1,
+            0.5,
+            16.0,
+            10.0,
+            10.0,
+            0.5,
+            0.9,
+            Map.of(OAK_PLANKS, 6.0, SailShipTemplate.MAST, 7.0, SailShipTemplate.SAIL, 1.0),
+            10.0,
+            80.0,
+            16.0,
+            1e-6,
+            1e-3);
+    World water =
+        new World() {
+          public Vector3d gravity() {
+            return new Vector3d(0, -10, 0);
+          }
+
+          public FluidField fluidField() {
+            return new FluidField() {
+              public boolean isFluid(Vector3dc p) {
+                return p.y() < 11;
+              }
+
+              public double density(Vector3dc p) {
+                return p.y() < 11 ? 10.0 : 0.0;
+              }
+            };
+          }
+
+          public double timeStep() {
+            return 0.05;
+          }
+        };
+    ShipPhysics physics =
+        new ShipPhysicsImpl(
+            new PhysicsEngine(),
+            water,
+            config,
+            new BukkitLikeResolver(),
+            new ShipRuntime() {
+              public void spawn(Ship s) {}
+
+              public void move(Ship s, double oldY, double newY) {}
+
+              public void remove(Ship s) {}
+
+              public void removeAll(java.util.Collection<Ship> s) {}
+            },
+            s -> 0);
+    physics.rise(ship);
+    assertTrue(ship.pose().y() > -2.0, "rise must not slam maxFall; y=" + ship.pose().y());
+    assertTrue(ship.pose().y() < 3.0, "rise must not slam maxRise; y=" + ship.pose().y());
+  }
+
+  @Test
   void drySailFallsInsteadOfGlidingUnderPluginGravity() {
     double gravity = 10.0;
     Ship ship =
