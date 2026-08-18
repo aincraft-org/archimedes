@@ -100,6 +100,8 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - [x] `ShipPhysics` skips tick/rise/sink when any ship chunk is unloaded (`World.isChunkLoaded`). Bukkit uses `org.bukkit.World#isChunkLoaded` (ServerChunkCache map lookup), not `getChunkAt`.
 - [x] Kelp/seagrass are passable vegetation (`World.vegetation`); they drag via `VegetationDragForce` and do not fail path clearance.
 - [x] Review: same `PressureSailForce` drives watercraft and airship compositions; ship client is still waterline-only (dry cloth falls).
+- [x] `QuadraticDragForce(c, DensityField)` is `−c · ρ · |v| v`; the one-arg constructor stays lumped. `ShipPhysics` attaches the density form as `WaterDrag` (`DensityField.liquid`) plus a small lumped air `Drag` with sails.
+- [x] Default plugin gravity is `0.5` so a dry ship falls; `0.05` plus damping looked like zero gravity.
 
 ### Current notes
 
@@ -115,8 +117,9 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 ## Next
 
 - [ ] `MediumThrustForce`: density-scaled actuator at a body-local point with `r × F` torque
-- [ ] `QuadraticDragForce(c, DensityField)`: `−c · ρ · |v| v`; one-arg constructor stays lumped
-- [ ] Horizontal movement and water drag for ships.
+- [x] `QuadraticDragForce(c, DensityField)`: `−c · ρ · |v| v`; one-arg constructor stays lumped
+- [x] Water drag on ships via density-scaled `QuadraticDragForce` (air keeps a small lumped drag).
+- [ ] Horizontal movement and steering for ships beyond sail-driven XZ.
 - [ ] `PhysicsWorld` that owns and steps a collection of bodies.
 - [ ] More `Shape` primitives (sphere, capsule).
 
@@ -163,6 +166,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 | 2026-08-17 | Pressure sails are honest cloth and a weak airship aesthetic | One-sided `q A` cannot go upwind; wool defaults to `+Z`; no yaw; props want `MediumThrust` |
 | 2026-08-17 | Physics is skipped unless ship chunks are in the loaded-chunk cache | Unloaded `getBlockAt` would load from disk; `isChunkLoaded` is a cache probe |
 | 2026-08-17 | Seaweed is vegetation drag, not a path block | Kelp/seagrass are not hull solids; `F = −c σ |v| v` |
+| 2026-08-17 | Ship water drag is density-scaled; default gravity is `0.5` | Lumped drag made water and air feel the same; `g=0.05` plus damping hid airborne fall |
 
 ## Open questions
 
