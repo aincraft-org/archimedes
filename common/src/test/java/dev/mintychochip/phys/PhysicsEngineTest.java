@@ -86,6 +86,19 @@ class PhysicsEngineTest {
     assertNotEquals(new Quaterniond(), body.transform().orientation());
   }
 
+  @Test
+  void keepsOrientationNormalizedWhenIntegrateLandsInTheTaylorBand() {
+    BodyImpl body =
+        new BodyImpl(
+            new Transform(new Vector3d(), new Quaterniond()),
+            1,
+            List.of(),
+            List.of((b, w) -> new Force.Result(new Vector3d(), new Vector3d(13.6, 0, 0))));
+    new PhysicsEngine().step(world(0.05), List.of(body));
+    assertEquals(0.68, body.angularVelocity().x(), 1e-12);
+    assertEquals(1.0, Math.sqrt(body.transform().orientation().lengthSquared()), 1e-12);
+  }
+
   private static World world(double dt) {
     return new World() {
       public Vector3d gravity() {

@@ -920,6 +920,83 @@ class ShipPhysicsTest {
   }
 
   @Test
+  void tickMovesAPluginScaleSmallSail() {
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(UUID.randomUUID(), 0, 63, 0),
+            SailShipTemplate.blocks(SailShipTemplate.Size.SMALL),
+            new ShipPose(0),
+            true);
+    ShipConfig config =
+        new ShipConfig(
+            2048,
+            8,
+            Set.of(),
+            Set.of(),
+            true,
+            1,
+            0.5,
+            16.0,
+            10.0,
+            10.0,
+            0.5,
+            0.9,
+            Map.of(OAK_PLANKS, 6.0, SailShipTemplate.MAST, 7.0, SailShipTemplate.SAIL, 1.0),
+            10.0,
+            80.0,
+            16.0,
+            1e-6,
+            1e-3);
+    World air =
+        new World() {
+          public Vector3d gravity() {
+            return new Vector3d(0, -config.gravity(), 0);
+          }
+
+          public FluidField fluidField() {
+            return new FluidField() {
+              public boolean isFluid(Vector3dc p) {
+                return false;
+              }
+
+              public double density(Vector3dc p) {
+                return 0;
+              }
+            };
+          }
+
+          public double timeStep() {
+            return 0.05;
+          }
+        };
+    ShipPhysics physics =
+        new ShipPhysicsImpl(
+            new PhysicsEngine(),
+            air,
+            config,
+            new BukkitLikeResolver(),
+            new ShipRuntime() {
+              public void spawn(Ship s) {}
+
+              public void move(Ship s, double oldY, double newY) {}
+
+              public void remove(Ship s) {}
+
+              public void removeAll(java.util.Collection<Ship> s) {}
+            },
+            s -> 0,
+            DensityField.uniform(1.2),
+            FlowField.uniform(new Vector3d(0, 0, 8)));
+    for (int i = 0; i < 8; i++) {
+      physics.tick(ship);
+    }
+    assertTrue(
+        ship.pose().z() > 0.01, "plugin-scale small sail must still move; z=" + ship.pose().z());
+  }
+
+  @Test
   void pluginScaleWeightExceedsRestSailForce() {
     double oakDensity = 6.0;
     double defaultDensity = 10.0;

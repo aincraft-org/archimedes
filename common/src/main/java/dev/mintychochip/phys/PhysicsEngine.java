@@ -9,8 +9,10 @@ import org.joml.Vector3d;
  * Stateless semi-implicit Euler integrator for active rigid bodies.
  *
  * <p>Each step sums the body's explicit forces and torques, updates linear and angular velocity,
- * then advances position and orientation by the world's timestep. Gravity is not implicit; callers
- * must attach a gravity force when they want it.
+ * then advances position and orientation by the world's timestep. The integrated orientation is
+ * renormalized before it is stored; JOML's first-order {@code integrate} can leave {@code |q|}
+ * outside {@link Quaternions#requireNormalized}'s {@code 1e-9} band. Gravity is not implicit;
+ * callers must attach a gravity force when they want it.
  */
 public final class PhysicsEngine implements Physics {
   /**
@@ -47,7 +49,7 @@ public final class PhysicsEngine implements Physics {
 
       Vector3d p = new Vector3d(body.transform().position());
       Quaterniond q = new Quaterniond(body.transform().orientation());
-      Quaterniond newQ = q.integrate(dt, newOmega.x(), newOmega.y(), newOmega.z());
+      Quaterniond newQ = q.integrate(dt, newOmega.x(), newOmega.y(), newOmega.z()).normalize();
       body.setTransform(new Transform(p.add(newV.mul(dt, new Vector3d()), new Vector3d()), newQ));
     }
     Collisions.resolve(Collisions.detect(bodies));

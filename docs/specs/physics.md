@@ -53,7 +53,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 ## Implementation guidance
 
 - Prefer records or small final classes for math and state types. Vectors/quaternions are JOML (`Vector3dc`, `Quaterniondc`); `Transform` wraps them.
-- Keep `PhysicsEngine` deterministic and unit-testable without a server. Orientation integration uses JOML `Quaterniond.integrate(dt, ωx, ωy, ωz)`.
+- Keep `PhysicsEngine` deterministic and unit-testable without a server. Orientation integration uses JOML `Quaterniond.integrate(dt, ωx, ωy, ωz)` and then `normalize()`. JOML's Taylor path can leave `|q|` off by ~1e-8, which fails `Transform`'s `1e-9` unit check and aborts the whole ship tick.
 - Put reusable vehicle laws in standalone `Force` units the caller attaches. Do not add watercraft/airship/airplane subclasses of `Body`.
 - Parameterize hydrostatic buoyancy by `DensityField` so water and air share `F = −ρV g`. Watercraft uses `DensityField.liquid(FluidField)` (gated on `isFluid`). Airships use `DensityField.uniform(ρ_air)`.
 - `ShipBuoyancyForce` is waterline lift only. `ShipPhysics` attaches `GravityForce` + `ShipBuoyancyForce` and steps `Physics`. Do not add a second integrator or Y-search solver.
@@ -103,6 +103,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - [x] `QuadraticDragForce(c, DensityField)` is `−c · ρ · |v| v`; the one-arg constructor stays lumped. `ShipPhysics` attaches the density form as `WaterDrag` (`DensityField.liquid`) plus a small lumped air `Drag` with sails.
 - [x] Default plugin gravity is `10` blocks/s² (same scale as the generic engine). `0.05`/`0.5` plus 0.9 damping made airborne sails glide.
 - [x] Plugin hull/water densities are ~10× the old `water=1` table (`water=10`, oak `6`, log `7`, wool `1`, default `10`) so weight exceeds rest sail force and a wooden deck can still float the cloth.
+- [x] `PhysicsEngine` renormalizes orientation after `integrate` so a slightly non-unit JOML quaternion cannot abort ship ticks.
 
 ### Current notes
 
@@ -173,6 +174,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 | 2026-08-17 | Cloth is light; `rise` damps each step; buoyancy uses wet-cell density | Wool at water density plus 80 undamped rise steps slammed a surface spawn ~11 blocks down |
 | 2026-08-17 | Blocked Y no longer rejects sail XZ | `g=10` made `floor(y)` drop into the seafloor; all-or-nothing path froze ships |
 | 2026-08-17 | Horizontal slides ignore keel solids; grass is passable | Overlapping sand/grass at the deck froze every move, including XZ |
+| 2026-08-17 | `PhysicsEngine` renormalizes after `integrate` | Live ticks threw `quaternion must be normalized` on plugin-scale small sails (JOML Taylor band) and aborted every ship |
 
 ## Open questions
 
