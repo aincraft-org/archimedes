@@ -44,12 +44,15 @@ max-rise: 16.0
 # Downward acceleration in blocks/s². Must stay near 10 so airborne hulls fall
 # instead of gliding under sail force (0.5 plus damping is only ~0.2 blocks/s).
 gravity: 10.0
-water-density: 1.0
+# Water and hull densities share a scale. Oak stays 0.6 of water so wood still
+# floats. Values are ~10× the old 1.0-water table so a 25 m² sail cannot
+# overpower the hull's weight (that table made a medium ship ~47 mass units).
+water-density: 10.0
 block-density: 0.5
 buoyancy:
   material-densities:
-    minecraft:oak_planks: 0.6
-  default-material-density: 1.0
+    minecraft:oak_planks: 6.0
+  default-material-density: 10.0
   player-mass: 80.0
   max-fall: 16.0
   mass-tolerance: 1.0e-6

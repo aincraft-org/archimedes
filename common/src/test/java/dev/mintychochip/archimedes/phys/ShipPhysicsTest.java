@@ -605,6 +605,93 @@ class ShipPhysicsTest {
   }
 
   @Test
+  void pluginScaleWeightExceedsRestSailForce() {
+    double oakDensity = 6.0;
+    double defaultDensity = 10.0;
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
+            SailShipTemplate.blocks(),
+            new ShipPose(0),
+            true);
+    ShipConfig config =
+        new ShipConfig(
+            2048,
+            8,
+            Set.of(),
+            Set.of(),
+            true,
+            1,
+            0.5,
+            16.0,
+            10.0,
+            10.0,
+            0.5,
+            0.9,
+            Map.of(OAK_PLANKS, oakDensity),
+            defaultDensity,
+            80.0,
+            16.0,
+            1e-6,
+            1e-3);
+    ShipPhysics physics =
+        new ShipPhysicsImpl(
+            new PhysicsEngine(),
+            new World() {
+              public Vector3d gravity() {
+                return new Vector3d(0, -config.gravity(), 0);
+              }
+
+              public FluidField fluidField() {
+                return new FluidField() {
+                  public boolean isFluid(Vector3dc p) {
+                    return false;
+                  }
+
+                  public double density(Vector3dc p) {
+                    return 0;
+                  }
+                };
+              }
+
+              public double timeStep() {
+                return 0.05;
+              }
+            },
+            config,
+            new BukkitLikeResolver(),
+            new ShipRuntime() {
+              public void spawn(Ship s) {}
+
+              public void move(Ship s, double oldY, double newY) {}
+
+              public void remove(Ship s) {}
+
+              public void removeAll(java.util.Collection<Ship> s) {}
+            },
+            s -> 0,
+            DensityField.uniform(1.2),
+            FlowField.uniform(new Vector3d(0, 0, 8)));
+    ShipInspection report = physics.inspect(ship);
+    ShipInspection.ForceLine gravity = null;
+    double sail = 0;
+    for (ShipInspection.ForceLine line : report.forces()) {
+      if ("Gravity".equals(line.name())) {
+        gravity = line;
+      }
+      if (line.name().startsWith("Sail")) {
+        sail += Math.sqrt(line.fx() * line.fx() + line.fy() * line.fy() + line.fz() * line.fz());
+      }
+    }
+    assertNotNull(gravity);
+    assertTrue(
+        Math.abs(gravity.fy()) > sail,
+        "weight " + Math.abs(gravity.fy()) + " should exceed sail " + sail);
+  }
+
+  @Test
   void tickStillMovesThroughVegetationInsteadOfStopping() {
     Ship ship =
         new Ship(
