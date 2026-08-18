@@ -2,7 +2,6 @@ package dev.mintychochip.archimedes.bukkit;
 
 import dev.mintychochip.archimedes.model.BlockPos;
 import dev.mintychochip.archimedes.model.Ship;
-import dev.mintychochip.archimedes.model.ShipTransform;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,14 +9,14 @@ import org.bukkit.util.BoundingBox;
 
 /**
  * Spatial grid of top-exposed hull block columns used to test whether an entity is on a ship. The
- * index stores surfaces at pose y = 0 so it can be reused for any vertical pose by supplying a
- * {@code poseY} offset.
+ * index stores surfaces at pose {@code (0,0,0)} so it can be reused for any pose by supplying
+ * {@code poseX}, {@code poseY}, and {@code poseZ} offsets.
  */
 final class TopSurfaceIndex {
   /** Grid keyed by packed integer block x/z. */
   private final Map<Long, TopSurface> grid;
 
-  /** Combined bounds of every top-surface column at pose y = 0. */
+  /** Combined bounds of every top-surface column at pose {@code (0,0,0)}. */
   private final BoundingBox bounds;
 
   /**
@@ -40,10 +39,10 @@ final class TopSurfaceIndex {
   private static final double CELL_EPSILON = 1e-9;
 
   /**
-   * Creates an index whose stored columns are expressed at pose {@code y = 0}.
+   * Creates an index whose stored columns are expressed at pose {@code (0,0,0)}.
    *
    * @param grid columns keyed by their integer x/z cell
-   * @param bounds aggregate bounds of those columns at pose {@code y = 0}
+   * @param bounds aggregate bounds of those columns at pose {@code (0,0,0)}
    */
   private TopSurfaceIndex(Map<Long, TopSurface> grid, BoundingBox bounds) {
     this.grid = grid;
@@ -52,7 +51,7 @@ final class TopSurfaceIndex {
 
   /**
    * Builds an index from the supplied top-exposed relative blocks and the ship's origin. Surfaces
-   * are stored at pose y = 0 and must be shifted by the current pose y when queried.
+   * are stored at pose {@code (0,0,0)} and must be shifted by the current pose when queried.
    *
    * @param topExposed top-exposed relative block positions
    * @param ship ship being moved
@@ -68,22 +67,23 @@ final class TopSurfaceIndex {
     double maxZ = Double.NEGATIVE_INFINITY;
 
     for (BlockPos relative : topExposed) {
-      ShipTransform.VisualPosition visual = ShipTransform.visual(ship, relative, 0.0);
-      double topY = visual.y() + 1.0;
+      double x = ship.origin().x() + relative.x();
+      double y = ship.origin().y() + relative.y();
+      double z = ship.origin().z() + relative.z();
+      double topY = y + 1.0;
       double lower = topY - LOWER_MARGIN;
       double upper = topY + UPPER_MARGIN;
 
-      TopSurface surface =
-          new TopSurface(visual.x(), lower, visual.z(), visual.x() + 1.0, upper, visual.z() + 1.0);
-      long key = pack((int) Math.floor(visual.x()), (int) Math.floor(visual.z()));
+      TopSurface surface = new TopSurface(x, lower, z, x + 1.0, upper, z + 1.0);
+      long key = pack((int) Math.floor(x), (int) Math.floor(z));
       grid.put(key, surface);
 
-      minX = Math.min(minX, visual.x());
+      minX = Math.min(minX, x);
       minY = Math.min(minY, lower);
-      minZ = Math.min(minZ, visual.z());
-      maxX = Math.max(maxX, visual.x() + 1.0);
+      minZ = Math.min(minZ, z);
+      maxX = Math.max(maxX, x + 1.0);
       maxY = Math.max(maxY, upper);
-      maxZ = Math.max(maxZ, visual.z() + 1.0);
+      maxZ = Math.max(maxZ, z + 1.0);
     }
 
     return new TopSurfaceIndex(grid, new BoundingBox(minX, minY, minZ, maxX, maxY, maxZ));
@@ -96,13 +96,25 @@ final class TopSurfaceIndex {
    * @return bounding box that spans every indexed column at the given pose
    */
   BoundingBox bounds(double poseY) {
+    return bounds(0.0, poseY, 0.0);
+  }
+
+  /**
+   * Returns the combined bounds of all indexed top-surface columns shifted by the supplied pose.
+   *
+   * @param poseX current ship pose x offset
+   * @param poseY current ship pose y offset
+   * @param poseZ current ship pose z offset
+   * @return bounding box that spans every indexed column at the given pose
+   */
+  BoundingBox bounds(double poseX, double poseY, double poseZ) {
     return new BoundingBox(
-        bounds.getMinX(),
+        bounds.getMinX() + poseX,
         bounds.getMinY() + poseY,
-        bounds.getMinZ(),
-        bounds.getMaxX(),
+        bounds.getMinZ() + poseZ,
+        bounds.getMaxX() + poseX,
         bounds.getMaxY() + poseY,
-        bounds.getMaxZ());
+        bounds.getMaxZ() + poseZ);
   }
 
   /**
@@ -114,15 +126,28 @@ final class TopSurfaceIndex {
    * @return true if the entity is on a top surface
    */
   boolean overlaps(BoundingBox entityBox, double poseY) {
-    int minX = (int) Math.floor(entityBox.getMinX());
-    int maxX = (int) Math.floor(entityBox.getMaxX() - CELL_EPSILON);
-    int minZ = (int) Math.floor(entityBox.getMinZ());
-    int maxZ = (int) Math.floor(entityBox.getMaxZ() - CELL_EPSILON);
+    return overlaps(entityBox, 0.0, poseY, 0.0);
+  }
+
+  /**
+   * Returns true when the entity box overlaps any indexed top-surface column at the supplied pose.
+   *
+   * @param entityBox entity bounding box
+   * @param poseX current ship pose x offset
+   * @param poseY current ship pose y offset
+   * @param poseZ current ship pose z offset
+   * @return true if the entity is on a top surface
+   */
+  boolean overlaps(BoundingBox entityBox, double poseX, double poseY, double poseZ) {
+    int minX = (int) Math.floor(entityBox.getMinX() - poseX);
+    int maxX = (int) Math.floor(entityBox.getMaxX() - poseX - CELL_EPSILON);
+    int minZ = (int) Math.floor(entityBox.getMinZ() - poseZ);
+    int maxZ = (int) Math.floor(entityBox.getMaxZ() - poseZ - CELL_EPSILON);
 
     for (int x = minX; x <= maxX; x++) {
       for (int z = minZ; z <= maxZ; z++) {
         TopSurface surface = grid.get(pack(x, z));
-        if (surface != null && overlapsYShifted(entityBox, surface, poseY)) {
+        if (surface != null && overlapsShifted(entityBox, surface, poseX, poseY, poseZ)) {
           return true;
         }
       }
@@ -130,14 +155,19 @@ final class TopSurfaceIndex {
     return false;
   }
 
-  private static boolean overlapsYShifted(BoundingBox entityBox, TopSurface surface, double poseY) {
+  private static boolean overlapsShifted(
+      BoundingBox entityBox, TopSurface surface, double poseX, double poseY, double poseZ) {
+    double minX = surface.box.getMinX() + poseX;
+    double maxX = surface.box.getMaxX() + poseX;
     double minY = surface.box.getMinY() + poseY;
     double maxY = surface.box.getMaxY() + poseY;
+    double minZ = surface.box.getMinZ() + poseZ;
+    double maxZ = surface.box.getMaxZ() + poseZ;
     double footY = entityBox.getMinY();
-    return entityBox.getMinX() < surface.box.getMaxX()
-        && entityBox.getMaxX() > surface.box.getMinX()
-        && entityBox.getMinZ() < surface.box.getMaxZ()
-        && entityBox.getMaxZ() > surface.box.getMinZ()
+    return entityBox.getMinX() < maxX
+        && entityBox.getMaxX() > minX
+        && entityBox.getMinZ() < maxZ
+        && entityBox.getMaxZ() > minZ
         && footY >= minY
         && footY <= maxY;
   }
@@ -148,7 +178,7 @@ final class TopSurfaceIndex {
 
   /** Describes a vertical column above a top-exposed block used to select riders. */
   private static final class TopSurface {
-    /** Column bounds above a top-exposed block at pose y = 0. */
+    /** Column bounds above a top-exposed block at pose {@code (0,0,0)}. */
     final BoundingBox box;
 
     TopSurface(double minX, double minY, double minZ, double maxX, double maxY, double maxZ) {

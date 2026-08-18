@@ -149,6 +149,22 @@ class TopSurfaceIndexTest {
   }
 
   @Test
+  void overlapShiftsWithPoseXZ() {
+    Ship ship =
+        new Ship(
+            UUID.randomUUID(),
+            OWNER,
+            new ShipOrigin(WORLD, 100, 200, 300),
+            List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
+
+    TopSurfaceIndex index = TopSurfaceIndex.build(List.of(new BlockPos(0, 0, 0)), ship);
+
+    BoundingBox player = new BoundingBox(103.25, 201.0, 308.25, 103.75, 202.8, 308.75);
+    assertTrue(index.overlaps(player, 3.0, 0.0, 8.0));
+    assertFalse(index.overlaps(player, 0.0, 0.0, 0.0));
+  }
+
+  @Test
   void overlapShiftsWithPoseY() {
     Ship ship =
         new Ship(

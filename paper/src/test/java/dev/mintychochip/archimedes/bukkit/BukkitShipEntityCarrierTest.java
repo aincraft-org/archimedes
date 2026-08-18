@@ -47,9 +47,9 @@ class BukkitShipEntityCarrierTest {
 
     Method carryEntity =
         BukkitShipEntityCarrier.class.getDeclaredMethod(
-            "carryEntity", Entity.class, double.class, String.class);
+            "carryEntity", Entity.class, double.class, double.class, double.class, String.class);
     carryEntity.setAccessible(true);
-    carryEntity.invoke(null, entity, 0.125, "ship-id");
+    carryEntity.invoke(null, entity, 0.0, 0.125, 0.0, "ship-id");
 
     Location moved = destination.get();
     assertNotNull(moved);
@@ -98,10 +98,10 @@ class BukkitShipEntityCarrierTest {
                 });
     Method carryEntity =
         BukkitShipEntityCarrier.class.getDeclaredMethod(
-            "carryEntity", Entity.class, double.class, String.class);
+            "carryEntity", Entity.class, double.class, double.class, double.class, String.class);
     carryEntity.setAccessible(true);
     try {
-      carryEntity.invoke(null, entity, 0.125, "ship-id");
+      carryEntity.invoke(null, entity, 0.0, 0.125, 0.0, "ship-id");
     } catch (java.lang.reflect.InvocationTargetException thrown) {
       Throwable cause = thrown.getCause();
       if (!(cause instanceof NullPointerException)) {
@@ -141,11 +141,76 @@ class BukkitShipEntityCarrierTest {
 
     Method carryEntity =
         BukkitShipEntityCarrier.class.getDeclaredMethod(
-            "carryEntity", Entity.class, double.class, String.class);
+            "carryEntity", Entity.class, double.class, double.class, double.class, String.class);
     carryEntity.setAccessible(true);
-    carryEntity.invoke(null, player, 0.125, "ship-id");
+    carryEntity.invoke(null, player, 0.0, 0.125, 0.0, "ship-id");
 
     assertNull(destination.get());
     assertEquals(new org.bukkit.util.Vector(0.2, 0.545, -0.1), velocity.get());
+  }
+
+  @Test
+  void carryAppliesHorizontalDeltaToPlayers() throws Exception {
+    org.bukkit.util.Vector currentVelocity = new org.bukkit.util.Vector(0.2, 0.0, -0.1);
+    AtomicReference<org.bukkit.util.Vector> velocity = new AtomicReference<>();
+    Player player =
+        (Player)
+            Proxy.newProxyInstance(
+                Player.class.getClassLoader(),
+                new Class<?>[] {Player.class},
+                (proxy, method, args) -> {
+                  if (method.getName().equals("getVelocity")) {
+                    return currentVelocity.clone();
+                  }
+                  if (method.getName().equals("setVelocity")) {
+                    velocity.set(((org.bukkit.util.Vector) args[0]).clone());
+                    return null;
+                  }
+                  if (method.getName().equals("teleport")) {
+                    throw new AssertionError("players must stay on velocity carry");
+                  }
+                  throw new AssertionError("Unexpected player method: " + method);
+                });
+
+    Method carryEntity =
+        BukkitShipEntityCarrier.class.getDeclaredMethod(
+            "carryEntity", Entity.class, double.class, double.class, double.class, String.class);
+    carryEntity.setAccessible(true);
+    carryEntity.invoke(null, player, 0.4, 0.0, 1.25, "ship-id");
+
+    assertEquals(new org.bukkit.util.Vector(0.6, 0.0, 1.15), velocity.get());
+  }
+
+  @Test
+  void carryTeleportsEntitiesHorizontally() throws Exception {
+    Location current = new Location(null, 12.5, 64.0, -3.25, 90.0f, 10.0f);
+    AtomicReference<Location> destination = new AtomicReference<>();
+    Entity entity =
+        (Entity)
+            Proxy.newProxyInstance(
+                Entity.class.getClassLoader(),
+                new Class<?>[] {Entity.class},
+                (proxy, method, args) -> {
+                  if (method.getName().equals("getLocation") && method.getParameterCount() == 0) {
+                    return current;
+                  }
+                  if (method.getName().equals("teleport")) {
+                    destination.set((Location) args[0]);
+                    return true;
+                  }
+                  throw new AssertionError("Unexpected entity method: " + method);
+                });
+
+    Method carryEntity =
+        BukkitShipEntityCarrier.class.getDeclaredMethod(
+            "carryEntity", Entity.class, double.class, double.class, double.class, String.class);
+    carryEntity.setAccessible(true);
+    carryEntity.invoke(null, entity, 0.4, 0.0, 1.25, "ship-id");
+
+    Location moved = destination.get();
+    assertNotNull(moved);
+    assertEquals(12.9, moved.getX(), 1e-9);
+    assertEquals(64.0, moved.getY(), 1e-9);
+    assertEquals(-2.0, moved.getZ(), 1e-9);
   }
 }

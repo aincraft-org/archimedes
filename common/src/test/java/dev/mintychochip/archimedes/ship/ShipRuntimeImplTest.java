@@ -153,6 +153,27 @@ class ShipRuntimeImplTest {
   }
 
   @Test
+  void failedMoveRestoresHorizontalPose() {
+    RecordingCollision collision = new RecordingCollision();
+    collision.moveFailure = true;
+    Ship ship = ship();
+    ship.setPose(new dev.mintychochip.archimedes.model.ShipPose(3, 7, 9));
+    ShipRuntime runtime = new ShipRuntimeImpl(new RecordingRenderer(), collision);
+
+    assertThrows(
+        ShipRuntimeException.class,
+        () ->
+            runtime.move(
+                ship,
+                new dev.mintychochip.archimedes.model.ShipPose(1, 4, 2),
+                new dev.mintychochip.archimedes.model.ShipPose(3, 7, 9)));
+
+    assertEquals(1.0, ship.pose().x());
+    assertEquals(4.0, ship.pose().y());
+    assertEquals(2.0, ship.pose().z());
+  }
+
+  @Test
   void downwardCollisionFailureDoesNotCarry() {
     RecordingRenderer renderer = new RecordingRenderer();
     RecordingCollision collision = new RecordingCollision();

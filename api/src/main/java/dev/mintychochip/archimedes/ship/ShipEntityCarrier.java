@@ -1,6 +1,7 @@
 package dev.mintychochip.archimedes.ship;
 
 import dev.mintychochip.archimedes.model.Ship;
+import dev.mintychochip.archimedes.model.ShipPose;
 
 /**
  * Carries non-ship entities that are standing on a ship so they move with it.
@@ -18,6 +19,16 @@ public interface ShipEntityCarrier {
   default void track(Ship ship, double poseY) {}
 
   /**
+   * Starts tracking a ship and seeds riders using the supplied committed pose.
+   *
+   * @param ship ship to track
+   * @param pose committed pose used for initial overlap checks
+   */
+  default void track(Ship ship, ShipPose pose) {
+    track(ship, pose.y());
+  }
+
+  /**
    * Stops tracking a ship and drops its rider state.
    *
    * @param ship ship to untrack
@@ -32,6 +43,16 @@ public interface ShipEntityCarrier {
    */
   default void updatePoseBasis(Ship ship, double poseY) {}
 
+  /**
+   * Updates the stored pose basis after a committed or rolled-back runtime move.
+   *
+   * @param ship ship whose basis is updated
+   * @param pose pose basis to store
+   */
+  default void updatePoseBasis(Ship ship, ShipPose pose) {
+    updatePoseBasis(ship, pose.y());
+  }
+
   /** Clears all tracked ships and riders. */
   default void clear() {}
 
@@ -43,4 +64,15 @@ public interface ShipEntityCarrier {
    * @param newY new pose
    */
   void carry(Ship ship, double oldY, double newY);
+
+  /**
+   * Carries eligible entities on the ship by the same pose delta.
+   *
+   * @param ship ship being moved
+   * @param from previous pose
+   * @param to new pose
+   */
+  default void carry(Ship ship, ShipPose from, ShipPose to) {
+    carry(ship, from.y(), to.y());
+  }
 }

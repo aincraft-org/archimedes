@@ -104,6 +104,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - [x] Default plugin gravity is `10` blocks/s² (same scale as the generic engine). `0.05`/`0.5` plus 0.9 damping made airborne sails glide.
 - [x] Plugin hull/water densities are ~10× the old `water=1` table (`water=10`, oak `6`, log `7`, wool `1`, default `10`) so weight exceeds rest sail force and a wooden deck can still float the cloth.
 - [x] `PhysicsEngine` renormalizes orientation after `integrate` so a slightly non-unit JOML quaternion cannot abort ship ticks.
+- [x] Standing riders are carried by the ship's XZ pose delta as well as Y.
 
 ### Current notes
 
@@ -134,7 +135,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - [ ] Stall, control surfaces, and atmosphere tables.
 - [ ] `LiftingSailForce` (angle-of-attack lift/drag) as a later catalog unit
 - [x] Attach structure sails on `ShipPhysics.tick` and integrate `ShipPose` x/z
-- [ ] Rider carry along XZ (vertical carry only today)
+- [x] Rider carry along XZ (same best-effort carrier as Y; players get velocity, others teleport)
 - [ ] Yaw / rotational ship pose
 
 ## Decisions log
@@ -175,6 +176,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 | 2026-08-17 | Blocked Y no longer rejects sail XZ | `g=10` made `floor(y)` drop into the seafloor; all-or-nothing path froze ships |
 | 2026-08-17 | Horizontal slides ignore keel solids; grass is passable | Overlapping sand/grass at the deck froze every move, including XZ |
 | 2026-08-17 | `PhysicsEngine` renormalizes after `integrate` | Live ticks threw `quaternion must be normalized` on plugin-scale small sails (JOML Taylor band) and aborted every ship |
+| 2026-08-17 | Rider carry applies the full pose delta | Sail XZ left standing players behind; carry used to no-op when `dy = 0` |
 
 ## Open questions
 

@@ -1,6 +1,7 @@
 package dev.mintychochip.archimedes.ship;
 
 import dev.mintychochip.archimedes.model.Ship;
+import dev.mintychochip.archimedes.model.ShipPose;
 
 /** No-op carrier used when entity carry is not configured. */
 public final class NoopShipEntityCarrier implements ShipEntityCarrier {
@@ -28,6 +29,12 @@ public final class NoopShipEntityCarrier implements ShipEntityCarrier {
   /** Ignores a request to carry entities between two ship heights. */
   @Override
   public void carry(Ship ship, double oldY, double newY) {
+    // nothing to carry
+  }
+
+  /** Ignores a request to carry entities between two ship poses. */
+  @Override
+  public void carry(Ship ship, ShipPose from, ShipPose to) {
     // nothing to carry
   }
 }

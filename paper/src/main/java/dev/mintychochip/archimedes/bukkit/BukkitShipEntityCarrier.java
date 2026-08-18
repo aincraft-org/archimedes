@@ -1,6 +1,7 @@
 package dev.mintychochip.archimedes.bukkit;
 
 import dev.mintychochip.archimedes.model.Ship;
+import dev.mintychochip.archimedes.model.ShipPose;
 import dev.mintychochip.archimedes.ship.ShipEntityCarrier;
 import io.papermc.paper.entity.TeleportFlag;
 import java.util.Set;
@@ -16,13 +17,13 @@ import org.bukkit.persistence.PersistentDataType;
 
 /**
  * Bukkit implementation of the ship entity carrier. Carries non-ship entities standing on the
- * exposed top hull blocks of a ship when the ship moves vertically, like a honey block.
+ * exposed top hull blocks of a ship when the ship moves, like standing on a vehicle.
  *
  * <p>Carry is best-effort: invalid, dead, or world-mismatched entities are skipped, and an entity
  * whose teleport returns false is ignored.
  *
- * <p>Riders are maintained by a {@link BukkitShipRiderTracker}, so a vertical move only teleports
- * the already-known on-board entities instead of scanning nearby entities on every move.
+ * <p>Riders are maintained by a {@link BukkitShipRiderTracker}, so a move only teleports the
+ * already-known on-board entities instead of scanning nearby entities on every move.
  */
 public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
   /** World the ship exists in. */
@@ -67,6 +68,11 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
     tracker.track(ship, poseY);
   }
 
+  @Override
+  public void track(Ship ship, ShipPose pose) {
+    tracker.track(ship, pose);
+  }
+
   /**
    * Stops tracking a ship and removes its rider associations.
    *
@@ -94,10 +100,15 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
     tracker.updatePoseBasis(ship, poseY);
   }
 
+  @Override
+  public void updatePoseBasis(Ship ship, ShipPose pose) {
+    tracker.updatePoseBasis(ship, pose);
+  }
+
   /**
-   * Carries currently tracked, valid, same-world, non-vehicle, non-ship entities by the ship's
-   * vertical movement. Player velocity is adjusted directly; other entities are teleported when
-   * possible. A zero movement delta performs no work.
+   * Carries currently tracked, valid, same-world, non-vehicle, non-ship entities by the ship's pose
+   * delta. Player velocity is adjusted directly; other entities are teleported when possible. A
+   * zero movement delta performs no work.
    *
    * @param ship the ship that moved
    * @param oldY the previous vertical pose
@@ -105,12 +116,30 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
    */
   @Override
   public void carry(Ship ship, double oldY, double newY) {
-    double delta = newY - oldY;
-    if (delta == 0.0) {
+    carry(
+        ship,
+        new ShipPose(ship.pose().x(), oldY, ship.pose().z()),
+        new ShipPose(ship.pose().x(), newY, ship.pose().z()));
+  }
+
+  /**
+   * Carries currently tracked riders by the full pose delta so a sail step that only changes XZ
+   * still keeps players and mobs on the deck.
+   *
+   * @param ship the ship that moved
+   * @param from previous pose
+   * @param to new pose
+   */
+  @Override
+  public void carry(Ship ship, ShipPose from, ShipPose to) {
+    double dx = to.x() - from.x();
+    double dy = to.y() - from.y();
+    double dz = to.z() - from.z();
+    if (dx == 0.0 && dy == 0.0 && dz == 0.0) {
       return;
     }
 
-    tracker.updatePoseBasis(ship, oldY);
+    tracker.updatePoseBasis(ship, from);
     String shipId = ship.id().toString();
     Set<UUID> riders = tracker.riders(ship);
     if (riders.isEmpty()) {
@@ -131,7 +160,7 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
       if (isShipOwned(entity, shipId)) {
         continue;
       }
-      carryEntity(entity, delta, shipId);
+      carryEntity(entity, dx, dy, dz, shipId);
     }
   }
 
@@ -146,18 +175,18 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
     return shipId.equals(render);
   }
 
-  private static void carryEntity(Entity entity, double delta, String shipId) {
+  private static void carryEntity(Entity entity, double dx, double dy, double dz, String shipId) {
     if (entity instanceof Player) {
-      entity.setVelocity(entity.getVelocity().add(new org.bukkit.util.Vector(0, delta, 0)));
+      entity.setVelocity(entity.getVelocity().add(new org.bukkit.util.Vector(dx, dy, dz)));
       return;
     }
     Location current = entity.getLocation();
     Location dest =
         new Location(
             current.getWorld(),
-            current.getX(),
-            current.getY() + delta,
-            current.getZ(),
+            current.getX() + dx,
+            current.getY() + dy,
+            current.getZ() + dz,
             current.getYaw(),
             current.getPitch());
     try {

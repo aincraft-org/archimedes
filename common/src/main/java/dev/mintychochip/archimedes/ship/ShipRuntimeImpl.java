@@ -2,6 +2,7 @@ package dev.mintychochip.archimedes.ship;
 
 import dev.mintychochip.archimedes.collision.CollisionVolumeManager;
 import dev.mintychochip.archimedes.model.Ship;
+import dev.mintychochip.archimedes.model.ShipPose;
 import java.util.Collection;
 
 /** Transactional composition of renderer and collision runtime. */
@@ -51,7 +52,7 @@ public final class ShipRuntimeImpl implements ShipRuntime {
       collisions.spawn(ship);
       rendererStarted = true;
       renderer.render(ship, ignored -> {});
-      carrier.track(ship, ship.pose().y());
+      carrier.track(ship, ship.pose());
     } catch (ShipRuntimeException failure) {
       if (rendererStarted) {
         try {
@@ -83,46 +84,61 @@ public final class ShipRuntimeImpl implements ShipRuntime {
    */
   @Override
   public void move(Ship ship, double oldY, double newY) {
-    boolean rising = newY > oldY;
+    move(
+        ship,
+        new ShipPose(ship.pose().x(), oldY, ship.pose().z()),
+        new ShipPose(ship.pose().x(), newY, ship.pose().z()));
+  }
+
+  /**
+   * Moves all runtime components from one pose to another.
+   *
+   * @param ship ship to move
+   * @param from previous pose
+   * @param to new pose
+   */
+  @Override
+  public void move(Ship ship, ShipPose from, ShipPose to) {
+    boolean rising = to.y() > from.y();
     boolean rendererStarted = false;
     boolean carrierStarted = false;
     boolean collisionsStarted = false;
     try {
       rendererStarted = true;
-      renderer.reposition(ship, oldY, newY);
+      renderer.reposition(ship, from.y(), to.y());
       if (rising) {
         carrierStarted = true;
-        carrier.carry(ship, oldY, newY);
+        carrier.carry(ship, from, to);
       }
       collisionsStarted = true;
       collisions.move(ship);
       if (!rising) {
         carrierStarted = true;
-        carrier.carry(ship, oldY, newY);
+        carrier.carry(ship, from, to);
       }
-      carrier.updatePoseBasis(ship, newY);
+      carrier.updatePoseBasis(ship, to);
     } catch (ShipRuntimeException failure) {
       if (collisionsStarted) {
         try {
-          collisions.rollback(ship, oldY);
+          collisions.rollback(ship, from.y());
         } catch (ShipRuntimeException cleanup) {
           failure.addSuppressed(cleanup);
         }
       }
-      ship.setPose(new dev.mintychochip.archimedes.model.ShipPose(oldY));
+      ship.setPose(from);
       if (rising && carrierStarted) {
         try {
-          carrier.carry(ship, newY, oldY);
+          carrier.carry(ship, to, from);
         } catch (ShipRuntimeException cleanup) {
           failure.addSuppressed(cleanup);
         }
       }
       if (carrierStarted) {
-        carrier.updatePoseBasis(ship, oldY);
+        carrier.updatePoseBasis(ship, from);
       }
       if (rendererStarted) {
         try {
-          renderer.reposition(ship, newY, oldY);
+          renderer.reposition(ship, to.y(), from.y());
         } catch (ShipRuntimeException cleanup) {
           failure.addSuppressed(cleanup);
         }

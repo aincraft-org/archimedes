@@ -552,7 +552,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
     }
     try {
       ship.setPose(target);
-      runtime.move(ship, oldPose.y(), target.y());
+      runtime.move(ship, oldPose, target);
       return true;
     } catch (RuntimeException failure) {
       ship.setPose(oldPose);
