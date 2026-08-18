@@ -54,7 +54,9 @@ class BukkitPhysicsWorldTest {
                 World.class.getClassLoader(),
                 new Class<?>[] {World.class},
                 (proxy, method, args) -> {
-                  if ("isChunkLoaded".equals(method.getName()) && args != null && args.length == 2) {
+                  if ("isChunkLoaded".equals(method.getName())
+                      && args != null
+                      && args.length == 2) {
                     return (int) args[0] == 1 && (int) args[1] == 4;
                   }
                   return defaultValue(method.getReturnType());
@@ -122,8 +124,7 @@ class BukkitPhysicsWorldTest {
   }
 
   private static ShipConfig config() {
-    return new ShipConfig(
-        64, 5, Set.of(), Set.of(), true, 1, 0.5, 16.0, 0.05, 1.0, 0.5, 0.9);
+    return new ShipConfig(64, 5, Set.of(), Set.of(), true, 1, 0.5, 16.0, 0.05, 1.0, 0.5, 0.9);
   }
 
   private static Object defaultValue(Class<?> type) {

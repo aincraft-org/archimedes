@@ -36,7 +36,8 @@ class VegetationDragForceTest {
     BodyImpl body =
         new BodyImpl(new Transform(new Vector3d(), new Quaterniond()), 1, List.of(), List.of());
     body.setLinearVelocity(new Vector3d(0, 0, 4));
-    assertEquals(0.0, new VegetationDragForce(2.0).apply(body, vegetated(0.0)).force().length(), 0.0);
+    assertEquals(
+        0.0, new VegetationDragForce(2.0).apply(body, vegetated(0.0)).force().length(), 0.0);
   }
 
   private static World vegetated(double occupancy) {

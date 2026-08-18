@@ -3,7 +3,6 @@ package dev.mintychochip.phys;
 import java.util.List;
 import java.util.Objects;
 import org.joml.Vector3d;
-import org.joml.Vector3dc;
 
 /**
  * Quadratic drag scaled by passable vegetation occupancy: {@code F = −c · σ · |v| v}.
@@ -56,9 +55,7 @@ public final class VegetationDragForce implements Force {
     double sum = 0;
     Vector3d center = new Vector3d();
     for (Collider collider : colliders) {
-      body.transform()
-          .position()
-          .add(collider.localTransform().position(), center);
+      body.transform().position().add(collider.localTransform().position(), center);
       sum += world.vegetation(center);
     }
     return clamp(sum / colliders.size());

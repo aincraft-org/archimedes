@@ -586,8 +586,7 @@ class ShipRendererTest {
     ship.setPose(new ShipPose(3.0));
     renderer.reposition(ship, 0.0, 3.0);
 
-    ShipTransform.VisualPosition hull =
-        ShipTransform.visual(ship, new BlockPos(0, 0, 0));
+    ShipTransform.VisualPosition hull = ShipTransform.visual(ship, new BlockPos(0, 0, 0));
     assertEquals(hull.x(), surface.fakes.get(0).location.getX(), 0.001);
     assertEquals(hull.y(), surface.fakes.get(0).location.getY(), 0.001);
     assertEquals(hull.z(), surface.fakes.get(0).location.getZ(), 0.001);

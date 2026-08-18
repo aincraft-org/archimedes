@@ -17,13 +17,13 @@ import java.util.Set;
  * Turns a 3D region of cloth cells into a series of thin BlockDisplay plates.
  *
  * <p>Connected cells form one region. Each region is fitted to a sheet along its thinnest axis and
- * tessellated into one plate per in-plane cell. Geometry is computed from the region; no item
- * model or resource pack is involved.
+ * tessellated into one plate per in-plane cell. Geometry is computed from the region; no item model
+ * or resource pack is involved.
  */
 public final class SailMesh {
   /**
-   * Plate thickness in blocks: one Minecraft pixel. The fitted sheet matches the region AABB on
-   * the two in-plane axes and is this thick on the remaining axis.
+   * Plate thickness in blocks: one Minecraft pixel. The fitted sheet matches the region AABB on the
+   * two in-plane axes and is this thick on the remaining axis.
    */
   public static final double PLATE_THICKNESS = 1.0 / 16.0;
 
@@ -64,7 +64,8 @@ public final class SailMesh {
     List<SailCell> cells = new ArrayList<>();
     for (ShipBlock block : blocks) {
       if (isCloth(block.blockData())) {
-        cells.add(new SailCell(block.pos().x(), block.pos().y(), block.pos().z(), block.blockData()));
+        cells.add(
+            new SailCell(block.pos().x(), block.pos().y(), block.pos().z(), block.blockData()));
       }
     }
     return cells;
@@ -144,8 +145,7 @@ public final class SailMesh {
       maxZ = Math.max(maxZ, cell.z());
     }
     int axis =
-        thinAxis(
-            maxX - minX + 1, maxY - minY + 1, maxZ - minZ + 1, region.get(0).appearance());
+        thinAxis(maxX - minX + 1, maxY - minY + 1, maxZ - minZ + 1, region.get(0).appearance());
     double mid;
     if (axis == 0) {
       mid = (minX + maxX + 1) * 0.5;

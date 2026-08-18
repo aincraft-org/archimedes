@@ -22,7 +22,8 @@ class SailMeshTest {
 
     assertEquals(1, pieces.size());
     SailPiece piece = pieces.get(0);
-    assertTrue(isTransformedPlate(piece), "single cell must still be a thin plate, not a unit cube");
+    assertTrue(
+        isTransformedPlate(piece), "single cell must still be a thin plate, not a unit cube");
     assertEquals(WHITE_WOOL, piece.appearance());
     assertSheetCoversRegion(cells, pieces);
   }
