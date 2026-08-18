@@ -525,6 +525,9 @@ public final class ShipPhysicsImpl implements ShipPhysics {
   /**
    * Commits a path-checked pose and rolls back pose and velocity on runtime failure.
    *
+   * <p>When the full pose is blocked but the same XZ with the old Y is clear, the vertical part is
+   * dropped so a seafloor or ground contact cannot cancel sail drive.
+   *
    * @param ship ship being moved
    * @param oldPose previous pose
    * @param newPose target pose
@@ -532,10 +535,24 @@ public final class ShipPhysicsImpl implements ShipPhysics {
    */
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   private boolean moveDirect(Ship ship, ShipPose oldPose, ShipPose newPose) {
-    if (!WaterlineResolver.isPathClear(ship, world, newPose, config)) return false;
+    ShipPose target = newPose;
+    if (!WaterlineResolver.isPathClear(ship, world, target, config)) {
+      target = new ShipPose(newPose.x(), oldPose.y(), newPose.z());
+      if (Math.abs(target.x() - oldPose.x()) < config.draftTolerance()
+          && Math.abs(target.z() - oldPose.z()) < config.draftTolerance()) {
+        return false;
+      }
+      if (!WaterlineResolver.isPathClear(ship, world, target, config)) {
+        return false;
+      }
+      Vector3d velocity = velocities.get(ship.id());
+      if (velocity != null) {
+        velocity.y = 0;
+      }
+    }
     try {
-      ship.setPose(newPose);
-      runtime.move(ship, oldPose.y(), newPose.y());
+      ship.setPose(target);
+      runtime.move(ship, oldPose.y(), target.y());
       return true;
     } catch (RuntimeException failure) {
       ship.setPose(oldPose);
