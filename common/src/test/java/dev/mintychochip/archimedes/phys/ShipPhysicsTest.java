@@ -502,6 +502,8 @@ class ShipPhysicsTest {
     }
     assertTrue(byName.containsKey("Gravity"));
     assertTrue(byName.get("Gravity").fy() < 0);
+    assertTrue(byName.containsKey("WaterDrag"));
+    assertTrue(byName.containsKey("Drag"));
     assertTrue(byName.containsKey("Sail"));
     assertTrue(byName.get("Sail").fz() > 0);
     assertTrue(report.netFz() > 0);
@@ -598,6 +600,111 @@ class ShipPhysicsTest {
     assertTrue(WaterlineResolver.isPathClear(ship, kelp, new ShipPose(0, 0, 2), config));
     assertTrue(physics.tick(ship));
     assertTrue(ship.pose().z() > 0);
+  }
+
+  @Test
+  void waterDragSlowsASailMoreThanAir() {
+    Ship dryShip = clothShip();
+    Ship wetShip = clothShip();
+    World dry = mediumWorld(false, 0);
+    World wet = mediumWorld(true, 1.0);
+    ShipPhysics dryPhysics = sailPhysics(dry);
+    ShipPhysics wetPhysics = sailPhysics(wet);
+    for (int i = 0; i < 8; i++) {
+      dryPhysics.tick(dryShip);
+      wetPhysics.tick(wetShip);
+    }
+    assertTrue(dryShip.pose().z() > 0);
+    assertTrue(dryShip.pose().z() > wetShip.pose().z() + 0.01);
+    java.util.Map<String, ShipInspection.ForceLine> dryForces = forcesByName(dryPhysics, dryShip);
+    java.util.Map<String, ShipInspection.ForceLine> wetForces = forcesByName(wetPhysics, wetShip);
+    assertEquals(0.0, dryForces.get("WaterDrag").fz(), 1e-9);
+    assertTrue(wetForces.get("WaterDrag").fz() < 0);
+  }
+
+  private static Ship clothShip() {
+    return new Ship(
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
+        List.of(new ShipBlock(new BlockPos(0, 1, 0), WHITE_WOOL)),
+        new ShipPose(0),
+        true);
+  }
+
+  private static World mediumWorld(boolean liquid, double density) {
+    return new World() {
+      public Vector3d gravity() {
+        return new Vector3d();
+      }
+
+      public FluidField fluidField() {
+        return new FluidField() {
+          public boolean isFluid(Vector3dc p) {
+            return liquid;
+          }
+
+          public double density(Vector3dc p) {
+            return liquid ? density : 0;
+          }
+        };
+      }
+
+      public double timeStep() {
+        return 0.05;
+      }
+    };
+  }
+
+  private static ShipPhysics sailPhysics(World world) {
+    ShipConfig config =
+        new ShipConfig(
+            2048,
+            8,
+            Set.of(),
+            Set.of(),
+            true,
+            1,
+            0.5,
+            16.0,
+            0.05,
+            1.0,
+            0.5,
+            0.9,
+            Map.of(WHITE_WOOL, 1.0),
+            1.0,
+            80.0,
+            16.0,
+            1e-6,
+            1e-3);
+    ShipRuntime runtime =
+        new ShipRuntime() {
+          public void spawn(Ship s) {}
+
+          public void move(Ship s, double oldY, double newY) {}
+
+          public void remove(Ship s) {}
+
+          public void removeAll(java.util.Collection<Ship> s) {}
+        };
+    return new ShipPhysicsImpl(
+        new PhysicsEngine(),
+        world,
+        config,
+        new BukkitLikeResolver(),
+        runtime,
+        s -> 0,
+        DensityField.uniform(1.2),
+        FlowField.uniform(new Vector3d(0, 0, 10)));
+  }
+
+  private static java.util.Map<String, ShipInspection.ForceLine> forcesByName(
+      ShipPhysics physics, Ship ship) {
+    java.util.Map<String, ShipInspection.ForceLine> byName = new java.util.HashMap<>();
+    for (ShipInspection.ForceLine line : physics.inspect(ship).forces()) {
+      byName.put(line.name(), line);
+    }
+    return byName;
   }
 
   static final class BukkitLikeResolver implements MaterialKeyResolver {

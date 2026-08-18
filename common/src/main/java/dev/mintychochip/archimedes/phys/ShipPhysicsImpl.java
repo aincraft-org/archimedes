@@ -14,8 +14,8 @@ import dev.mintychochip.phys.GravityForce;
 import dev.mintychochip.phys.Physics;
 import dev.mintychochip.phys.PressureSailForce;
 import dev.mintychochip.phys.QuadraticDragForce;
-import dev.mintychochip.phys.VegetationDragForce;
 import dev.mintychochip.phys.Transform;
+import dev.mintychochip.phys.VegetationDragForce;
 import dev.mintychochip.phys.World;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -272,8 +272,8 @@ public final class ShipPhysicsImpl implements ShipPhysics {
     if (force instanceof PressureSailForce) {
       return "Sail";
     }
-    if (force instanceof QuadraticDragForce) {
-      return "Drag";
+    if (force instanceof QuadraticDragForce drag) {
+      return drag.densityScaled() ? "WaterDrag" : "Drag";
     }
     if (force instanceof VegetationDragForce) {
       return "Vegetation";
@@ -313,6 +313,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
     forces.add(new GravityForce());
     forces.add(new ShipBuoyancyForce());
     forces.add(new VegetationDragForce(0.8));
+    forces.add(new QuadraticDragForce(0.8, DensityField.liquid(world.fluidField())));
     if (withSails) {
       forces.add(new QuadraticDragForce(0.05));
       forces.addAll(ShipSails.forces(ship, resolver, clothKeys(ship), air, wind));
@@ -382,8 +383,9 @@ public final class ShipPhysicsImpl implements ShipPhysics {
     double rawY = body.transform().position().y() - ship.origin().y();
     double low = oldY - config.maxFall();
     double high = oldY + config.maxRise();
-    double clampedY = Math.min(high, Math.max(low, rawY));
-    if (clampedY != rawY) {
+    boolean clamped = rawY < low || rawY > high;
+    double clampedY = clamped ? Math.min(high, Math.max(low, rawY)) : rawY;
+    if (clamped) {
       Vector3d velocity = new Vector3d(body.linearVelocity());
       velocity.y = 0;
       body.setLinearVelocity(velocity);
