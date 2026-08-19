@@ -106,6 +106,8 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - [x] `PhysicsEngine` renormalizes orientation after `integrate` so a slightly non-unit JOML quaternion cannot abort ship ticks.
 - [x] Standing riders are teleported by the ship's pose delta. A normal jump stays on the deck; the solid hull follows the fractional pose.
 - [x] Wet-cell fraction drives displacement, so a large deck sits in the water and a boarded player deepens draft.
+- [x] `MediumThrustForce` samples `DensityField` at a body-local point and produces `r × F` torque.
+- [x] `QuadraticDragForce` optional `DensityField` overload; one-arg lumped law unchanged.
 
 ### Current notes
 
@@ -120,7 +122,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 
 ## Next
 
-- [ ] `MediumThrustForce`: density-scaled actuator at a body-local point with `r × F` torque
+- [x] `MediumThrustForce`: density-scaled actuator at a body-local point with `r × F` torque
 - [x] `QuadraticDragForce(c, DensityField)`: `−c · ρ · |v| v`; one-arg constructor stays lumped
 - [x] Water drag on ships via density-scaled `QuadraticDragForce` (air keeps a small lumped drag).
 - [ ] Horizontal movement and steering for ships beyond sail-driven XZ.
