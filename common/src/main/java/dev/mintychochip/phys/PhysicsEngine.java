@@ -9,10 +9,11 @@ import org.joml.Vector3d;
  * Stateless semi-implicit Euler integrator for active rigid bodies.
  *
  * <p>Each step sums the body's explicit forces and torques, updates linear and angular velocity,
- * then advances position and orientation by the world's timestep. The integrated orientation is
- * renormalized before it is stored; JOML's first-order {@code integrate} can leave {@code |q|}
- * outside {@link Quaternions#requireNormalized}'s {@code 1e-9} band. Gravity is not implicit;
- * callers must attach a gravity force when they want it.
+ * then advances position and orientation by the world's timestep. Angular acceleration uses Euler's
+ * equation {@code I ω̇ = τ − ω × (Iω)}. The integrated orientation is renormalized before it is
+ * stored; JOML's first-order {@code integrate} can leave {@code |q|} outside {@link
+ * Quaternions#requireNormalized}'s {@code 1e-9} band. Gravity is not implicit; callers must attach
+ * a gravity force when they want it.
  */
 public final class PhysicsEngine implements Physics {
   /**
@@ -42,8 +43,11 @@ public final class PhysicsEngine implements Physics {
       Vector3d newV = v.add(acc.mul(dt, new Vector3d()), new Vector3d());
       body.setLinearVelocity(newV);
 
-      Vector3d angularAcc = body.inverseInertia().transform(totalTorque, new Vector3d());
       Vector3d omega = new Vector3d(body.angularVelocity());
+      Vector3d iOmega = body.inertia().transform(omega, new Vector3d());
+      Vector3d gyro = omega.cross(iOmega, new Vector3d());
+      Vector3d netTorque = totalTorque.sub(gyro, new Vector3d());
+      Vector3d angularAcc = body.inverseInertia().transform(netTorque, new Vector3d());
       Vector3d newOmega = omega.add(angularAcc.mul(dt, new Vector3d()), new Vector3d());
       body.setAngularVelocity(newOmega);
 
