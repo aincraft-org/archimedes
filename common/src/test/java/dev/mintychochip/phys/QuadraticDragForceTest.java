@@ -50,4 +50,68 @@ class QuadraticDragForceTest {
     assertTrue(water.densityScaled());
     assertFalse(new QuadraticDragForce(0.5).densityScaled());
   }
+
+  @Test
+  void densityDragAtRestIsZero() {
+    BodyImpl body =
+        new BodyImpl(new Transform(new Vector3d(), new Quaterniond()), 1, List.of(), List.of());
+    World world = PhysFixtures.world(0.1, new Vector3d(0, -10, 0), PhysFixtures.vacuum());
+
+    Force.Result result = new QuadraticDragForce(2, DensityField.uniform(1000)).apply(body, world);
+
+    assertEquals(0.0, result.force().length(), 0.0);
+    assertEquals(0.0, result.torque().length(), 0.0);
+  }
+
+  @Test
+  void densityDragScalesLumpedLawBySampledDensity() {
+    BodyImpl body =
+        new BodyImpl(new Transform(new Vector3d(), new Quaterniond()), 1, List.of(), List.of());
+    body.setLinearVelocity(new Vector3d(3, 0, 0));
+    World world = PhysFixtures.world(0.1, new Vector3d(0, -10, 0), PhysFixtures.vacuum());
+
+    Force.Result water = new QuadraticDragForce(2, DensityField.uniform(1000)).apply(body, world);
+    Force.Result air = new QuadraticDragForce(2, DensityField.uniform(1.2)).apply(body, world);
+
+    assertEquals(-18000.0, water.force().x(), 1e-6);
+    assertEquals(-21.6, air.force().x(), 1e-9);
+    assertEquals(1000.0 / 1.2, water.force().x() / air.force().x(), 1e-9);
+    assertEquals(0.0, water.torque().length(), 0.0);
+  }
+
+  @Test
+  void densityDragUsesMeanColliderDensity() {
+    FluidField water = PhysFixtures.liquidBelow(0, 1000);
+    Collider hull = PhysFixtures.box(new Vector3d(), new Vector3d(0.5, 0.5, 0.5));
+    BodyImpl body =
+        new BodyImpl(new Transform(new Vector3d(), new Quaterniond()), 1, List.of(hull), List.of());
+    body.setLinearVelocity(new Vector3d(2, 0, 0));
+    World world = PhysFixtures.world(0.1, new Vector3d(0, -10, 0), water);
+
+    Force.Result result = new QuadraticDragForce(1, DensityField.liquid(water)).apply(body, world);
+
+    // Half-submerged unit cube: mean ρ ≈ 500; F = −1 * 500 * 2² = −2000
+    assertEquals(-2000.0, result.force().x(), 1.0);
+  }
+
+  @Test
+  void denserMediumBleedsSpeedFasterOnStep() {
+    QuadraticDragForce waterDrag = new QuadraticDragForce(0.001, DensityField.uniform(1000));
+    QuadraticDragForce airDrag = new QuadraticDragForce(0.001, DensityField.uniform(1.2));
+    BodyImpl water =
+        new BodyImpl(
+            new Transform(new Vector3d(), new Quaterniond()), 1, List.of(), List.of(waterDrag));
+    BodyImpl air =
+        new BodyImpl(
+            new Transform(new Vector3d(), new Quaterniond()), 1, List.of(), List.of(airDrag));
+    water.setLinearVelocity(new Vector3d(10, 0, 0));
+    air.setLinearVelocity(new Vector3d(10, 0, 0));
+    World world = PhysFixtures.world(0.05, new Vector3d(0, -10, 0), PhysFixtures.vacuum());
+
+    new PhysicsEngine().step(world, List.of(water, air));
+
+    assertTrue(water.linearVelocity().x() < air.linearVelocity().x());
+    assertTrue(air.linearVelocity().x() < 10);
+    assertTrue(water.linearVelocity().x() > 0);
+  }
 }
