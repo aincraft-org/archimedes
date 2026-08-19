@@ -16,10 +16,15 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.BlockDisplay;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.util.Transformation;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 /**
  * Bukkit-backed renderer adapter: creates a non-persistent block display per hull block carrying
@@ -45,6 +50,9 @@ public final class BukkitShipRenderer implements ShipRendererLike {
   /** Tag key carrying each sail plate's tessellation index. */
   private final NamespacedKey sailKey;
 
+  /** Torn cloth ragdoll displays keyed by debris id. */
+  private final Map<UUID, Ragdoll> ragdolls = new HashMap<>();
+
   /**
    * Creates the renderer for a surface and namespace key.
    *
@@ -57,6 +65,14 @@ public final class BukkitShipRenderer implements ShipRendererLike {
     this.blockKey = new NamespacedKey(shipKey.getNamespace(), shipKey.getKey() + "-block");
     this.sailKey = new NamespacedKey(shipKey.getNamespace(), shipKey.getKey() + "-sail");
   }
+
+  /**
+   * A spawned cloth ragdoll display.
+   *
+   * @param shipId parent vehicle
+   * @param display block display
+   */
+  private record Ragdoll(UUID shipId, BlockDisplay display) {}
 
   /**
    * Renders the ship as tagged non-persistent block displays. If rendering or registration fails,
@@ -100,7 +116,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
               });
       displays.add(display);
     }
-    List<SailPiece> pieces = SailMesh.tessellate(SailMesh.cellsOf(ship.blocks()));
+    List<SailPiece> pieces = SailMesh.tessellate(SailMesh.cellsOf(ship.intactBlocks()));
     for (int i = 0; i < pieces.size(); i++) {
       displays.add(spawnSail(ship, pieces.get(i), i));
     }
@@ -141,6 +157,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
   public void removeRuntime(Vehicle ship) {
     try {
       surface.removeTagged(shipKey, ship.id().toString());
+      ragdolls.entrySet().removeIf(entry -> entry.getValue().shipId().equals(ship.id()));
     } catch (RuntimeException failure) {
       if (failure instanceof ShipRuntimeException) {
         throw (ShipRuntimeException) failure;
@@ -164,6 +181,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
       }
       throw new ShipRuntimeException("Renderer tagged removal failed", failure);
     }
+    ragdolls.clear();
   }
 
   /**
@@ -184,7 +202,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
         surface.teleport(entry.getKey(), location(ship, entry.getValue()));
       }
       Map<String, BlockDisplay> sails = pairSails(ship);
-      List<SailPiece> pieces = SailMesh.tessellate(SailMesh.cellsOf(ship.blocks()));
+      List<SailPiece> pieces = SailMesh.tessellate(SailMesh.cellsOf(ship.intactBlocks()));
       for (int i = 0; i < pieces.size(); i++) {
         BlockDisplay display = sails.get(Integer.toString(i));
         if (display != null) {
@@ -237,5 +255,52 @@ public final class BukkitShipRenderer implements ShipRendererLike {
 
   private static String key(ShipBlock block) {
     return block.pos().x() + "," + block.pos().y() + "," + block.pos().z();
+  }
+
+  @Override
+  public void spawnClothRagdoll(
+      Vehicle ship, UUID debrisId, String appearance, double x, double y, double z) {
+    Location location =
+        surface.location(
+            ship.origin(), x - ship.origin().x(), y - ship.origin().y(), z - ship.origin().z());
+    BlockDisplay display =
+        surface.spawnBlockDisplay(
+            location,
+            d -> {
+              d.setBlock(surface.blockData(appearance));
+              d.setPersistent(false);
+              d.setTeleportDuration(ShipRenderer.TELEPORT_DURATION_TICKS);
+              d.getPersistentDataContainer()
+                  .set(shipKey, PersistentDataType.STRING, ship.id().toString());
+            });
+    ragdolls.put(debrisId, new Ragdoll(ship.id(), display));
+    for (BlockDisplay sail : pairSails(ship).values()) {
+      sail.remove();
+    }
+    List<SailPiece> pieces = SailMesh.tessellate(SailMesh.cellsOf(ship.intactBlocks()));
+    for (int i = 0; i < pieces.size(); i++) {
+      spawnSail(ship, pieces.get(i), i);
+    }
+  }
+
+  @Override
+  public void moveClothRagdoll(
+      UUID debrisId, double x, double y, double z, double qx, double qy, double qz, double qw) {
+    Ragdoll ragdoll = ragdolls.get(debrisId);
+    if (ragdoll == null || ragdoll.display().isDead()) {
+      return;
+    }
+    BlockDisplay display = ragdoll.display();
+    Location location = display.getLocation();
+    location.setX(x);
+    location.setY(y);
+    location.setZ(z);
+    surface.teleport(display, location);
+    display.setTransformation(
+        new Transformation(
+            new Vector3f(),
+            new Quaternionf((float) qx, (float) qy, (float) qz, (float) qw),
+            new Vector3f(1, 1, 1),
+            new Quaternionf()));
   }
 }

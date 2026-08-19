@@ -52,7 +52,7 @@ public final class ShipRenderer {
       display.setPersistent(false);
       displays.add(display);
     }
-    for (SailPiece piece : SailMesh.tessellate(SailMesh.cellsOf(ship.blocks()))) {
+    for (SailPiece piece : SailMesh.tessellate(SailMesh.cellsOf(ship.intactBlocks()))) {
       BlockData data = surface.blockData(piece.appearance());
       BlockDisplay display =
           surface.spawnBlockDisplay(

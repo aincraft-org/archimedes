@@ -1,5 +1,7 @@
 package dev.mintychochip.archimedes.bukkit;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -11,13 +13,17 @@ import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.render.RenderSurface;
 import dev.mintychochip.archimedes.ship.ShipRuntimeException;
 import java.lang.reflect.Proxy;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.BlockDisplay;
+import org.bukkit.util.Transformation;
 import org.junit.jupiter.api.Test;
 
 class BukkitShipRendererTest {
@@ -77,6 +83,22 @@ class BukkitShipRendererTest {
 
     assertSame(failure, thrown.getCause());
     assertTrue(thrown.getMessage().contains(ship.id().toString()));
+  }
+
+  @Test
+  void clothRagdollIsABlockDisplayThatReceivesOrientation() {
+    RecordingSurface surface = new RecordingSurface();
+    BukkitShipRenderer renderer =
+        new BukkitShipRenderer(surface, new NamespacedKey(NAMESPACE, KEY));
+    Vehicle ship = ship();
+    UUID debris = UUID.randomUUID();
+    renderer.spawnClothRagdoll(ship, debris, "minecraft:white_wool", 1, 2, 3);
+    assertEquals(1, surface.spawned.size());
+    renderer.moveClothRagdoll(debris, 4, 5, 6, 0, 0, 0, 1);
+    assertEquals(4.0, surface.fakes.get(0).location.getX(), 1e-6);
+    assertEquals(5.0, surface.fakes.get(0).location.getY(), 1e-6);
+    assertEquals(6.0, surface.fakes.get(0).location.getZ(), 1e-6);
+    assertNotNull(surface.fakes.get(0).transformation);
   }
 
   @Test
@@ -209,6 +231,116 @@ class BukkitShipRendererTest {
     if (type == double.class) return 0.0;
     if (type == float.class) return 0.0f;
     return null;
+  }
+
+  private static final class RecordingSurface implements RenderSurface {
+    private final List<BlockDisplay> spawned = new ArrayList<>();
+    private final List<FakeRagdoll> fakes = new ArrayList<>();
+
+    @Override
+    public BlockDisplay spawnBlockDisplay(
+        Location location, java.util.function.Consumer<BlockDisplay> config) {
+      FakeRagdoll fake = new FakeRagdoll();
+      fake.location = location;
+      BlockDisplay proxy = fake.proxy();
+      config.accept(proxy);
+      fakes.add(fake);
+      spawned.add(proxy);
+      return proxy;
+    }
+
+    @Override
+    public BlockData blockData(String serialized) {
+      return (BlockData)
+          Proxy.newProxyInstance(
+              BlockData.class.getClassLoader(),
+              new Class<?>[] {BlockData.class},
+              (proxy, method, args) -> defaultValue(method.getReturnType()));
+    }
+
+    @Override
+    public Collection<BlockDisplay> tagged(NamespacedKey key, String shipId) {
+      List<BlockDisplay> found = new ArrayList<>();
+      for (int i = 0; i < spawned.size(); i++) {
+        if (shipId.equals(fakes.get(i).tags.get(key))) {
+          found.add(spawned.get(i));
+        }
+      }
+      return found;
+    }
+
+    @Override
+    public void teleport(org.bukkit.entity.Entity entity, Location location) {
+      for (int i = 0; i < spawned.size(); i++) {
+        if (spawned.get(i) == entity) {
+          fakes.get(i).location = location;
+          break;
+        }
+      }
+    }
+
+    @Override
+    public UUID worldUuid() {
+      return WORLD;
+    }
+
+    @Override
+    public Location location(ShipOrigin origin, double dx, double dy, double dz) {
+      return new Location(null, origin.x() + dx, origin.y() + dy, origin.z() + dz);
+    }
+
+    @Override
+    public void shipRendered(UUID shipId, Collection<BlockDisplay> displays) {}
+
+    @Override
+    public void removeTagged(NamespacedKey key, String shipId) {}
+  }
+
+  private static final class FakeRagdoll {
+    Location location;
+    Transformation transformation;
+    final Map<NamespacedKey, String> tags = new HashMap<>();
+
+    BlockDisplay proxy() {
+      return (BlockDisplay)
+          Proxy.newProxyInstance(
+              BlockDisplay.class.getClassLoader(),
+              new Class<?>[] {BlockDisplay.class},
+              (target, method, args) -> {
+                switch (method.getName()) {
+                  case "setBlock":
+                  case "setPersistent":
+                  case "setTeleportDuration":
+                  case "remove":
+                    return null;
+                  case "isDead":
+                    return false;
+                  case "getLocation":
+                    return location;
+                  case "setTransformation":
+                    transformation = (Transformation) args[0];
+                    return null;
+                  case "getTransformation":
+                    return transformation;
+                  case "getPersistentDataContainer":
+                    return Proxy.newProxyInstance(
+                        getClass().getClassLoader(),
+                        new Class<?>[] {org.bukkit.persistence.PersistentDataContainer.class},
+                        (container, containerMethod, containerArgs) -> {
+                          if ("set".equals(containerMethod.getName())) {
+                            tags.put((NamespacedKey) containerArgs[0], (String) containerArgs[2]);
+                            return null;
+                          }
+                          if ("get".equals(containerMethod.getName())) {
+                            return tags.get(containerArgs[0]);
+                          }
+                          return defaultValue(containerMethod.getReturnType());
+                        });
+                  default:
+                    return defaultValue(method.getReturnType());
+                }
+              });
+    }
   }
 
   private static Vehicle ship() {

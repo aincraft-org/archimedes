@@ -197,4 +197,23 @@ public final class ShipRuntimeImpl implements ShipRuntime {
       carrier.clear();
     }
   }
+
+  @Override
+  public void spawnClothRagdoll(
+      Vehicle ship, java.util.UUID debrisId, String appearance, double x, double y, double z) {
+    renderer.spawnClothRagdoll(ship, debrisId, appearance, x, y, z);
+  }
+
+  @Override
+  public void moveClothRagdoll(
+      java.util.UUID debrisId,
+      double x,
+      double y,
+      double z,
+      double qx,
+      double qy,
+      double qz,
+      double qw) {
+    renderer.moveClothRagdoll(debrisId, x, y, z, qx, qy, qz, qw);
+  }
 }
