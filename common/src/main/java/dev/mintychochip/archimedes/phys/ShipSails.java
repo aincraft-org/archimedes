@@ -56,7 +56,7 @@ public final class ShipSails {
     return List.copyOf(sails);
   }
 
-  private static Vector3dc facingNormal(String blockData) {
+  static Vector3dc facingNormal(String blockData) {
     String facing = facingValue(blockData);
     if ("north".equals(facing)) {
       return new Vector3d(0, 0, -1);
