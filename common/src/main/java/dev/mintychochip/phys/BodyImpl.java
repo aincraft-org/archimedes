@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Objects;
 import org.joml.Matrix3d;
 import org.joml.Matrix3dc;
+import org.joml.Quaterniondc;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 
@@ -30,6 +31,12 @@ public final class BodyImpl implements Body {
   /** Immutable force view. */
   private final List<Force> forces;
 
+  /** Body-frame inertia from collider AABBs, or {@code m I} when none. */
+  private final Matrix3d bodyInertia;
+
+  /** Inverse of {@link #bodyInertia}. */
+  private final Matrix3d bodyInverseInertia;
+
   /**
    * Creates a rigid body with copied collider and force collections.
    *
@@ -46,6 +53,8 @@ public final class BodyImpl implements Body {
     this.mass = mass;
     this.colliders = List.copyOf(colliders);
     this.forces = List.copyOf(forces);
+    this.bodyInertia = inertiaFromColliders(this.colliders, mass);
+    this.bodyInverseInertia = invertInertia(this.bodyInertia, mass);
   }
 
   /**
@@ -105,23 +114,78 @@ public final class BodyImpl implements Body {
   }
 
   /**
-   * Returns the isotropic inertia approximation used by this implementation.
+   * Returns world-frame inertia. AABB colliders produce an anisotropic tensor about the body
+   * origin; no colliders fall back to {@code m I}.
    *
-   * @return a diagonal matrix with the mass on each diagonal
+   * @return inertia tensor
    */
   public Matrix3dc inertia() {
-    double i = mass;
-    return new Matrix3d().set(i, 0, 0, 0, i, 0, 0, 0, i);
+    return rotateTensor(bodyInertia);
   }
 
   /**
-   * Returns the inverse of the isotropic inertia approximation.
+   * Returns the inverse of {@link #inertia()}.
    *
-   * @return a diagonal matrix with the inverse mass on each diagonal
+   * @return inverse inertia tensor
    */
   public Matrix3dc inverseInertia() {
-    double i = 1.0 / mass;
-    return new Matrix3d().set(i, 0, 0, 0, i, 0, 0, 0, i);
+    return rotateTensor(bodyInverseInertia);
+  }
+
+  private Matrix3d rotateTensor(Matrix3dc body) {
+    Quaterniondc q = transform.orientation();
+    Matrix3d rotation = new Matrix3d().rotation(q);
+    Matrix3d world = new Matrix3d();
+    rotation.mul(body, world);
+    world.mul(rotation.transpose(new Matrix3d()));
+    return world;
+  }
+
+  private static Matrix3d inertiaFromColliders(List<Collider> colliders, double bodyMass) {
+    Matrix3d inertia = new Matrix3d().zero();
+    double colliderMass = 0;
+    for (Collider collider : colliders) {
+      if (!(collider.shape() instanceof Aabb box)) {
+        continue;
+      }
+      Vector3dc h = box.halfExtents();
+      double volume = 8 * h.x() * h.y() * h.z();
+      double m = collider.material().density() * volume;
+      if (m <= 0 || !Double.isFinite(m)) {
+        continue;
+      }
+      colliderMass += m;
+      double ixx = m / 3.0 * (h.y() * h.y() + h.z() * h.z());
+      double iyy = m / 3.0 * (h.x() * h.x() + h.z() * h.z());
+      double izz = m / 3.0 * (h.x() * h.x() + h.y() * h.y());
+      Vector3d r = new Vector3d(box.center());
+      collider.localTransform().orientation().transform(r);
+      r.add(collider.localTransform().position());
+      // I += I_cm + m ((r·r) 1 - r rᵀ)
+      double r2 = r.lengthSquared();
+      inertia.m00 += ixx + m * (r2 - r.x() * r.x());
+      inertia.m11 += iyy + m * (r2 - r.y() * r.y());
+      inertia.m22 += izz + m * (r2 - r.z() * r.z());
+      inertia.m01 += -m * r.x() * r.y();
+      inertia.m10 += -m * r.x() * r.y();
+      inertia.m02 += -m * r.x() * r.z();
+      inertia.m20 += -m * r.x() * r.z();
+      inertia.m12 += -m * r.y() * r.z();
+      inertia.m21 += -m * r.y() * r.z();
+    }
+    if (colliderMass <= 0) {
+      return new Matrix3d().scaling(bodyMass);
+    }
+    inertia.scale(bodyMass / colliderMass);
+    return inertia;
+  }
+
+  private static Matrix3d invertInertia(Matrix3d inertia, double bodyMass) {
+    Matrix3d inverse = new Matrix3d(inertia);
+    if (inverse.invert() == null) {
+      return new Matrix3d().scaling(1.0 / bodyMass);
+    }
+    return inverse;
   }
 
   /**
