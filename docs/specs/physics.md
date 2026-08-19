@@ -24,6 +24,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
   - `ShipBuoyancyForce` (waterline lift only) plus `GravityForce` on the generic step.
   - `EnvelopeBuoyancyForce` (envelope-cell aerostatic lift; factory only until the live tick uses `VehicleFactory`).
   - `ShipSails` maps marked structure blocks to `PressureSailForce`.
+  - Engine/turbine blocks (`engine-materials`) attach `MediumThrustForce` on `ShipPhysics.tick` when `enginesEnabled`.
   - `ShipPhysics` facade that steps the engine and drives `ShipRuntime`.
 
 ### Out of scope / non-goals
@@ -65,6 +66,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - `FlowField` is pointwise flow velocity (`still`, `uniform`, axis-aligned `box`, and `compose`). Multiple winds exist by composing or by attaching different fields to different forces. Do not add `World.flowField()`. Do not use `isFluid` for air.
 - `PressureSailForce` is one-sided cloth: `F = q A max(n̂ · v̂_app, 0)² n̂`, `v_app = v_wind(p) − v − ω × r`, `τ = r × F`. Density and wind are constructor-injected. Still air or edge-on sheet is zero force.
 - Hook sails to a structure with `ShipSails.forces`. `ShipPhysics.tick` attaches cloth (`*_wool`, `*_banner`, `*_wall_banner`) plus lumped air drag when a `FlowField` is supplied. The plugin default wind is `+Z`. `ShipPose` stores `x,y,z`; yaw is still out.
+- Engines and turbines are the same `MediumThrustForce` (`F = k ρ n̂` along `facing=`). `ShipPhysics.tick` attaches one per `engine-materials` block when `enginesEnabled`. Vacuum (`ρ = 0`) is zero thrust. Disabling engines omits the force, not the collider/mass.
 - Support and Coulomb friction share a `ContactPlane`. Support cancels the compressive gravity load along the normal when the body is in contact; it is not a penetration constraint. Friction uses that same gravity-derived `N`: kinetic is `−μ_k N v̂_t`; static cancels sibling tangent load when `|T| ≤ μ_s N` at rest. `N = 0` off the plane.
 - Viscous linear drag is `F = −c v`, distinct from quadratic `−c |v| v`. Angular drag is `τ = −c ω`. Neither is applied to Archimedes ships.
 - Relative-flow quadratic drag is `F = −c ρ |v_app| v_app` with `v_app = v − u_flow`. Omit `FlowField` for still medium. Do not add `World.flowField()`.
@@ -114,6 +116,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - [x] `QuadraticDragForce` optional `DensityField` overload; one-arg lumped law unchanged.
 - [x] Catalog/field inventory (2026-08-19): phys `Force`s including `LiftingSailForce` and `KeelForce` plus `ShipBuoyancyForce` + `EnvelopeBuoyancyForce`; `World` has gravity/fluid/timeStep/obstacle/chunk/vegetation only. Proof: `CatalogAndFieldInventoryTest`.
 - [x] Relative-flow quadratic drag, anisotropic AABB inertia, gyroscopic `ω × Iω`, `LiftingSailForce`, `KeelForce`.
+- [x] Live tick attaches density-scaled engine/turbine thrust (`MediumThrustForce`) from `engine-materials` when `enginesEnabled`.
 
 ### Current notes
 
@@ -126,6 +129,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - `archimedes.phys` review (2026-08-17): `Body` is the per-step physics object. `ShipPhysics` is the ship facade (rebuild body, clamp, path, `ShipRuntime`). `RiderCount` and `MaterialKeyResolver` are one-method seams so `:common` stays off Bukkit; they are not unused. No type in that package is a pass-through.
 - Propulsion split from the 2026-08-17 review: watercraft stay liquid buoyancy + sails (lifting sails later); airships should hover on envelope/`FluidBuoyancy(uniform ρ_air)` and drive with `MediumThrustForce`. Pressure sails on airships are optional flavor, not the look.
 - Accuracy (2026-08-19): `QuadraticDragForce` can take a `FlowField` (`v_app = v − u`). AABB colliders give anisotropic `I`; `PhysicsEngine` includes `ω × Iω`. `LiftingSailForce` and `KeelForce` are catalog units. Live `ShipPhysicsImpl.tick` still uses still-medium hull drag and does not attach lifting sails or keels. Waterline/envelope lift remain τ = 0.
+- Engines/turbines on tick: configured furnace-family blocks apply `MediumThrustForce` along facing. Same law in water or air (`ρ` from liquid if `isFluid`, else injected air). Proof: `ShipPhysicsTest.furnaceFacingSouthAdvancesPoseZOnTick`.
 
 ## Next
 
@@ -197,6 +201,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 | 2026-08-17 | Displacement is the wet fraction of each cell | A barely-wet deck was counted fully, so large rafts sat on the water and player load did not bob |
 | 2026-08-19 | Accuracy gaps ranked as relative-flow drag, anisotropic I, gyro, `LiftingSailForce`, keel — not new `World` fields | Inventory of catalog types; `FlowField` already exists for sails |
 | 2026-08-19 | Ship relative-flow drag, AABB inertia, gyro, lifting sail, and keel as catalog units | User asked to implement the accuracy list; plugin tick still uses still-medium hull drag |
+| 2026-08-19 | Engines/turbines on live tick are `MediumThrustForce`, not rockets | Same density-scaled law; flag drops thrust only |
 
 ## Open questions
 
