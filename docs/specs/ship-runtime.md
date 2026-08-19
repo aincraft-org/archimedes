@@ -1,7 +1,7 @@
 # Ship Runtime — Living Spec
 
 > Status: active
-> Last updated: 2026-08-17
+> Last updated: 2026-08-19
 > Owners: jlo
 
 ## Intent
@@ -48,6 +48,7 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 - PDC identity uses distinct renderer (`ship-id`) and collision (`collision-owner`) key families; stale sweeps and remove paths remain symmetric with their spawn-time tags.
 - Reposition pairs hull displays by PDC block key and sail plates by tessellation index, then recomputes from the model. Collision volumes stay keyed by relative block position.
 - Hull picture stays one untransformed `BlockDisplay` per non-cloth captured block (`setBlock` only). Cloth (`*_wool`, `*_banner`, `*_wall_banner`) is a tessellated sheet of transformed `BlockDisplay` plates from `SailMesh` — not one cube per cloth cell, and not a resource-pack / `ItemDisplay` model. Other curved looks (`ItemDisplay` + pack model, or a later bone engine) remain Future overlays. See `docs/superpowers/specs/2026-08-17-curved-mesh-rendering-review.md`.
+- Torn cloth leaves the sheet (`SailMesh.cellsOf(intactBlocks)`) and spawns a separate untransformed `BlockDisplay` ragdoll. `ShipRuntime.spawnClothRagdoll` / `moveClothRagdoll` drive it; remaining sail plates retessellate on tear. Collision hulls for torn cells are still spawned at assembly (refresh is Next).
 - Visual `BlockDisplay`s (hull and sail plates) get `setTeleportDuration(1)` at spawn so the client interpolates 20 TPS teleports. Reposition still teleports to the model visual corner and does not clear that duration. Collision Shulkers snap to the same fractional pose.
 - Buoyancy callers change pose then call `runtime.move(oldY,newY)`; runtime failure restores the old pose.
 - `removeAllTagged` is a runtime capability: `ShipRuntimeImpl` delegates to `ShipRendererLike.removeAllRuntime()` and `CollisionVolumeManager.removeAllTagged()`, which Bukkit adapters implement as tagged-entity sweeps.
@@ -65,9 +66,11 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 - [x] Review: Paper cannot stream a GPU mesh; hulls stay `BlockDisplay` per block; curves are overlay options only (`docs/superpowers/specs/2026-08-17-curved-mesh-rendering-review.md`)
 - [x] Cloth regions render as a tessellated series of thin transformed `BlockDisplay` plates (`SailMesh`); hull cells stay one untransformed cube; sail plates tag with the ship, move on reposition, and vanish on tagged remove
 - [x] Visual BlockDisplays interpolate pose teleports (`setTeleportDuration` ≥ 1 tick); collision Shulkers do not
+- [x] Torn cloth spawns a `BlockDisplay` ragdoll that is teleported and reoriented each debris step; remaining sail plates retessellate from `intactBlocks`
 
 ## Next
 
+- [ ] Drop collision volumes for torn cloth when a cell snaps
 - [ ] Record live collision acceptance: stand on exposed tops, hull-side blocking, no pass-through, six-directional face checks
 - Live attempt on 2026-08-16 remained blocked by an occupied server port and no connected Minecraft client; observed startup evidence and the exact reproduction matrix are recorded in `docs/superpowers/results/2026-08-16-spec-alignment-acceptance.md`. Automated hull tests do not satisfy this item.
 - [x] Remove dead package and stale wording; historical design records retain the original barrier-deck decision.
@@ -96,3 +99,4 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 | 2026-08-17 | No GPU mesh upload; hull stays voxel `BlockDisplay`; curves are Future overlays | Paper protocol has no triangle-mesh packet; the ship is the scanned build |
 | 2026-08-17 | Cloth sails are tessellated `BlockDisplay` plates from the captured region | User asked for a series of block displays from a 3D cloth region before any resource pack |
 | 2026-08-17 | Visual displays use 1-tick teleport interpolation; Shulkers snap | 20 TPS teleports look stuttery; duration > 1 lags the picture behind collision |
+| 2026-08-19 | Torn cloth ragdolls as a `BlockDisplay` cube, not a remaining sail plate | User: the piece that comes off should look like a block and tumble |

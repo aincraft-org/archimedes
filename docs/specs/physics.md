@@ -25,6 +25,9 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
   - `EnvelopeBuoyancyForce` (envelope-cell aerostatic lift; factory only until the live tick uses `VehicleFactory`).
   - `ShipSails` maps marked structure blocks to `PressureSailForce`.
   - Engine/turbine blocks (`engine-materials`) attach `MediumThrustForce` on `ShipPhysics.tick` when `enginesEnabled`.
+  - `SailRigging`: cloth support is graph distance through intact cloth to rigid hull; cells tear when `qA` load exceeds `breakLoad / (1 + distance)`.
+  - Torn cloth is runtime-only (`Vehicle.tearCloth`); it drops out of mass, colliders, and `ShipSails`.
+  - `ClothDebris` ragdolls torn cells with gravity, lumped drag, and angular drag; `ShipRuntime` spawns them as `BlockDisplay`s.
   - `ShipPhysics` facade that steps the engine and drives `ShipRuntime`.
 
 ### Out of scope / non-goals
@@ -66,6 +69,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - `FlowField` is pointwise flow velocity (`still`, `uniform`, axis-aligned `box`, and `compose`). Multiple winds exist by composing or by attaching different fields to different forces. Do not add `World.flowField()`. Do not use `isFluid` for air.
 - `PressureSailForce` is one-sided cloth: `F = q A max(n̂ · v̂_app, 0)² n̂`, `v_app = v_wind(p) − v − ω × r`, `τ = r × F`. Density and wind are constructor-injected. Still air or edge-on sheet is zero force.
 - Hook sails to a structure with `ShipSails.forces`. `ShipPhysics.tick` attaches cloth (`*_wool`, `*_banner`, `*_wall_banner`) plus lumped air drag when a `FlowField` is supplied. The plugin default wind is `+Z`. `ShipPose` stores `x,y,z`; yaw is still out.
+- Sail snap uses the pre-step linear velocity and identity orientation. Gameplay has no retained spin, so post-step `ω` must not inflate apparent wind. Torn cloth is a gap in the rigging graph so failure can cascade on later ticks. Evaluate every intact cell against the same snapshot, then tear. An all-cloth vehicle has no hull to snap from and does not tear; a cell isolated from a present hull (`distance = MAX_VALUE`) does.
 - Engines and turbines are the same `MediumThrustForce` (`F = k ρ n̂` along `facing=`). `ShipPhysics.tick` attaches one per `engine-materials` block when `enginesEnabled`. Vacuum (`ρ = 0`) is zero thrust. Disabling engines omits the force, not the collider/mass.
 - Support and Coulomb friction share a `ContactPlane`. Support cancels the compressive gravity load along the normal when the body is in contact; it is not a penetration constraint. Friction uses that same gravity-derived `N`: kinetic is `−μ_k N v̂_t`; static cancels sibling tangent load when `|T| ≤ μ_s N` at rest. `N = 0` off the plane.
 - Viscous linear drag is `F = −c v`, distinct from quadratic `−c |v| v`. Angular drag is `τ = −c ω`. Neither is applied to Archimedes ships.
@@ -117,6 +121,8 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - [x] Catalog/field inventory (2026-08-19): phys `Force`s including `LiftingSailForce` and `KeelForce` plus `ShipBuoyancyForce` + `EnvelopeBuoyancyForce`; `World` has gravity/fluid/timeStep/obstacle/chunk/vegetation only. Proof: `CatalogAndFieldInventoryTest`.
 - [x] Relative-flow quadratic drag, anisotropic AABB inertia, gyroscopic `ω × Iω`, `LiftingSailForce`, `KeelForce`.
 - [x] Live tick attaches density-scaled engine/turbine thrust (`MediumThrustForce`) from `engine-materials` when `enginesEnabled`.
+- [x] Unsupported cloth snaps when wind load exceeds rigging strength (`SailRigging`); mast-adjacent cells hold default wind, far cells tear.
+- [x] Torn cloth leaves mass/colliders/sail force and becomes `ClothDebris` stepped with gravity + drag + spin.
 
 ### Current notes
 
@@ -130,6 +136,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - Propulsion split from the 2026-08-17 review: watercraft stay liquid buoyancy + sails (lifting sails later); airships should hover on envelope/`FluidBuoyancy(uniform ρ_air)` and drive with `MediumThrustForce`. Pressure sails on airships are optional flavor, not the look.
 - Accuracy (2026-08-19): `QuadraticDragForce` can take a `FlowField` (`v_app = v − u`). AABB colliders give anisotropic `I`; `PhysicsEngine` includes `ω × Iω`. `LiftingSailForce` and `KeelForce` are catalog units. Live `ShipPhysicsImpl.tick` still uses still-medium hull drag and does not attach lifting sails or keels. Waterline/envelope lift remain τ = 0.
 - Engines/turbines on tick: configured furnace-family blocks apply `MediumThrustForce` along facing. Same law in water or air (`ρ` from liquid if `isFluid`, else injected air). Proof: `ShipPhysicsTest.furnaceFacingSouthAdvancesPoseZOnTick`.
+- Sail snap (2026-08-19): `PressureSailForce` load vs `breakLoad/(1+distance)`. Proof: `ShipPhysicsTest.unsupportedWoolTearsOffInStrongWind`. Ragdoll physics: `ClothDebrisTest.ragdollFallsAndTumbles`.
 
 ## Next
 
@@ -202,6 +209,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 | 2026-08-19 | Accuracy gaps ranked as relative-flow drag, anisotropic I, gyro, `LiftingSailForce`, keel — not new `World` fields | Inventory of catalog types; `FlowField` already exists for sails |
 | 2026-08-19 | Ship relative-flow drag, AABB inertia, gyro, lifting sail, and keel as catalog units | User asked to implement the accuracy list; plugin tick still uses still-medium hull drag |
 | 2026-08-19 | Engines/turbines on live tick are `MediumThrustForce`, not rockets | Same density-scaled law; flag drops thrust only |
+| 2026-08-19 | Unsupported wool snaps; torn cells ragdoll as `BlockDisplay`s | User: a sail with no structure should tear off under wind, not stay a rigid sheet |
 
 ## Open questions
 

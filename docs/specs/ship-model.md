@@ -1,7 +1,7 @@
 # Ship Model — Living Spec
 
 > Status: active
-> Last updated: 2026-08-16
+> Last updated: 2026-08-19
 > Owners: jlo
 
 ## Intent
@@ -30,7 +30,7 @@ Success looks like: a `Ship` is a pure, unit-testable description of a build (or
 ## Invariants
 
 - `ShipBlock` snapshots pair a relative position with the exact `BlockData` string captured from the world at assembly (`ShipServiceImpl` via `WorldMutator.blockDataAt`); restoration must reproduce the original block. The scanner itself captures positions only.
-- `Ship.blocks` is immutable after construction; `pose` and `buoyancyEnabled` are the only mutable state.
+- `Ship.blocks` is immutable after construction; `pose`, `buoyancyEnabled`, actuator flags, and runtime torn-cloth marks are the mutable state. Torn cells stay in `blocks` (restore still has the snapshot) and are omitted from `intactBlocks`. Torn marks are not persisted.
 - `ShipPose` is `(x, y, z)` offsets from origin. `anchorD*() = floor` of each axis. Missing persisted `x`/`z` load as `0`. Fractional components drive visuals; integer anchors drive collision, clearance, and restoration.
 - `ShipTransform` is the canonical projection for rendering and hulls (visual / cell / collision anchor). World-boundary code may derive integer cells from `origin + floor(pose)` (e.g. `BukkitWorldMutator.baseY`, `BuoyancyImpl.pathClear`) but must never duplicate the visual/anchor arithmetic or add offsets.
 - `archimedes.json` is the single persistence authority; leftover `ships.json` is read when the new file is absent; entities are never persisted (non-persistent at Bukkit level).
@@ -57,6 +57,7 @@ Success looks like: a `Ship` is a pure, unit-testable description of a build (or
 - [x] Atomic save (tmp + ATOMIC_MOVE with fallback)
 - [x] Legacy file load (`y=0`, buoyancy enabled)
 - [x] Config: `maximum-blocks`, `target-distance`, `forbidden-materials`, `disabled-worlds`, buoyancy/physics constants; strict validation of supplied values, code defaults for missing keys
+- [x] Runtime torn-cloth set: `tearCloth` / `isTorn` / `intactBlocks`; not written to `archimedes.json`
 
 ### Current notes
 
@@ -78,6 +79,7 @@ Success looks like: a `Ship` is a pure, unit-testable description of a build (or
 | Date | Decision | Why |
 |------|----------|-----|
 | 2026-08-16 | Living specs live in `docs/specs/`; dated docs in `docs/superpowers/` remain historical record | User directive; one maintained catalog per domain |
+| 2026-08-19 | Torn cloth is runtime-only; captured blocks stay on the model | Restore and persistence keep the original build; snap is a live failure |
 | 2026-08-16 | Material densities are configuration-only; rider mass and equilibrium diagnostics are runtime-only | Avoid schema migration and stale persisted load; recompute from blocks, config, and tracked players |
 | 2026-08-16 | Public models/interfaces in `:api`; scanner/store in `:common`; config loader in `:paper` | Gradle submodule split keeps Paper toolchain off domain implementations |
 | 2026-08-16 | Product renamed Ships → Archimedes (`dev.mintychochip.archimedes`, `archimedes.json`) | Align plugin identity with the archimedes remote; leftover `ships.json` still loads |
