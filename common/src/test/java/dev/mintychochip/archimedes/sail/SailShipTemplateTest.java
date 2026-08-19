@@ -66,6 +66,45 @@ class SailShipTemplateTest {
     }
   }
 
+  @Test
+  void meshSpecBuildsAMultiDepthClothVolume() {
+    List<ShipBlock> blocks = SailShipTemplate.blocks(SailShipTemplate.Spec.parse("mesh"));
+
+    Set<Integer> depths = new HashSet<>();
+    int wool = 0;
+    for (ShipBlock block : blocks) {
+      if (WHITE_WOOL.equals(block.blockData())) {
+        wool++;
+        depths.add(block.pos().z());
+      }
+    }
+    assertTrue(depths.size() > 1, "mesh sail must occupy more than one depth");
+    assertTrue(wool > 9, "mesh sail must have more cloth than the flat small wall");
+    assertTrue(has(blocks, 0, 0, 0, OAK_PLANKS));
+    assertTrue(has(blocks, 0, 7, 0, OAK_LOG));
+    Set<Long> plateDepths = new HashSet<>();
+    for (SailPiece piece : SailMesh.tessellate(SailMesh.cellsOf(blocks))) {
+      plateDepths.add(Math.round(piece.originZ() * 1_000_000.0));
+    }
+    assertTrue(
+        plateDepths.size() > 1, "mesh template must tessellate into plates at more than one depth");
+  }
+
+  @Test
+  void specParseAcceptsSizeShapeAndMeshToken() {
+    SailShipTemplate.Spec medium = SailShipTemplate.Spec.parse("medium");
+    assertEquals(SailShipTemplate.Size.MEDIUM, medium.size());
+    assertEquals(SailShipTemplate.Shape.FLAT, medium.shape());
+    SailShipTemplate.Spec mesh = SailShipTemplate.Spec.parse("mesh");
+    assertEquals(SailShipTemplate.Size.MEDIUM, mesh.size());
+    assertEquals(SailShipTemplate.Shape.MESH, mesh.shape());
+    SailShipTemplate.Spec largeMesh = SailShipTemplate.Spec.parse("large-mesh");
+    assertEquals(SailShipTemplate.Size.LARGE, largeMesh.size());
+    assertEquals(SailShipTemplate.Shape.MESH, largeMesh.shape());
+    assertEquals(null, SailShipTemplate.Spec.parse("huge"));
+    assertEquals(null, SailShipTemplate.Spec.parse(null));
+  }
+
   private static int count(List<ShipBlock> blocks, String data) {
     int n = 0;
     for (ShipBlock block : blocks) {

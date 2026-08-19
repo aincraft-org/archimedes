@@ -38,14 +38,14 @@ public interface ShipService {
 
   /**
    * Spawns a predetermined sail ship of the given size ({@code small}, {@code medium}, {@code
-   * large}).
+   * large}, {@code mesh}, or {@code <size>-mesh}).
    *
    * @param playerId the owning player
    * @param worldId the world identifier
    * @param x origin x
    * @param y origin y
    * @param z origin z
-   * @param size named hull size
+   * @param size named hull size or mesh spec
    * @return the spawned ship, or null on failure
    */
   Vehicle spawnSail(UUID playerId, UUID worldId, int x, int y, int z, String size);

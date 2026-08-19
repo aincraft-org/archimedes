@@ -660,6 +660,24 @@ class ShipCommandTest {
   }
 
   @Test
+  void sailAcceptsMeshToken() {
+    RecordingService service = new RecordingService();
+    service.assembled = ship();
+    commandNoTarget(service)
+        .onCommand(player(service, true), CMD, SHIP, new String[] {SUB_SAIL, "mesh"});
+    assertEquals("mesh", service.lastSailSize);
+  }
+
+  @Test
+  void sailAcceptsSizePlusMeshToken() {
+    RecordingService service = new RecordingService();
+    service.assembled = ship();
+    commandNoTarget(service)
+        .onCommand(player(service, true), CMD, SHIP, new String[] {SUB_SAIL, "large", "mesh"});
+    assertEquals("large-mesh", service.lastSailSize);
+  }
+
+  @Test
   void sailRejectsWithoutPermission() {
     RecordingService service = new RecordingService();
     commandNoTarget(service).onCommand(player(service, false), CMD, SHIP, new String[] {SUB_SAIL});

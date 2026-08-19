@@ -60,4 +60,16 @@ class ShipTabCompleterTest {
         new ShipTabCompleter()
             .onTabComplete(SENDER, COMMAND, SHIP_COMMAND, new String[] {"sail", "s"}));
   }
+
+  @Test
+  void completesSailMeshOption() {
+    assertEquals(
+        List.of("mesh"),
+        new ShipTabCompleter()
+            .onTabComplete(SENDER, COMMAND, SHIP_COMMAND, new String[] {"sail", "mes"}));
+    assertEquals(
+        List.of("mesh"),
+        new ShipTabCompleter()
+            .onTabComplete(SENDER, COMMAND, SHIP_COMMAND, new String[] {"sail", "large", "m"}));
+  }
 }

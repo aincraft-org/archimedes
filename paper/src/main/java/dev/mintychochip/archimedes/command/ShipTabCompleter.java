@@ -14,14 +14,18 @@ public final class ShipTabCompleter implements org.bukkit.command.TabCompleter {
   /** Kill argument names. */
   private static final List<String> KILL_ARGS = List.of("all");
 
-  /** Sail size names. */
-  private static final List<String> SAIL_SIZES = List.of("small", "medium", "large");
+  /** Sail size names, including the 3D mesh token. */
+  private static final List<String> SAIL_SIZES = List.of("small", "medium", "large", "mesh");
+
+  /** Extra sail argument: 3D cloth volume. */
+  private static final List<String> SAIL_SHAPES = List.of("mesh");
 
   /**
    * Completes the first {@code /arch} argument from the known subcommands.
    *
    * <p>The first argument is the subcommand list; {@code sail} and {@code kill} also complete their
-   * second argument. Other later arguments return an empty list.
+   * second argument, and {@code sail} completes {@code mesh} as a third argument. Other later
+   * arguments return an empty list.
    *
    * @param sender command sender
    * @param command invoked command
@@ -42,6 +46,10 @@ public final class ShipTabCompleter implements org.bukkit.command.TabCompleter {
     if (args.length == 2 && "sail".equalsIgnoreCase(args[0])) {
       String prefix = args[1].toLowerCase(java.util.Locale.ROOT);
       return SAIL_SIZES.stream().filter(size -> size.startsWith(prefix)).toList();
+    }
+    if (args.length == 3 && "sail".equalsIgnoreCase(args[0])) {
+      String prefix = args[2].toLowerCase(java.util.Locale.ROOT);
+      return SAIL_SHAPES.stream().filter(shape -> shape.startsWith(prefix)).toList();
     }
     if (args.length == 2 && "kill".equalsIgnoreCase(args[0])) {
       String prefix = args[1].toLowerCase(java.util.Locale.ROOT);

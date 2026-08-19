@@ -17,8 +17,10 @@ import dev.mintychochip.archimedes.sail.SailShipTemplate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -1221,6 +1223,34 @@ class ShipServiceImplTest {
 
     assertNull(service.spawnSail(OWNER, WORLD, 5, 64, 8, "huge"));
     assertEquals("Unknown sail size: huge", service.lastError());
+  }
+
+  @Test
+  void spawnSailMeshProducesAThreeDimensionalClothRegion() {
+    Fakes fakes = new Fakes();
+    ShipService service =
+        new ShipServiceImpl(
+            new MemoryStore(fakes),
+            (x, y, z) -> List.of(),
+            runtime(fakes),
+            fakes,
+            new RecordingBuoyancy(),
+            false,
+            true,
+            WORLD);
+
+    Vehicle ship = service.spawnSail(OWNER, WORLD, 5, 64, 8, "mesh");
+
+    assertNotNull(ship);
+    Set<Integer> depths = new HashSet<>();
+    for (ShipBlock block : ship.blocks()) {
+      if (block.blockData().endsWith("_wool")) {
+        depths.add(block.pos().z());
+      }
+    }
+    assertTrue(depths.size() > 1, "spawned mesh sail must have wool at more than one depth");
+    assertEquals(
+        SailShipTemplate.blocks(SailShipTemplate.Spec.parse("mesh")).size(), ship.blockCount());
   }
 
   @Test

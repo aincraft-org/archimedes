@@ -168,8 +168,8 @@ public final class ShipServiceImpl implements ShipService {
       lastError = "Ship assembly is disabled in this world";
       return null;
     }
-    SailShipTemplate.Size size = SailShipTemplate.Size.parse(sizeName);
-    if (size == null) {
+    SailShipTemplate.Spec spec = SailShipTemplate.Spec.parse(sizeName);
+    if (spec == null) {
       lastError = "Unknown sail size: " + sizeName;
       return null;
     }
@@ -178,7 +178,7 @@ public final class ShipServiceImpl implements ShipService {
             UUID.randomUUID(),
             playerId,
             new ShipOrigin(targetWorldId, x, y, z),
-            SailShipTemplate.blocks(size));
+            SailShipTemplate.blocks(spec));
     boolean runtimeStarted = false;
     boolean buoyancyStarted = false;
     try {

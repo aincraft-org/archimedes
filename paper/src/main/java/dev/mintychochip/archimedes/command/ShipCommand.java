@@ -226,9 +226,16 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
   }
 
   private boolean sail(Player player, String[] args) {
-    String size = args.length >= 2 ? args[1] : "medium";
-    if (SailShipTemplate.Size.parse(size) == null) {
-      player.sendMessage(ChatColor.RED + "Usage: /arch sail [small|medium|large]");
+    String size;
+    if (args.length >= 3) {
+      size = args[1] + "-" + args[2];
+    } else if (args.length >= 2) {
+      size = args[1];
+    } else {
+      size = "medium";
+    }
+    if (SailShipTemplate.Spec.parse(size) == null) {
+      player.sendMessage(ChatColor.RED + "Usage: /arch sail [small|medium|large] [mesh]");
       return true;
     }
     org.bukkit.block.BlockFace facing = player.getFacing();
