@@ -18,14 +18,12 @@ import org.junit.jupiter.api.Test;
  */
 class VehiclePropulsionCompositionTest {
   @Test
-  void catalogHasSailsAndRocketsButNotMediumThrustOrLiftingSails() throws ClassNotFoundException {
+  void catalogHasSailsRocketsAndMediumThrustButNotLiftingSails() throws ClassNotFoundException {
     Class.forName("dev.mintychochip.phys.PressureSailForce");
     Class.forName("dev.mintychochip.phys.ThrustForce");
     Class.forName("dev.mintychochip.phys.FluidBuoyancyForce");
     Class.forName("dev.mintychochip.phys.LiftForce");
-    assertThrows(
-        ClassNotFoundException.class,
-        () -> Class.forName("dev.mintychochip.phys.MediumThrustForce"));
+    Class.forName("dev.mintychochip.phys.MediumThrustForce");
     assertThrows(
         ClassNotFoundException.class,
         () -> Class.forName("dev.mintychochip.phys.LiftingSailForce"));

@@ -234,4 +234,92 @@ class CatalogStepTest {
     assertEquals(0.0, idle.linearVelocity().length(), 0.0);
     assertEquals(0.0, sheeted.linearVelocity().length(), 0.0);
   }
+
+  @Test
+  void mediumThrustStepIsZeroInVacuumAndSpinsWhenOffset() {
+    MediumThrustForce dry =
+        new MediumThrustForce(new Vector3d(), new Vector3d(1, 0, 0), 8, DensityField.uniform(0));
+    MediumThrustForce offset =
+        new MediumThrustForce(
+            new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), 1, DensityField.uniform(1000));
+    BodyImpl vacuum =
+        new BodyImpl(new Transform(new Vector3d(), new Quaterniond()), 2, List.of(), List.of(dry));
+    BodyImpl spinner =
+        new BodyImpl(
+            new Transform(new Vector3d(), new Quaterniond()), 2, List.of(), List.of(offset));
+    World world = PhysFixtures.world(0.1, new Vector3d(0, -10, 0), PhysFixtures.vacuum());
+
+    new PhysicsEngine().step(world, List.of(vacuum, spinner));
+
+    assertEquals(0.0, vacuum.linearVelocity().length(), 0.0);
+    assertTrue(spinner.linearVelocity().x() > 0);
+    assertTrue(spinner.angularVelocity().y() > 0);
+  }
+
+  @Test
+  void mediumThrustPlusDensityDragIsSlowerThanThrustAlone() {
+    MediumThrustForce thrust =
+        new MediumThrustForce(new Vector3d(), new Vector3d(1, 0, 0), 4, DensityField.uniform(1000));
+    QuadraticDragForce drag = new QuadraticDragForce(0.0002, DensityField.uniform(1000));
+    BodyImpl driven =
+        new BodyImpl(
+            new Transform(new Vector3d(), new Quaterniond()), 2, List.of(), List.of(thrust));
+    BodyImpl damped =
+        new BodyImpl(
+            new Transform(new Vector3d(), new Quaterniond()), 2, List.of(), List.of(thrust, drag));
+    World world = PhysFixtures.world(0.05, new Vector3d(0, -10, 0), PhysFixtures.vacuum());
+
+    for (int i = 0; i < 8; i++) {
+      new PhysicsEngine().step(world, List.of(driven, damped));
+    }
+
+    assertTrue(damped.linearVelocity().x() > 0);
+    assertTrue(damped.linearVelocity().x() < driven.linearVelocity().x());
+  }
+
+  @Test
+  void sameCoefficientsShareTerminalSpeedAcrossMedia() {
+    double k = 4;
+    double c = 0.02;
+    double terminal = Math.sqrt(k / c);
+    MediumThrustForce waterThrust =
+        new MediumThrustForce(new Vector3d(), new Vector3d(1, 0, 0), k, DensityField.uniform(1000));
+    MediumThrustForce airThrust =
+        new MediumThrustForce(new Vector3d(), new Vector3d(1, 0, 0), k, DensityField.uniform(1.2));
+    QuadraticDragForce waterDrag = new QuadraticDragForce(c, DensityField.uniform(1000));
+    QuadraticDragForce airDrag = new QuadraticDragForce(c, DensityField.uniform(1.2));
+    BodyImpl waterRest =
+        new BodyImpl(
+            new Transform(new Vector3d(), new Quaterniond()),
+            2,
+            List.of(),
+            List.of(waterThrust, waterDrag));
+    BodyImpl airRest =
+        new BodyImpl(
+            new Transform(new Vector3d(), new Quaterniond()),
+            2,
+            List.of(),
+            List.of(airThrust, airDrag));
+    BodyImpl waterCruise =
+        new BodyImpl(
+            new Transform(new Vector3d(), new Quaterniond()),
+            2,
+            List.of(),
+            List.of(waterThrust, waterDrag));
+    BodyImpl airCruise =
+        new BodyImpl(
+            new Transform(new Vector3d(), new Quaterniond()),
+            2,
+            List.of(),
+            List.of(airThrust, airDrag));
+    waterCruise.setLinearVelocity(new Vector3d(terminal, 0, 0));
+    airCruise.setLinearVelocity(new Vector3d(terminal, 0, 0));
+    World world = PhysFixtures.world(0.05, new Vector3d(0, -10, 0), PhysFixtures.vacuum());
+
+    new PhysicsEngine().step(world, List.of(waterRest, airRest, waterCruise, airCruise));
+
+    assertTrue(waterRest.linearVelocity().x() > airRest.linearVelocity().x());
+    assertEquals(terminal, waterCruise.linearVelocity().x(), 1e-6);
+    assertEquals(terminal, airCruise.linearVelocity().x(), 1e-6);
+  }
 }
