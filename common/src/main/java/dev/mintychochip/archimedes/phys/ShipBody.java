@@ -19,8 +19,8 @@ import org.joml.Vector3d;
 /**
  * Builds a physics body from a ship's blocks and runtime rider count.
  *
- * <p>Each block becomes a unit AABB collider at its local block-center position. Unknown material
- * keys use the configured default density.
+ * <p>Each intact block becomes a unit AABB collider at its local block-center position. Unknown
+ * material keys use the configured default density. Torn cloth is omitted.
  */
 public final class ShipBody {
   private ShipBody() {}
@@ -42,7 +42,7 @@ public final class ShipBody {
       int riderCount,
       Force... forces) {
     List<Collider> colliders = new ArrayList<>();
-    for (ShipBlock block : ship.blocks()) {
+    for (ShipBlock block : ship.intactBlocks()) {
       String key = resolver.key(block);
       double density =
           config.materialDensities().getOrDefault(key, config.defaultMaterialDensity());

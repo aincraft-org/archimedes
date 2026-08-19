@@ -15,7 +15,7 @@ public final class ShipMassModel {
   /**
    * Sums material and player mass.
    *
-   * @param ship ship whose blocks are included
+   * @param ship ship whose intact blocks are included
    * @param resolver material-key resolver
    * @param config density and player-mass configuration
    * @param riderCount number of players aboard
@@ -26,7 +26,7 @@ public final class ShipMassModel {
       Vehicle ship, MaterialKeyResolver resolver, ShipConfig config, int riderCount) {
     if (riderCount < 0) throw new IllegalArgumentException("negative rider count");
     double total = riderCount * config.playerMass();
-    for (ShipBlock block : ship.blocks()) {
+    for (ShipBlock block : ship.intactBlocks()) {
       String key = resolver.key(block);
       total += densityOf(key, config);
     }

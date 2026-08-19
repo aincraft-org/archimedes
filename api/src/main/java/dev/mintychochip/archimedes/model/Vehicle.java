@@ -1,6 +1,9 @@
 package dev.mintychochip.archimedes.model;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 /** Assembled vehicle whose captured block list is immutable while runtime state remains mutable. */
@@ -28,6 +31,9 @@ public final class Vehicle {
 
   /** Whether engine forces are active for this vehicle. */
   private boolean enginesEnabled;
+
+  /** Cloth cells torn off by wind; runtime-only, not persisted. */
+  private final Set<BlockPos> tornCloth = new HashSet<>();
 
   /**
    * Creates a vehicle with its initial pose at zero and buoyancy, sails, and engines enabled.
@@ -202,5 +208,36 @@ public final class Vehicle {
    */
   public void setEnginesEnabled(boolean enabled) {
     this.enginesEnabled = enabled;
+  }
+
+  /**
+   * Marks a cloth cell as torn off. Captured blocks stay on the model; torn cells no longer sail.
+   *
+   * @param pos relative cloth cell
+   * @return whether the cell was newly torn
+   */
+  public boolean tearCloth(BlockPos pos) {
+    return tornCloth.add(Objects.requireNonNull(pos));
+  }
+
+  /**
+   * @param pos relative cell
+   * @return whether the cell has torn off
+   */
+  public boolean isTorn(BlockPos pos) {
+    return tornCloth.contains(pos);
+  }
+
+  /**
+   * @return captured blocks that have not torn off
+   */
+  public List<ShipBlock> intactBlocks() {
+    List<ShipBlock> intact = new java.util.ArrayList<>();
+    for (ShipBlock block : blocks) {
+      if (!tornCloth.contains(block.pos())) {
+        intact.add(block);
+      }
+    }
+    return List.copyOf(intact);
   }
 }

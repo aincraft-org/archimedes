@@ -1432,6 +1432,92 @@ class ShipPhysicsTest {
     assertFalse(off.forces().stream().anyMatch(line -> line.name().contains("MediumThrust")));
   }
 
+  @Test
+  void unsupportedWoolTearsOffInStrongWind() {
+    Vehicle ship =
+        new Vehicle(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
+            List.of(
+                new ShipBlock(new BlockPos(0, 0, 0), OAK_PLANKS),
+                new ShipBlock(new BlockPos(0, 1, 0), WHITE_WOOL),
+                new ShipBlock(new BlockPos(0, 2, 0), WHITE_WOOL),
+                new ShipBlock(new BlockPos(0, 3, 0), WHITE_WOOL)),
+            new ShipPose(0),
+            true);
+    ShipConfig config =
+        new ShipConfig(
+            2048,
+            8,
+            Set.of(),
+            Set.of(),
+            true,
+            1,
+            0.5,
+            16.0,
+            0.05,
+            1.0,
+            0.5,
+            0.9,
+            Map.of(OAK_PLANKS, 6.0, WHITE_WOOL, 1.0),
+            10.0,
+            80.0,
+            16.0,
+            1e-6,
+            1e-3);
+    World world = mediumWorld(false, 0);
+    java.util.List<UUID> spawned = new java.util.ArrayList<>();
+    java.util.List<UUID> moved = new java.util.ArrayList<>();
+    ShipRuntime runtime =
+        new ShipRuntime() {
+          public void spawn(Vehicle s) {}
+
+          public void move(Vehicle s, double oldY, double newY) {}
+
+          public void remove(Vehicle s) {}
+
+          public void removeAll(java.util.Collection<Vehicle> s) {}
+
+          public void spawnClothRagdoll(
+              Vehicle s, UUID debrisId, String appearance, double x, double y, double z) {
+            spawned.add(debrisId);
+          }
+
+          public void moveClothRagdoll(
+              UUID debrisId,
+              double x,
+              double y,
+              double z,
+              double qx,
+              double qy,
+              double qz,
+              double qw) {
+            moved.add(debrisId);
+          }
+        };
+    ShipPhysics physics =
+        new ShipPhysicsImpl(
+            new PhysicsEngine(),
+            world,
+            config,
+            new EngineKeyResolver(),
+            runtime,
+            s -> 0,
+            DensityField.uniform(1.2),
+            FlowField.uniform(new Vector3d(0, 0, 10)));
+    assertEquals(0, SailRigging.distanceToRigid(ship, new BlockPos(0, 1, 0)));
+    assertEquals(2, SailRigging.distanceToRigid(ship, new BlockPos(0, 3, 0)));
+    double massBefore = physics.inspect(ship).mass();
+    physics.tick(ship);
+    assertFalse(ship.isTorn(new BlockPos(0, 1, 0)), "mast-adjacent cloth holds");
+    assertTrue(ship.isTorn(new BlockPos(0, 2, 0)), "mid cloth snaps");
+    assertTrue(ship.isTorn(new BlockPos(0, 3, 0)), "far cloth snaps");
+    assertTrue(physics.inspect(ship).mass() < massBefore);
+    assertEquals(2, spawned.size());
+    assertEquals(spawned, moved);
+  }
+
   private static Vehicle furnaceShip() {
     return new Vehicle(
         UUID.randomUUID(),

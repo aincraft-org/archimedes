@@ -1,12 +1,14 @@
 package dev.mintychochip.archimedes.phys;
 
 import dev.mintychochip.archimedes.config.ShipConfig;
+import dev.mintychochip.archimedes.model.BlockPos;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipPose;
 import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.sail.SailMesh;
 import dev.mintychochip.archimedes.ship.ShipRuntime;
 import dev.mintychochip.phys.Body;
+import dev.mintychochip.phys.BodyImpl;
 import dev.mintychochip.phys.DensityField;
 import dev.mintychochip.phys.FlowField;
 import dev.mintychochip.phys.Force;
@@ -27,6 +29,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.joml.Quaterniond;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 
@@ -66,6 +69,9 @@ public final class ShipPhysicsImpl implements ShipPhysics {
 
   /** Per-ship last tick duration in nanoseconds. */
   private final Map<UUID, Long> lastTickNanos = new HashMap<>();
+
+  /** Torn cloth ragdolls. */
+  private final List<ClothDebris> debris = new ArrayList<>();
 
   /**
    * Creates a ship physics facade with still air (no sail drive).
@@ -138,6 +144,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
     if (!chunksLoaded(ship)) return false;
     long started = System.nanoTime();
     boolean moved = integrate(ship, 1, true);
+    stepDebris();
     lastTickNanos.put(ship.id(), System.nanoTime() - started);
     return moved;
   }
@@ -474,6 +481,83 @@ public final class ShipPhysicsImpl implements ShipPhysics {
     return key.endsWith("_wool") || key.endsWith("_banner") || key.endsWith("_wall_banner");
   }
 
+  private void tearOverloadedCloth(Vehicle ship, Body body, Vector3dc incomingVelocity) {
+    List<ShipBlock> failing = new ArrayList<>();
+    Map<BlockPos, Double> loads = new HashMap<>();
+    boolean hullPresent = SailRigging.hasRigid(ship);
+    for (ShipBlock block : ship.blocks()) {
+      if (ship.isTorn(block.pos()) || !SailMesh.isCloth(block.blockData())) {
+        continue;
+      }
+      int distance = SailRigging.distanceToRigid(ship, block.pos());
+      double load = clothLoad(block, incomingVelocity);
+      if (!SailRigging.fails(load, distance, SailRigging.DEFAULT_BREAK_LOAD, hullPresent)) {
+        continue;
+      }
+      failing.add(block);
+      loads.put(block.pos(), load);
+    }
+    for (ShipBlock block : failing) {
+      if (!ship.tearCloth(block.pos())) {
+        continue;
+      }
+      Vector3d worldPos =
+          new Vector3d(
+              ship.origin().x() + ship.pose().x() + block.pos().x(),
+              ship.origin().y() + ship.pose().y() + block.pos().y(),
+              ship.origin().z() + ship.pose().z() + block.pos().z());
+      Vector3d impulse =
+          new Vector3d(ShipSails.facingNormal(block.blockData()))
+              .mul(loads.get(block.pos()) * 0.02);
+      impulse.add(body.linearVelocity());
+      Vector3d spin = new Vector3d(block.pos().x() * 0.1, 2, block.pos().z() * 0.1);
+      ClothDebris piece = new ClothDebris(block.blockData(), worldPos, impulse, spin);
+      debris.add(piece);
+      runtime.spawnClothRagdoll(
+          ship, piece.id(), piece.appearance(), worldPos.x(), worldPos.y(), worldPos.z());
+    }
+  }
+
+  /**
+   * Aerodynamic load on a cloth cell using the gameplay pose: identity orientation and the pre-step
+   * linear velocity. Post-step spin is not part of {@code ShipPose} and must not inflate apparent
+   * wind.
+   *
+   * @param block cloth cell
+   * @param linearVelocity hull velocity at the start of the tick
+   * @return pressure-sail force magnitude
+   */
+  private double clothLoad(ShipBlock block, Vector3dc linearVelocity) {
+    BodyImpl probe =
+        new BodyImpl(new Transform(new Vector3d(), new Quaterniond()), 1, List.of(), List.of());
+    probe.setLinearVelocity(linearVelocity);
+    return new PressureSailForce(
+            new Vector3d(block.pos().x() + 0.5, block.pos().y() + 0.5, block.pos().z() + 0.5),
+            ShipSails.facingNormal(block.blockData()),
+            1.0,
+            air,
+            wind)
+        .apply(probe, world)
+        .force()
+        .length();
+  }
+
+  private void stepDebris() {
+    for (ClothDebris piece : debris) {
+      piece.step(world, physics);
+      Quaterniond q = piece.orientation();
+      runtime.moveClothRagdoll(
+          piece.id(),
+          piece.position().x(),
+          piece.position().y(),
+          piece.position().z(),
+          q.x(),
+          q.y(),
+          q.z(),
+          q.w());
+    }
+  }
+
   /**
    * Steps physics, clamps vertical travel, damps retained velocity, and commits movement.
    *
@@ -485,7 +569,8 @@ public final class ShipPhysicsImpl implements ShipPhysics {
   private boolean integrate(Vehicle ship, int steps, boolean withSails) {
     ShipPose old = ship.pose();
     Body body = body(ship, withSails);
-    body.setLinearVelocity(new Vector3d(velocities.getOrDefault(ship.id(), new Vector3d())));
+    Vector3d incoming = new Vector3d(velocities.getOrDefault(ship.id(), new Vector3d()));
+    body.setLinearVelocity(incoming);
     double newY = old.y();
     for (int i = 0; i < steps; i++) {
       physics.step(world, List.of(body));
@@ -498,6 +583,9 @@ public final class ShipPhysicsImpl implements ShipPhysics {
       }
     }
     velocities.put(ship.id(), new Vector3d(body.linearVelocity()).mul(config.damping()));
+    if (withSails) {
+      tearOverloadedCloth(ship, body, incoming);
+    }
     ShipPose next =
         new ShipPose(
             body.transform().position().x() - ship.origin().x(),

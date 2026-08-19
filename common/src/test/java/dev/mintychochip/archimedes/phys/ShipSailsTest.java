@@ -87,6 +87,23 @@ class ShipSailsTest {
   }
 
   @Test
+  void tornClothIsNotASail() {
+    Vehicle ship =
+        ship(
+            new ShipBlock(new BlockPos(0, 1, 0), WHITE_WOOL),
+            new ShipBlock(new BlockPos(0, 0, 0), OAK_PLANKS));
+    ship.tearCloth(new BlockPos(0, 1, 0));
+    List<Force> sails =
+        ShipSails.forces(
+            ship,
+            block -> block.blockData().contains("wool") ? WHITE_WOOL : OAK_PLANKS,
+            Set.of(WHITE_WOOL),
+            DensityField.uniform(1.2),
+            FlowField.uniform(new Vector3d(0, 0, 10)));
+    assertTrue(sails.isEmpty());
+  }
+
+  @Test
   void blockFacingSetsTheClothNormal() {
     Vehicle ship =
         ship(new ShipBlock(new BlockPos(0, 0, 0), "minecraft:white_wall_banner[facing=west]"));

@@ -46,7 +46,7 @@ public final class ShipSails {
     Objects.requireNonNull(wind);
     List<Force> sails = new ArrayList<>();
     for (ShipBlock block : ship.blocks()) {
-      if (!sailKeys.contains(resolver.key(block))) {
+      if (ship.isTorn(block.pos()) || !sailKeys.contains(resolver.key(block))) {
         continue;
       }
       Vector3d point =
