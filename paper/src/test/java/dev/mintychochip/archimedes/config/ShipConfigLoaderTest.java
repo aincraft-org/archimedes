@@ -183,4 +183,35 @@ class ShipConfigLoaderTest {
 
     assertEquals(0.6, valid.materialDensities().get("minecraft:oak_planks"), 1e-9);
   }
+
+  @Test
+  void overlappingSailAndEnvelopeMaterialsFailEnable() {
+    YamlConfiguration yaml = new YamlConfiguration();
+    yaml.set(ShipConfigLoader.MAXIMUM_BLOCKS_KEY, 100);
+    yaml.set(ShipConfigLoader.TARGET_DISTANCE_KEY, 8);
+    yaml.set("envelope-materials", java.util.List.of("minecraft:white_wool"));
+    IllegalArgumentException error =
+        assertThrows(IllegalArgumentException.class, () -> ShipConfigLoader.load(yaml));
+    assertTrue(error.getMessage().toLowerCase(java.util.Locale.ROOT).contains("envelope"));
+  }
+
+  @Test
+  void engineThrustMustBeFiniteNonNegative() {
+    YamlConfiguration yaml = new YamlConfiguration();
+    yaml.set(ShipConfigLoader.MAXIMUM_BLOCKS_KEY, 100);
+    yaml.set(ShipConfigLoader.TARGET_DISTANCE_KEY, 8);
+    yaml.set("engine-thrust", -1);
+    assertThrows(IllegalArgumentException.class, () -> ShipConfigLoader.load(yaml));
+  }
+
+  @Test
+  void missingEngineAndEnvelopeKeysUseDefaults() {
+    YamlConfiguration yaml = new YamlConfiguration();
+    yaml.set(ShipConfigLoader.MAXIMUM_BLOCKS_KEY, 100);
+    yaml.set(ShipConfigLoader.TARGET_DISTANCE_KEY, 8);
+    ShipConfig loaded = ShipConfigLoader.load(yaml);
+    assertTrue(loaded.engineMaterials().contains("minecraft:furnace"));
+    assertTrue(loaded.envelopeMaterials().contains("minecraft:slime_block"));
+    assertEquals(1.0, loaded.engineThrust());
+  }
 }

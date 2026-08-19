@@ -60,13 +60,23 @@ public final class ShipConfig {
   /** Draft tolerance used to suppress tiny pose changes. */
   private final double draftTolerance;
 
+  /** Material registry names treated as engines. */
+  private final Set<String> engineMaterials;
+
+  /** Material registry names treated as envelope cells. */
+  private final Set<String> envelopeMaterials;
+
+  /** Thrust coefficient applied at each engine block. */
+  private final double engineThrust;
+
   /**
    * Creates configuration with legacy physics defaults.
    *
-   * <p>This delegates to the full constructor with an empty material-density map, default material
-   * density {@code 1.0}, player mass {@code 80.0}, maximum fall {@code 16.0}, mass tolerance {@code
-   * 1e-6}, and draft tolerance {@code 1e-3}. Set and map arguments are copied in their iteration
-   * order where applicable and reject null arguments and null elements or entries with {@link
+   * <p>This delegates to the 19-argument constructor with an empty material-density map, default
+   * material density {@code 1.0}, player mass {@code 80.0}, maximum fall {@code 16.0}, mass
+   * tolerance {@code 1e-6}, and draft tolerance {@code 1e-3}. Engine and envelope defaults are
+   * supplied by that constructor. Set and map arguments are copied in their iteration order where
+   * applicable and reject null arguments and null elements or entries with {@link
    * NullPointerException}.
    *
    * @param maximumBlocks the maximum captured blocks per ship
@@ -119,9 +129,13 @@ public final class ShipConfig {
   /**
    * Creates the configuration with explicit physics settings.
    *
-   * <p>The supplied sets and map are defensively copied and exposed as unmodifiable collections.
-   * Null collection/map arguments and null elements, keys, or values are rejected with {@link
-   * NullPointerException}; scalar arguments are stored as supplied.
+   * <p>Delegates to the full constructor with default engine materials {@code furnace}, {@code
+   * blast_furnace}, and {@code smoker}; default envelope materials {@code slime_block} and {@code
+   * honey_block}; and engine thrust {@code 1.0}. The supplied sets and map are defensively copied
+   * and exposed as unmodifiable collections. Null collection/map arguments and null elements, keys,
+   * or values are rejected with {@link NullPointerException}; scalar arguments are stored as
+   * supplied except that non-finite or negative engine thrust is rejected with {@link
+   * IllegalArgumentException}.
    *
    * @param maximumBlocks the maximum captured blocks per ship
    * @param targetDistance the maximum command targeting distance
@@ -161,6 +175,85 @@ public final class ShipConfig {
       double maxFall,
       double massTolerance,
       double draftTolerance) {
+    this(
+        maximumBlocks,
+        targetDistance,
+        forbiddenMaterials,
+        disabledWorlds,
+        buoyancyEnabled,
+        physicsTicks,
+        bobAmplitude,
+        maxRise,
+        gravity,
+        waterDensity,
+        blockDensity,
+        damping,
+        materialDensities,
+        defaultMaterialDensity,
+        playerMass,
+        maxFall,
+        massTolerance,
+        draftTolerance,
+        Set.of("minecraft:furnace", "minecraft:blast_furnace", "minecraft:smoker"),
+        Set.of("minecraft:slime_block", "minecraft:honey_block"),
+        1.0);
+  }
+
+  /**
+   * Creates the configuration with explicit physics, engine, and envelope settings.
+   *
+   * <p>The supplied sets and map are defensively copied and exposed as unmodifiable collections.
+   * Null collection/map arguments and null elements, keys, or values are rejected with {@link
+   * NullPointerException}. Non-finite or negative {@code engineThrust} is rejected with {@link
+   * IllegalArgumentException}; other scalar arguments are stored as supplied.
+   *
+   * @param maximumBlocks the maximum captured blocks per ship
+   * @param targetDistance the maximum command targeting distance
+   * @param forbiddenMaterials materials that cannot be assembled
+   * @param disabledWorlds worlds where assembly is disabled
+   * @param buoyancyEnabled whether buoyancy is enabled globally
+   * @param physicsTicks physics tick interval
+   * @param bobAmplitude max bob amplitude
+   * @param maxRise max rise from build site
+   * @param gravity gravity constant
+   * @param waterDensity water density constant
+   * @param blockDensity block density constant
+   * @param damping velocity damping factor
+   * @param materialDensities per-material densities
+   * @param defaultMaterialDensity default material density
+   * @param playerMass mass of a rider
+   * @param maxFall maximum fall distance
+   * @param massTolerance mass equilibrium tolerance
+   * @param draftTolerance waterline tolerance
+   * @param engineMaterials materials treated as engines
+   * @param envelopeMaterials materials treated as envelope cells
+   * @param engineThrust thrust coefficient at each engine
+   */
+  public ShipConfig(
+      int maximumBlocks,
+      int targetDistance,
+      Set<String> forbiddenMaterials,
+      Set<UUID> disabledWorlds,
+      boolean buoyancyEnabled,
+      int physicsTicks,
+      double bobAmplitude,
+      double maxRise,
+      double gravity,
+      double waterDensity,
+      double blockDensity,
+      double damping,
+      Map<String, Double> materialDensities,
+      double defaultMaterialDensity,
+      double playerMass,
+      double maxFall,
+      double massTolerance,
+      double draftTolerance,
+      Set<String> engineMaterials,
+      Set<String> envelopeMaterials,
+      double engineThrust) {
+    if (!Double.isFinite(engineThrust) || engineThrust < 0) {
+      throw new IllegalArgumentException("engineThrust must be a finite non-negative number");
+    }
     this.maximumBlocks = maximumBlocks;
     this.targetDistance = targetDistance;
     this.forbiddenMaterials = Set.copyOf(forbiddenMaterials);
@@ -179,6 +272,9 @@ public final class ShipConfig {
     this.maxFall = maxFall;
     this.massTolerance = massTolerance;
     this.draftTolerance = draftTolerance;
+    this.engineMaterials = Set.copyOf(engineMaterials);
+    this.envelopeMaterials = Set.copyOf(envelopeMaterials);
+    this.engineThrust = engineThrust;
   }
 
   /**
@@ -326,5 +422,26 @@ public final class ShipConfig {
    */
   public double draftTolerance() {
     return draftTolerance;
+  }
+
+  /**
+   * @return an unmodifiable set of material registry names treated as engines
+   */
+  public Set<String> engineMaterials() {
+    return engineMaterials;
+  }
+
+  /**
+   * @return an unmodifiable set of material registry names treated as envelope cells
+   */
+  public Set<String> envelopeMaterials() {
+    return envelopeMaterials;
+  }
+
+  /**
+   * @return the thrust coefficient applied at each engine block
+   */
+  public double engineThrust() {
+    return engineThrust;
   }
 }

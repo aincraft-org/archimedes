@@ -20,6 +20,23 @@ public final class ShipConfigLoader {
   /** Key for the forbidden material list setting. */
   public static final String FORBIDDEN_MATERIALS_KEY = "forbidden-materials";
 
+  /** Key for the engine material list setting. */
+  public static final String ENGINE_MATERIALS_KEY = "engine-materials";
+
+  /** Key for the envelope material list setting. */
+  public static final String ENVELOPE_MATERIALS_KEY = "envelope-materials";
+
+  /** Key for the engine thrust coefficient. */
+  public static final String ENGINE_THRUST_KEY = "engine-thrust";
+
+  /** Default engine materials when the list is omitted. */
+  private static final Set<String> DEFAULT_ENGINE_MATERIALS =
+      Set.of("minecraft:furnace", "minecraft:blast_furnace", "minecraft:smoker");
+
+  /** Default envelope materials when the list is omitted. */
+  private static final Set<String> DEFAULT_ENVELOPE_MATERIALS =
+      Set.of("minecraft:slime_block", "minecraft:honey_block");
+
   /** Key for the disabled world identifier list setting. */
   public static final String DISABLED_WORLDS_KEY = "disabled-worlds";
 
@@ -70,6 +87,19 @@ public final class ShipConfigLoader {
       if (!value.isBlank()) {
         forbidden.add(value.toLowerCase(Locale.ROOT));
       }
+    }
+    Set<String> engineMaterials =
+        loadMaterialKeys(configuration, ENGINE_MATERIALS_KEY, DEFAULT_ENGINE_MATERIALS);
+    Set<String> envelopeMaterials =
+        loadMaterialKeys(configuration, ENVELOPE_MATERIALS_KEY, DEFAULT_ENVELOPE_MATERIALS);
+    for (String key : envelopeMaterials) {
+      if (isSailCloth(key)) {
+        throw new IllegalArgumentException("envelope-materials cannot include sail cloth");
+      }
+    }
+    double engineThrust = configuration.getDouble(ENGINE_THRUST_KEY, 1.0);
+    if (!Double.isFinite(engineThrust) || engineThrust < 0) {
+      throw new IllegalArgumentException("engine-thrust must be a finite non-negative number");
     }
     Set<UUID> disabledWorlds = new HashSet<>();
     for (String value : configuration.getStringList(DISABLED_WORLDS_KEY)) {
@@ -152,7 +182,28 @@ public final class ShipConfigLoader {
         playerMass,
         maxFall,
         massTolerance,
-        draftTolerance);
+        draftTolerance,
+        engineMaterials,
+        envelopeMaterials,
+        engineThrust);
+  }
+
+  private static Set<String> loadMaterialKeys(
+      FileConfiguration configuration, String key, Set<String> defaults) {
+    if (!configuration.isSet(key)) {
+      return defaults;
+    }
+    Set<String> values = new HashSet<>();
+    for (String value : configuration.getStringList(key)) {
+      if (!value.isBlank()) {
+        values.add(value.toLowerCase(Locale.ROOT));
+      }
+    }
+    return values;
+  }
+
+  private static boolean isSailCloth(String key) {
+    return key.endsWith("_wool") || key.endsWith("_banner") || key.endsWith("_wall_banner");
   }
 
   private static double positiveFinite(double value, String name) {

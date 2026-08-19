@@ -26,6 +26,21 @@ forbidden-materials:
   - "minecraft:nether_portal"
   - "minecraft:moving_piston"
 
+# Blocks that produce thrust when engines are enabled (registry names).
+engine-materials:
+  - "minecraft:furnace"
+  - "minecraft:blast_furnace"
+  - "minecraft:smoker"
+
+# Blocks that contribute aerostatic envelope volume. Must not include sail cloth
+# (*_wool, *_banner, *_wall_banner).
+envelope-materials:
+  - "minecraft:slime_block"
+  - "minecraft:honey_block"
+
+# Thrust coefficient at each engine block. Must be finite and non-negative.
+engine-thrust: 1.0
+
 # Worlds where assembly is disabled (world UUIDs).
 disabled-worlds:
 
