@@ -6,9 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.mintychochip.archimedes.config.ShipConfig;
 import dev.mintychochip.archimedes.model.BlockPos;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
+import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.phys.ShipInspection;
 import dev.mintychochip.archimedes.phys.ShipPhysics;
 import dev.mintychochip.archimedes.ship.ShipService;
@@ -59,8 +59,8 @@ class ShipCommandTest {
   private static final class RecordingService implements ShipService {
     final List<String> calls = new ArrayList<>();
     final List<String> messages = new ArrayList<>();
-    Ship assembled;
-    Ship owned;
+    Vehicle assembled;
+    Vehicle owned;
     String error = "boom";
     UUID owner = UUID.randomUUID();
     boolean opUser;
@@ -73,12 +73,12 @@ class ShipCommandTest {
     boolean lastOperator;
     boolean disassembleFails;
     boolean killFails;
-    final List<Ship> registered = new ArrayList<>();
+    final List<Vehicle> registered = new ArrayList<>();
     UUID lastKilled;
     int killAllCount;
 
     @Override
-    public Ship assembleAt(UUID playerId, int x, int y, int z, UUID worldId) {
+    public Vehicle assembleAt(UUID playerId, int x, int y, int z, UUID worldId) {
       calls.add(SUB_ASSEMBLE);
       targetX = x;
       targetY = y;
@@ -87,7 +87,7 @@ class ShipCommandTest {
     }
 
     @Override
-    public Ship spawnSail(UUID playerId, UUID worldId, int x, int y, int z, String size) {
+    public Vehicle spawnSail(UUID playerId, UUID worldId, int x, int y, int z, String size) {
       calls.add(SUB_SAIL);
       lastRequester = playerId;
       lastWorld = worldId;
@@ -99,7 +99,7 @@ class ShipCommandTest {
     }
 
     @Override
-    public Ship findOwnedInWorld(UUID playerId, UUID worldId) {
+    public Vehicle findOwnedInWorld(UUID playerId, UUID worldId) {
       calls.add("find");
       return owned;
     }
@@ -133,7 +133,7 @@ class ShipCommandTest {
     }
 
     @Override
-    public Map<UUID, Ship> loadAll() {
+    public Map<UUID, Vehicle> loadAll() {
       return Map.of();
     }
 
@@ -144,7 +144,7 @@ class ShipCommandTest {
     public void removeAllRuntime() {}
 
     @Override
-    public Collection<Ship> all() {
+    public Collection<Vehicle> all() {
       calls.add(ALL);
       if (!registered.isEmpty()) {
         return List.copyOf(registered);
@@ -174,22 +174,22 @@ class ShipCommandTest {
   }
 
   /** Builds a ship with one block for service returns. */
-  private static Ship ship() {
+  private static Vehicle ship() {
     return shipAt(1, 2, 3);
   }
 
   /** Builds a one-block ship at the given origin. */
-  private static Ship shipAt(int x, int y, int z) {
+  private static Vehicle shipAt(int x, int y, int z) {
     ShipOrigin origin = new ShipOrigin(WORLD_ID, x, y, z);
-    return new Ship(
+    return new Vehicle(
         UUID.randomUUID(),
         UUID.randomUUID(),
         origin,
         List.of(new ShipBlock(new BlockPos(0, 0, 0), "minecraft:stone")));
   }
 
-  /** Ship placed under the test player at (10, 64, 20). */
-  private static Ship nearbyShip() {
+  /** Vehicle placed under the test player at (10, 64, 20). */
+  private static Vehicle nearbyShip() {
     return shipAt(10, 64, 20);
   }
 
@@ -285,25 +285,25 @@ class ShipCommandTest {
   private static ShipPhysics unusedPhysics() {
     return new ShipPhysics() {
       @Override
-      public boolean tick(dev.mintychochip.archimedes.model.Ship ship) {
+      public boolean tick(dev.mintychochip.archimedes.model.Vehicle ship) {
         return false;
       }
 
       @Override
-      public boolean rise(dev.mintychochip.archimedes.model.Ship ship) {
+      public boolean rise(dev.mintychochip.archimedes.model.Vehicle ship) {
         return true;
       }
 
       @Override
-      public boolean sink(dev.mintychochip.archimedes.model.Ship ship, int blocks) {
+      public boolean sink(dev.mintychochip.archimedes.model.Vehicle ship, int blocks) {
         return false;
       }
 
       @Override
-      public void clear(dev.mintychochip.archimedes.model.Ship ship) {}
+      public void clear(dev.mintychochip.archimedes.model.Vehicle ship) {}
 
       @Override
-      public ShipInspection inspect(dev.mintychochip.archimedes.model.Ship ship) {
+      public ShipInspection inspect(dev.mintychochip.archimedes.model.Vehicle ship) {
         return new ShipInspection(
             ship.id(),
             ship.blockCount(),
@@ -466,8 +466,8 @@ class ShipCommandTest {
   @Test
   void inspectPicksNearbyHullOverFirstOwnedShip() {
     RecordingService service = new RecordingService();
-    Ship distant = shipAt(0, 64, 790);
-    Ship nearby = nearbyShip();
+    Vehicle distant = shipAt(0, 64, 790);
+    Vehicle nearby = nearbyShip();
     service.owned = distant;
     service.registered.add(distant);
     service.registered.add(nearby);
@@ -494,7 +494,7 @@ class ShipCommandTest {
   @Test
   void killDestroysNearbyShip() {
     RecordingService service = new RecordingService();
-    Ship nearby = nearbyShip();
+    Vehicle nearby = nearbyShip();
     service.owned = nearby;
     commandNoTarget(service).onCommand(player(service, true), CMD, SHIP, new String[] {SUB_KILL});
     assertTrue(service.calls.contains(SUB_KILL));

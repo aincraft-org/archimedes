@@ -1,7 +1,7 @@
 package dev.mintychochip.archimedes.bukkit;
 
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipPose;
+import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.ship.ShipEntityCarrier;
 import io.papermc.paper.entity.TeleportFlag;
 import java.util.Set;
@@ -64,7 +64,7 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
    * @param poseY the ship's current vertical pose
    */
   @Override
-  public void track(Ship ship, double poseY) {
+  public void track(Vehicle ship, double poseY) {
     tracker.track(ship, poseY);
   }
 
@@ -75,7 +75,7 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
    * @param pose the ship's current pose
    */
   @Override
-  public void track(Ship ship, ShipPose pose) {
+  public void track(Vehicle ship, ShipPose pose) {
     tracker.track(ship, pose);
   }
 
@@ -85,7 +85,7 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
    * @param ship the ship to stop tracking
    */
   @Override
-  public void untrack(Ship ship) {
+  public void untrack(Vehicle ship) {
     tracker.untrack(ship);
   }
 
@@ -102,7 +102,7 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
    * @param poseY the new vertical pose basis
    */
   @Override
-  public void updatePoseBasis(Ship ship, double poseY) {
+  public void updatePoseBasis(Vehicle ship, double poseY) {
     tracker.updatePoseBasis(ship, poseY);
   }
 
@@ -113,7 +113,7 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
    * @param pose the new pose basis
    */
   @Override
-  public void updatePoseBasis(Ship ship, ShipPose pose) {
+  public void updatePoseBasis(Vehicle ship, ShipPose pose) {
     tracker.updatePoseBasis(ship, pose);
   }
 
@@ -127,7 +127,7 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
    * @param newY the new vertical pose
    */
   @Override
-  public void carry(Ship ship, double oldY, double newY) {
+  public void carry(Vehicle ship, double oldY, double newY) {
     carry(
         ship,
         new ShipPose(ship.pose().x(), oldY, ship.pose().z()),
@@ -143,7 +143,7 @@ public final class BukkitShipEntityCarrier implements ShipEntityCarrier {
    * @param to new pose
    */
   @Override
-  public void carry(Ship ship, ShipPose from, ShipPose to) {
+  public void carry(Vehicle ship, ShipPose from, ShipPose to) {
     double dx = to.x() - from.x();
     double dy = to.y() - from.y();
     double dz = to.z() - from.z();

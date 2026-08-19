@@ -1,8 +1,8 @@
 package dev.mintychochip.archimedes.bukkit;
 
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipTransform;
+import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.render.RenderSurface;
 import dev.mintychochip.archimedes.render.SailTransform;
 import dev.mintychochip.archimedes.render.ShipRenderer;
@@ -66,7 +66,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
    * @param holder finalization receiver invoked only after registration succeeds
    */
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
-  public void render(Ship ship, ShipHolder holder) {
+  public void render(Vehicle ship, ShipHolder holder) {
     List<BlockDisplay> displays = new ArrayList<>(ship.blockCount());
     try {
       renderDisplays(ship, displays);
@@ -81,7 +81,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
     }
   }
 
-  private void renderDisplays(Ship ship, List<BlockDisplay> displays) {
+  private void renderDisplays(Vehicle ship, List<BlockDisplay> displays) {
     for (ShipBlock block : ship.blocks()) {
       if (SailMesh.isCloth(block.blockData())) {
         continue;
@@ -106,7 +106,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
     }
   }
 
-  private BlockDisplay spawnSail(Ship ship, SailPiece piece, int index) {
+  private BlockDisplay spawnSail(Vehicle ship, SailPiece piece, int index) {
     BlockData data = surface.blockData(piece.appearance());
     String sailIndex = Integer.toString(index);
     return surface.spawnBlockDisplay(
@@ -123,7 +123,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
   }
 
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
-  private void cleanupRender(Ship ship, ShipRuntimeException failure) {
+  private void cleanupRender(Vehicle ship, ShipRuntimeException failure) {
     try {
       surface.removeTagged(shipKey, ship.id().toString());
     } catch (RuntimeException cleanup) {
@@ -138,7 +138,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
    * @param ship the ship to clean up
    */
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
-  public void removeRuntime(Ship ship) {
+  public void removeRuntime(Vehicle ship) {
     try {
       surface.removeTagged(shipKey, ship.id().toString());
     } catch (RuntimeException failure) {
@@ -177,7 +177,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
    * @param newY resulting pose y
    */
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
-  public void reposition(Ship ship, double oldY, double newY) {
+  public void reposition(Vehicle ship, double oldY, double newY) {
     try {
       Map<BlockDisplay, ShipBlock> blocksByDisplay = pairDisplays(ship);
       for (Map.Entry<BlockDisplay, ShipBlock> entry : blocksByDisplay.entrySet()) {
@@ -198,7 +198,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
     }
   }
 
-  private org.bukkit.Location location(Ship ship, ShipBlock block) {
+  private org.bukkit.Location location(Vehicle ship, ShipBlock block) {
     ShipTransform.VisualPosition position = ShipTransform.visual(ship, block.pos());
     return surface.location(
         ship.origin(),
@@ -207,7 +207,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
         position.z() - ship.origin().z());
   }
 
-  private Map<BlockDisplay, ShipBlock> pairDisplays(Ship ship) {
+  private Map<BlockDisplay, ShipBlock> pairDisplays(Vehicle ship) {
     Map<String, ShipBlock> blocksByKey = new java.util.HashMap<>();
     for (ShipBlock block : ship.blocks()) {
       blocksByKey.put(key(block), block);
@@ -224,7 +224,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
     return paired;
   }
 
-  private Map<String, BlockDisplay> pairSails(Ship ship) {
+  private Map<String, BlockDisplay> pairSails(Vehicle ship) {
     Map<String, BlockDisplay> sails = new HashMap<>();
     for (BlockDisplay display : surface.tagged(shipKey, ship.id().toString())) {
       String index = display.getPersistentDataContainer().get(sailKey, PersistentDataType.STRING);

@@ -1,6 +1,6 @@
 package dev.mintychochip.archimedes.ship;
 
-import dev.mintychochip.archimedes.model.Ship;
+import dev.mintychochip.archimedes.model.Vehicle;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
@@ -20,7 +20,7 @@ public interface ShipService {
    * @param worldId the world identifier
    * @return the assembled ship, or null on failure
    */
-  Ship assembleAt(UUID playerId, int x, int y, int z, UUID worldId);
+  Vehicle assembleAt(UUID playerId, int x, int y, int z, UUID worldId);
 
   /**
    * Spawns a predetermined sail ship at the given origin without scanning or clearing world blocks.
@@ -32,7 +32,7 @@ public interface ShipService {
    * @param z origin z
    * @return the spawned ship, or null on failure
    */
-  default Ship spawnSail(UUID playerId, UUID worldId, int x, int y, int z) {
+  default Vehicle spawnSail(UUID playerId, UUID worldId, int x, int y, int z) {
     return spawnSail(playerId, worldId, x, y, z, "medium");
   }
 
@@ -48,7 +48,7 @@ public interface ShipService {
    * @param size named hull size
    * @return the spawned ship, or null on failure
    */
-  Ship spawnSail(UUID playerId, UUID worldId, int x, int y, int z, String size);
+  Vehicle spawnSail(UUID playerId, UUID worldId, int x, int y, int z, String size);
 
   /**
    * Returns the ship owned by a player in their current world, or null.
@@ -57,7 +57,7 @@ public interface ShipService {
    * @param worldId the world identifier
    * @return the owned ship, or null
    */
-  Ship findOwnedInWorld(UUID playerId, UUID worldId);
+  Vehicle findOwnedInWorld(UUID playerId, UUID worldId);
 
   /**
    * Disassembles a ship.
@@ -96,7 +96,7 @@ public interface ShipService {
    *
    * @return all registered ships keyed by identifier
    */
-  Map<UUID, Ship> loadAll();
+  Map<UUID, Vehicle> loadAll();
 
   /** Persists all registered ships. */
   void saveAll();
@@ -107,7 +107,7 @@ public interface ShipService {
   /**
    * @return every registered ship
    */
-  Collection<Ship> all();
+  Collection<Vehicle> all();
 
   /** Integrates one buoyancy tick for every registered ship. */
   void tick();

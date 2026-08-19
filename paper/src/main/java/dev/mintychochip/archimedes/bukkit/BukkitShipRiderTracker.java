@@ -1,8 +1,8 @@
 package dev.mintychochip.archimedes.bukkit;
 
 import dev.mintychochip.archimedes.collision.CollisionHull;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipPose;
+import dev.mintychochip.archimedes.model.Vehicle;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -41,7 +41,7 @@ public final class BukkitShipRiderTracker implements Listener {
   private final World world;
 
   /** Supplier of all currently registered ships. */
-  private final Supplier<Collection<Ship>> allShips;
+  private final Supplier<Collection<Vehicle>> allShips;
 
   /** Key identifying collision-owner Shulkers. */
   private final NamespacedKey collisionOwnerKey;
@@ -71,7 +71,7 @@ public final class BukkitShipRiderTracker implements Listener {
    */
   public BukkitShipRiderTracker(
       World world,
-      Supplier<Collection<Ship>> allShips,
+      Supplier<Collection<Vehicle>> allShips,
       NamespacedKey collisionOwnerKey,
       NamespacedKey renderShipKey) {
     this.world = world;
@@ -87,7 +87,7 @@ public final class BukkitShipRiderTracker implements Listener {
    * @param ship the ship to track
    * @param seedPoseY the pose y to use when locating existing riders, typically the ship's old y
    */
-  public void track(Ship ship, double seedPoseY) {
+  public void track(Vehicle ship, double seedPoseY) {
     track(ship, new ShipPose(ship.pose().x(), seedPoseY, ship.pose().z()));
   }
 
@@ -98,7 +98,7 @@ public final class BukkitShipRiderTracker implements Listener {
    * @param ship the ship to track
    * @param seedPose the pose to use when locating existing riders
    */
-  public void track(Ship ship, ShipPose seedPose) {
+  public void track(Vehicle ship, ShipPose seedPose) {
     UUID shipId = ship.id();
     poseBasisByShip.put(shipId, seedPose);
     boolean added =
@@ -116,7 +116,7 @@ public final class BukkitShipRiderTracker implements Listener {
    * @param ship ship whose basis is updated
    * @param poseY pose basis to store
    */
-  public void updatePoseBasis(Ship ship, double poseY) {
+  public void updatePoseBasis(Vehicle ship, double poseY) {
     updatePoseBasis(ship, new ShipPose(ship.pose().x(), poseY, ship.pose().z()));
   }
 
@@ -126,7 +126,7 @@ public final class BukkitShipRiderTracker implements Listener {
    * @param ship ship whose basis is updated
    * @param pose pose basis to store
    */
-  public void updatePoseBasis(Ship ship, ShipPose pose) {
+  public void updatePoseBasis(Vehicle ship, ShipPose pose) {
     poseBasisByShip.put(ship.id(), pose);
   }
 
@@ -145,7 +145,7 @@ public final class BukkitShipRiderTracker implements Listener {
    * @param ship ship the entity is riding
    * @param entityId rider to keep
    */
-  public void retain(Ship ship, UUID entityId) {
+  public void retain(Vehicle ship, UUID entityId) {
     addRider(ship.id(), entityId);
   }
 
@@ -155,7 +155,7 @@ public final class BukkitShipRiderTracker implements Listener {
    * @param ship the ship to query
    * @return the current riders of the ship
    */
-  public Set<UUID> riders(Ship ship) {
+  public Set<UUID> riders(Vehicle ship) {
     return ridersByShip.computeIfAbsent(ship.id(), k -> new HashSet<>());
   }
 
@@ -165,7 +165,7 @@ public final class BukkitShipRiderTracker implements Listener {
    *
    * @param ship the ship to refresh
    */
-  public void refresh(Ship ship) {
+  public void refresh(Vehicle ship) {
     indices.put(ship.id(), TopSurfaceIndex.build(CollisionHull.topExposedBlocks(ship), ship));
   }
 
@@ -174,7 +174,7 @@ public final class BukkitShipRiderTracker implements Listener {
    *
    * @param ship the ship to untrack
    */
-  public void untrack(Ship ship) {
+  public void untrack(Vehicle ship) {
     UUID shipId = ship.id();
     Set<UUID> riders = ridersByShip.remove(shipId);
     if (riders != null) {
@@ -193,7 +193,7 @@ public final class BukkitShipRiderTracker implements Listener {
    * @param ship the ship to seed
    * @param pose the pose basis to use for overlap checks
    */
-  private void seedRiders(Ship ship, ShipPose pose) {
+  private void seedRiders(Vehicle ship, ShipPose pose) {
     TopSurfaceIndex index = indices.get(ship.id());
     if (index == null) {
       return;
@@ -353,9 +353,9 @@ public final class BukkitShipRiderTracker implements Listener {
 
     UUID entityId = entity.getUniqueId();
     UUID previousShip = shipByEntity.get(entityId);
-    Ship chosen = null;
+    Vehicle chosen = null;
 
-    for (Ship ship : allShips.get()) {
+    for (Vehicle ship : allShips.get()) {
       if (!ship.origin().worldId().equals(world.getUID())) {
         continue;
       }
@@ -371,7 +371,7 @@ public final class BukkitShipRiderTracker implements Listener {
     }
 
     if (chosen == null) {
-      for (Ship ship : allShips.get()) {
+      for (Vehicle ship : allShips.get()) {
         if (!ship.origin().worldId().equals(world.getUID())) {
           continue;
         }
@@ -398,7 +398,7 @@ public final class BukkitShipRiderTracker implements Listener {
    * @param ship ship whose stored pose basis is needed
    * @return the last committed pose basis, or a zero pose when none is stored
    */
-  private ShipPose poseBasis(Ship ship) {
+  private ShipPose poseBasis(Vehicle ship) {
     return poseBasisByShip.getOrDefault(ship.id(), new ShipPose(0));
   }
 
@@ -408,7 +408,7 @@ public final class BukkitShipRiderTracker implements Listener {
    * @param ship the ship to index
    * @return the top-surface index for the ship
    */
-  private TopSurfaceIndex indexFor(Ship ship) {
+  private TopSurfaceIndex indexFor(Vehicle ship) {
     return indices.computeIfAbsent(
         ship.id(), k -> TopSurfaceIndex.build(CollisionHull.topExposedBlocks(ship), ship));
   }

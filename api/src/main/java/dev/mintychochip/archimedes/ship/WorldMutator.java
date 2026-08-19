@@ -1,6 +1,6 @@
 package dev.mintychochip.archimedes.ship;
 
-import dev.mintychochip.archimedes.model.Ship;
+import dev.mintychochip.archimedes.model.Vehicle;
 
 /**
  * Mutates the world during assembly and disassembly. Implementations must be robust against partial
@@ -23,7 +23,7 @@ public interface WorldMutator {
    * @param ship the ship to clear
    * @return false when any removal fails, leaving the world unchanged
    */
-  boolean clearBlocks(Ship ship);
+  boolean clearBlocks(Vehicle ship);
 
   /**
    * Validates that every ship destination is currently empty.
@@ -31,7 +31,7 @@ public interface WorldMutator {
    * @param ship the ship to validate
    * @return true when every destination is empty
    */
-  boolean validateRestore(Ship ship);
+  boolean validateRestore(Vehicle ship);
 
   /**
    * Restores every ship block's original data at its destination.
@@ -39,7 +39,7 @@ public interface WorldMutator {
    * @param ship the ship to restore
    * @return false when a destination became occupied mid-operation
    */
-  boolean restoreBlocks(Ship ship);
+  boolean restoreBlocks(Vehicle ship);
 
   /**
    * @return the last failure message

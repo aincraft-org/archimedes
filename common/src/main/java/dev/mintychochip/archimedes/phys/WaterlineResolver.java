@@ -1,9 +1,9 @@
 package dev.mintychochip.archimedes.phys;
 
 import dev.mintychochip.archimedes.config.ShipConfig;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipPose;
+import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.phys.Body;
 import dev.mintychochip.phys.Bounds;
 import dev.mintychochip.phys.Collider;
@@ -117,7 +117,7 @@ public final class WaterlineResolver {
    *     currently unused
    * @return whether every sampled block path position is clear
    */
-  public static boolean isPathClear(Ship ship, World world, double poseY, ShipConfig config) {
+  public static boolean isPathClear(Vehicle ship, World world, double poseY, ShipConfig config) {
     return isPathClear(ship, world, new ShipPose(ship.pose().x(), poseY, ship.pose().z()), config);
   }
 
@@ -130,12 +130,12 @@ public final class WaterlineResolver {
    * @param config unused; reserved for future tolerances
    * @return whether every sampled cell is clear
    */
-  public static boolean isPathClear(Ship ship, World world, ShipPose target, ShipConfig config) {
+  public static boolean isPathClear(Vehicle ship, World world, ShipPose target, ShipConfig config) {
     return isPathClear(ship, world, target, config, false);
   }
 
   /**
-   * Like {@link #isPathClear(Ship, World, ShipPose, ShipConfig)} but solids at or below the keel
+   * Like {@link #isPathClear(Vehicle, World, ShipPose, ShipConfig)} but solids at or below the keel
    * are ignored. Used for XZ slides so ground contact cannot freeze the hull.
    *
    * @param ship ship whose blocks define the swept volume
@@ -145,12 +145,12 @@ public final class WaterlineResolver {
    * @return whether the slide is clear of walls
    */
   public static boolean isHorizontalPathClear(
-      Ship ship, World world, ShipPose target, ShipConfig config) {
+      Vehicle ship, World world, ShipPose target, ShipConfig config) {
     return isPathClear(ship, world, target, config, true);
   }
 
   private static boolean isPathClear(
-      Ship ship, World world, ShipPose target, ShipConfig config, boolean ignoreKeel) {
+      Vehicle ship, World world, ShipPose target, ShipConfig config, boolean ignoreKeel) {
     int minX = Math.min(ship.pose().anchorDx(), target.anchorDx());
     int maxX = Math.max(ship.pose().anchorDx(), target.anchorDx());
     int minY = Math.min(ship.pose().anchorDy(), target.anchorDy());
@@ -183,7 +183,7 @@ public final class WaterlineResolver {
    * @param ship hull whose lowest relative Y is needed
    * @return minimum block y, or 0 when empty
    */
-  private static int minRelativeY(Ship ship) {
+  private static int minRelativeY(Vehicle ship) {
     int min = Integer.MAX_VALUE;
     for (ShipBlock block : ship.blocks()) {
       min = Math.min(min, block.pos().y());

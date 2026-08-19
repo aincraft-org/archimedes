@@ -4,8 +4,8 @@ import dev.mintychochip.archimedes.collision.CollisionHull;
 import dev.mintychochip.archimedes.collision.CollisionVolume;
 import dev.mintychochip.archimedes.collision.CollisionVolumeManager;
 import dev.mintychochip.archimedes.model.BlockPos;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipTransform;
+import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.ship.ShipRuntimeException;
 import java.util.HashMap;
 import java.util.Map;
@@ -60,7 +60,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
    */
   @Override
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
-  public void spawn(Ship ship) {
+  public void spawn(Vehicle ship) {
     normalizeRemoval(ship.id(), "collision spawn pre-cleanup");
 
     Map<BlockPos, CollisionVolume> spawned = new HashMap<>();
@@ -128,7 +128,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
    */
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   @Override
-  public void move(Ship ship) {
+  public void move(Vehicle ship) {
     Map<BlockPos, CollisionVolume> shipVolumes = volumes.get(ship.id());
     if (shipVolumes == null) {
       spawn(ship);
@@ -181,7 +181,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
    * @param ship ship whose volumes are restored
    * @param oldY previous pose y to restore
    */
-  public void rollback(Ship ship, double oldY) {
+  public void rollback(Vehicle ship, double oldY) {
     Map<BlockPos, CollisionVolume> shipVolumes = volumes.get(ship.id());
     if (shipVolumes == null) {
       return;

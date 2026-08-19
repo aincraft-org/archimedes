@@ -1,6 +1,6 @@
 package dev.mintychochip.archimedes.ship;
 
-import dev.mintychochip.archimedes.model.Ship;
+import dev.mintychochip.archimedes.model.Vehicle;
 import java.util.Map;
 import java.util.UUID;
 
@@ -11,12 +11,12 @@ public interface ShipStoreLike {
    *
    * @return all persisted ships keyed by identifier
    */
-  Map<UUID, Ship> loadAll();
+  Map<UUID, Vehicle> loadAll();
 
   /**
    * Saves all ships.
    *
    * @param ships the ships to save
    */
-  void saveAll(Map<UUID, Ship> ships);
+  void saveAll(Map<UUID, Vehicle> ships);
 }

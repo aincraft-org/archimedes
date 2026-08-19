@@ -4,9 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.mintychochip.archimedes.model.BlockPos;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
+import dev.mintychochip.archimedes.model.Vehicle;
 import java.util.List;
 import java.util.UUID;
 import org.bukkit.util.BoundingBox;
@@ -20,8 +20,8 @@ class TopSurfaceIndexTest {
 
   @Test
   void overlapForEntityStandingOnTopBlock() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             OWNER,
             new ShipOrigin(WORLD, 100, 200, 300),
@@ -36,8 +36,8 @@ class TopSurfaceIndexTest {
 
   @Test
   void noOverlapWhenEntityIsTooHigh() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             OWNER,
             new ShipOrigin(WORLD, 100, 200, 300),
@@ -52,8 +52,8 @@ class TopSurfaceIndexTest {
 
   @Test
   void noOverlapWhenEntityIsAirborne() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             OWNER,
             new ShipOrigin(WORLD, 100, 200, 300),
@@ -68,8 +68,8 @@ class TopSurfaceIndexTest {
 
   @Test
   void overlapWhenEntityIsSlightlyAboveTheTopBlock() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             OWNER,
             new ShipOrigin(WORLD, 100, 200, 300),
@@ -84,8 +84,8 @@ class TopSurfaceIndexTest {
 
   @Test
   void overlapWhenEntityIsJumpingOnTheDeck() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             OWNER,
             new ShipOrigin(WORLD, 100, 200, 300),
@@ -99,8 +99,8 @@ class TopSurfaceIndexTest {
 
   @Test
   void noOverlapWhenEntityIsBesideTheBlock() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             OWNER,
             new ShipOrigin(WORLD, 100, 200, 300),
@@ -115,8 +115,8 @@ class TopSurfaceIndexTest {
 
   @Test
   void overlapForEntityStraddlingTwoTopBlocks() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             OWNER,
             new ShipOrigin(WORLD, 100, 200, 300),
@@ -134,8 +134,8 @@ class TopSurfaceIndexTest {
 
   @Test
   void overlapForNegativeWorldOrigin() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             OWNER,
             new ShipOrigin(WORLD, -100, 200, -100),
@@ -149,8 +149,8 @@ class TopSurfaceIndexTest {
 
   @Test
   void overlapShiftsWithPoseXZ() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             OWNER,
             new ShipOrigin(WORLD, 100, 200, 300),
@@ -165,8 +165,8 @@ class TopSurfaceIndexTest {
 
   @Test
   void overlapShiftsWithPoseY() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             OWNER,
             new ShipOrigin(WORLD, 100, 200, 300),

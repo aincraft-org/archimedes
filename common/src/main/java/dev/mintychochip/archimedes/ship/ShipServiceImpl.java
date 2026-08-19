@@ -1,9 +1,9 @@
 package dev.mintychochip.archimedes.ship;
 
 import dev.mintychochip.archimedes.model.BlockPos;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
+import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.sail.SailShipTemplate;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -27,7 +27,7 @@ public final class ShipServiceImpl implements ShipService {
   /** World block mutator. */
   private final WorldMutator mutator;
 
-  /** Ship physics controller. */
+  /** Vehicle physics controller. */
   private final dev.mintychochip.archimedes.phys.ShipPhysics shipPhysics;
 
   /** Whether buoyancy is enabled globally. */
@@ -40,7 +40,7 @@ public final class ShipServiceImpl implements ShipService {
   private final UUID worldId;
 
   /** Loaded ships keyed by identifier. */
-  private final Map<UUID, Ship> ships = new LinkedHashMap<>();
+  private final Map<UUID, Vehicle> ships = new LinkedHashMap<>();
 
   /** Most recent user-facing failure message. */
   private String lastError;
@@ -97,7 +97,7 @@ public final class ShipServiceImpl implements ShipService {
    */
   @Override
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
-  public Ship assembleAt(UUID playerId, int x, int y, int z, UUID targetWorldId) {
+  public Vehicle assembleAt(UUID playerId, int x, int y, int z, UUID targetWorldId) {
     if (!targetWorldId.equals(worldId)) {
       lastError = "Ship assembly is not permitted in this world";
       return null;
@@ -115,8 +115,8 @@ public final class ShipServiceImpl implements ShipService {
     for (BlockPos pos : component) {
       blocks.add(new ShipBlock(pos, mutator.blockDataAt(x + pos.x(), y + pos.y(), z + pos.z())));
     }
-    Ship ship =
-        new Ship(UUID.randomUUID(), playerId, new ShipOrigin(targetWorldId, x, y, z), blocks);
+    Vehicle ship =
+        new Vehicle(UUID.randomUUID(), playerId, new ShipOrigin(targetWorldId, x, y, z), blocks);
     if (!mutator.clearBlocks(ship)) {
       lastError = mutator.lastError();
       return null;
@@ -158,7 +158,8 @@ public final class ShipServiceImpl implements ShipService {
    */
   @Override
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
-  public Ship spawnSail(UUID playerId, UUID targetWorldId, int x, int y, int z, String sizeName) {
+  public Vehicle spawnSail(
+      UUID playerId, UUID targetWorldId, int x, int y, int z, String sizeName) {
     if (!targetWorldId.equals(worldId)) {
       lastError = "Ship assembly is not permitted in this world";
       return null;
@@ -172,8 +173,8 @@ public final class ShipServiceImpl implements ShipService {
       lastError = "Unknown sail size: " + sizeName;
       return null;
     }
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             playerId,
             new ShipOrigin(targetWorldId, x, y, z),
@@ -203,7 +204,7 @@ public final class ShipServiceImpl implements ShipService {
 
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   private void rollbackSpawn(
-      Ship ship, ShipRuntimeException failure, boolean runtimeStarted, boolean buoyancyStarted) {
+      Vehicle ship, ShipRuntimeException failure, boolean runtimeStarted, boolean buoyancyStarted) {
     if (runtimeStarted) {
       try {
         runtime.remove(ship);
@@ -231,7 +232,7 @@ public final class ShipServiceImpl implements ShipService {
 
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   private void rollback(
-      Ship ship, ShipRuntimeException failure, boolean runtimeStarted, boolean buoyancyStarted) {
+      Vehicle ship, ShipRuntimeException failure, boolean runtimeStarted, boolean buoyancyStarted) {
     boolean restored = true;
     try {
       if (!mutator.restoreBlocks(ship)) {
@@ -283,8 +284,8 @@ public final class ShipServiceImpl implements ShipService {
    * @return the first loaded ship owned by the player in the requested world, or {@code null}
    */
   @Override
-  public Ship findOwnedInWorld(UUID playerId, UUID targetWorldId) {
-    for (Ship ship : ships.values()) {
+  public Vehicle findOwnedInWorld(UUID playerId, UUID targetWorldId) {
+    for (Vehicle ship : ships.values()) {
       if (ship.ownerId().equals(playerId) && ship.origin().worldId().equals(targetWorldId)) {
         return ship;
       }
@@ -299,7 +300,7 @@ public final class ShipServiceImpl implements ShipService {
    */
   @Override
   public boolean disassemble(UUID shipId, UUID requesterId, boolean operator) {
-    Ship ship = ships.get(shipId);
+    Vehicle ship = ships.get(shipId);
     if (ship == null) {
       lastError = "Ship not found";
       return false;
@@ -331,7 +332,7 @@ public final class ShipServiceImpl implements ShipService {
    */
   @Override
   public boolean kill(UUID shipId, UUID requesterId, boolean operator) {
-    Ship ship = ships.get(shipId);
+    Vehicle ship = ships.get(shipId);
     if (ship == null) {
       lastError = "Ship not found";
       return false;
@@ -354,8 +355,8 @@ public final class ShipServiceImpl implements ShipService {
    */
   @Override
   public int killAll() {
-    List<Ship> snapshot = List.copyOf(ships.values());
-    for (Ship ship : snapshot) {
+    List<Vehicle> snapshot = List.copyOf(ships.values());
+    for (Vehicle ship : snapshot) {
       runtime.remove(ship);
       shipPhysics.clear(ship);
     }
@@ -380,18 +381,18 @@ public final class ShipServiceImpl implements ShipService {
    */
   @Override
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
-  public Map<UUID, Ship> loadAll() {
-    List<Ship> spawned = new ArrayList<>();
-    Ship current = null;
+  public Map<UUID, Vehicle> loadAll() {
+    List<Vehicle> spawned = new ArrayList<>();
+    Vehicle current = null;
     String phase = "store-load";
     RuntimeException primary;
     try {
-      Map<UUID, Ship> loaded = new LinkedHashMap<>(store.loadAll());
+      Map<UUID, Vehicle> loaded = new LinkedHashMap<>(store.loadAll());
       ships.clear();
       phase = "initial-tag-sweep";
       runtime.removeAllTagged();
       phase = "spawn";
-      for (Ship ship : loaded.values()) {
+      for (Vehicle ship : loaded.values()) {
         current = ship;
         runtime.spawn(ship);
         spawned.add(ship);
@@ -401,7 +402,7 @@ public final class ShipServiceImpl implements ShipService {
     } catch (RuntimeException failure) {
       primary = failure;
     }
-    for (Ship ship : spawned) {
+    for (Vehicle ship : spawned) {
       try {
         runtime.remove(ship);
       } catch (RuntimeException cleanup) {
@@ -434,7 +435,7 @@ public final class ShipServiceImpl implements ShipService {
    * @return an immutable snapshot of currently loaded ships
    */
   @Override
-  public Collection<Ship> all() {
+  public Collection<Vehicle> all() {
     return List.copyOf(ships.values());
   }
 
@@ -442,7 +443,7 @@ public final class ShipServiceImpl implements ShipService {
   @Override
   public void tick() {
     boolean moved = false;
-    for (Ship ship : ships.values()) {
+    for (Vehicle ship : ships.values()) {
       moved |= shipPhysics.tick(ship);
     }
     if (moved) {
@@ -457,7 +458,7 @@ public final class ShipServiceImpl implements ShipService {
    */
   @Override
   public boolean toggleBuoyancy(UUID requesterId, UUID targetWorldId) {
-    Ship ship = findOwnedInWorld(requesterId, targetWorldId);
+    Vehicle ship = findOwnedInWorld(requesterId, targetWorldId);
     if (ship == null) {
       lastError = "No ship in this world";
       return false;
@@ -478,7 +479,7 @@ public final class ShipServiceImpl implements ShipService {
       lastError = "Block count must be positive";
       return false;
     }
-    Ship ship = findOwnedInWorld(requesterId, targetWorldId);
+    Vehicle ship = findOwnedInWorld(requesterId, targetWorldId);
     if (ship == null) {
       lastError = "No ship in this world";
       return false;

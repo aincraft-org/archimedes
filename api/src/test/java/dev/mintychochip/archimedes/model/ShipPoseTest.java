@@ -20,8 +20,8 @@ class ShipPoseTest {
 
   @Test
   void defaultShipHasZeroPoseAndBuoyancyEnabled() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
@@ -42,8 +42,8 @@ class ShipPoseTest {
 
   @Test
   void poseAndBuoyancyAreMutable() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 0, 0),

@@ -1,6 +1,6 @@
 package dev.mintychochip.archimedes.render;
 
-import dev.mintychochip.archimedes.model.Ship;
+import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.sail.SailPiece;
 import org.bukkit.Location;
 import org.bukkit.util.Transformation;
@@ -19,7 +19,7 @@ public final class SailTransform {
    * @param piece plate in ship-local coordinates
    * @return world location of the plate's min corner
    */
-  public static Location location(RenderSurface surface, Ship ship, SailPiece piece) {
+  public static Location location(RenderSurface surface, Vehicle ship, SailPiece piece) {
     return surface.location(
         ship.origin(),
         ship.pose().x() + piece.originX(),

@@ -8,10 +8,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.mintychochip.archimedes.model.BlockPos;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
 import dev.mintychochip.archimedes.model.ShipPose;
+import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.phys.ShipInspection;
 import dev.mintychochip.archimedes.sail.SailShipTemplate;
 import java.util.ArrayList;
@@ -47,10 +47,10 @@ class ShipServiceImplTest {
 
   /** In-memory store, world mutator, and renderer for the service. */
   private static final class Fakes implements WorldMutator {
-    final Map<UUID, Ship> persisted = new HashMap<>();
-    final List<Ship> rendered = new ArrayList<>();
+    final Map<UUID, Vehicle> persisted = new HashMap<>();
+    final List<Vehicle> rendered = new ArrayList<>();
 
-    final List<Ship> removedRuntime = new ArrayList<>();
+    final List<Vehicle> removedRuntime = new ArrayList<>();
     final Map<String, String> blocks = new HashMap<>();
     boolean restoreValid = true;
 
@@ -62,7 +62,7 @@ class ShipServiceImplTest {
     }
 
     @Override
-    public boolean clearBlocks(Ship ship) {
+    public boolean clearBlocks(Vehicle ship) {
       for (var block : ship.blocks()) {
         blocks.remove(
             (ship.origin().x() + block.pos().x())
@@ -75,12 +75,12 @@ class ShipServiceImplTest {
     }
 
     @Override
-    public boolean validateRestore(Ship ship) {
+    public boolean validateRestore(Vehicle ship) {
       return restoreValid;
     }
 
     @Override
-    public boolean restoreBlocks(Ship ship) {
+    public boolean restoreBlocks(Vehicle ship) {
       for (var block : ship.blocks()) {
         blocks.put(
             (ship.origin().x() + block.pos().x())
@@ -98,7 +98,7 @@ class ShipServiceImplTest {
       return "world mutation failed";
     }
 
-    private static int baseY(Ship ship) {
+    private static int baseY(Vehicle ship) {
       return ship.origin().y() + ship.pose().anchorDy();
     }
   }
@@ -111,30 +111,30 @@ class ShipServiceImplTest {
     boolean sinkResult = true;
 
     @Override
-    public boolean rise(Ship ship) {
+    public boolean rise(Vehicle ship) {
       calls.add(RISE_CALL);
       return !riseFails;
     }
 
     @Override
-    public boolean tick(Ship ship) {
+    public boolean tick(Vehicle ship) {
       calls.add("tick");
       return tickResult;
     }
 
     @Override
-    public boolean sink(Ship ship, int blocks) {
+    public boolean sink(Vehicle ship, int blocks) {
       calls.add("sink");
       return sinkResult;
     }
 
     @Override
-    public void clear(Ship ship) {
+    public void clear(Vehicle ship) {
       calls.add(CLEAR_CALL);
     }
 
     @Override
-    public ShipInspection inspect(Ship ship) {
+    public ShipInspection inspect(Vehicle ship) {
       return new ShipInspection(
           ship.id(),
           ship.blockCount(),
@@ -162,27 +162,27 @@ class ShipServiceImplTest {
   private static ShipRuntime runtime(Fakes fakes) {
     return new ShipRuntime() {
       @Override
-      public void spawn(Ship ship) {
+      public void spawn(Vehicle ship) {
         fakes.rendered.add(ship);
       }
 
       @Override
-      public void move(Ship ship, double oldY, double newY) {}
+      public void move(Vehicle ship, double oldY, double newY) {}
 
       @Override
-      public void remove(Ship ship) {
+      public void remove(Vehicle ship) {
         fakes.removedRuntime.add(ship);
       }
 
       @Override
-      public void removeAll(Collection<Ship> ships) {
+      public void removeAll(Collection<Vehicle> ships) {
         fakes.removedRuntime.addAll(ships);
       }
     };
   }
 
-  private static Ship ship(Fakes fakes) {
-    return new Ship(
+  private static Vehicle ship(Fakes fakes) {
+    return new Vehicle(
         UUID.randomUUID(),
         OWNER,
         fakes.origin,
@@ -192,21 +192,21 @@ class ShipServiceImplTest {
   @Test
   void loadAllInitialSweepFailureClearsRegistryAndAttemptsFinalSweep() {
     Fakes fakes = new Fakes();
-    Ship persisted = ship(fakes);
+    Vehicle persisted = ship(fakes);
     List<String> sweeps = new ArrayList<>();
     ShipRuntime runtime =
         new ShipRuntime() {
           @Override
-          public void spawn(Ship ship) {}
+          public void spawn(Vehicle ship) {}
 
           @Override
-          public void move(Ship ship, double oldY, double newY) {}
+          public void move(Vehicle ship, double oldY, double newY) {}
 
           @Override
-          public void remove(Ship ship) {}
+          public void remove(Vehicle ship) {}
 
           @Override
-          public void removeAll(Collection<Ship> ships) {}
+          public void removeAll(Collection<Vehicle> ships) {}
 
           @Override
           public void removeAllTagged() {
@@ -220,12 +220,12 @@ class ShipServiceImplTest {
         new ShipServiceImpl(
             new ShipStoreLike() {
               @Override
-              public Map<UUID, Ship> loadAll() {
+              public Map<UUID, Vehicle> loadAll() {
                 return Map.of(persisted.id(), persisted);
               }
 
               @Override
-              public void saveAll(Map<UUID, Ship> ships) {}
+              public void saveAll(Map<UUID, Vehicle> ships) {}
             },
             (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
             runtime,
@@ -249,16 +249,16 @@ class ShipServiceImplTest {
     ShipRuntime runtime =
         new ShipRuntime() {
           @Override
-          public void spawn(Ship ship) {}
+          public void spawn(Vehicle ship) {}
 
           @Override
-          public void move(Ship ship, double oldY, double newY) {}
+          public void move(Vehicle ship, double oldY, double newY) {}
 
           @Override
-          public void remove(Ship ship) {}
+          public void remove(Vehicle ship) {}
 
           @Override
-          public void removeAll(Collection<Ship> ships) {}
+          public void removeAll(Collection<Vehicle> ships) {}
 
           @Override
           public void removeAllTagged() {
@@ -269,12 +269,12 @@ class ShipServiceImplTest {
         new ShipServiceImpl(
             new ShipStoreLike() {
               @Override
-              public Map<UUID, Ship> loadAll() {
+              public Map<UUID, Vehicle> loadAll() {
                 throw new ShipRuntimeException(new IllegalStateException("store"));
               }
 
               @Override
-              public void saveAll(Map<UUID, Ship> ships) {}
+              public void saveAll(Map<UUID, Vehicle> ships) {}
             },
             (x, y, z) -> List.of(),
             runtime,
@@ -292,51 +292,51 @@ class ShipServiceImplTest {
   @Test
   void loadAllCleansUpEarlierSpawnWhenLaterSpawnFails() {
     Fakes fakes = new Fakes();
-    Ship first =
-        new Ship(
+    Vehicle first =
+        new Vehicle(
             UUID.randomUUID(),
             OWNER,
             fakes.origin,
             List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
-    Ship second =
-        new Ship(
+    Vehicle second =
+        new Vehicle(
             UUID.randomUUID(),
             OWNER,
             fakes.origin,
             List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
-    java.util.LinkedHashMap<UUID, Ship> persisted = new java.util.LinkedHashMap<>();
+    java.util.LinkedHashMap<UUID, Vehicle> persisted = new java.util.LinkedHashMap<>();
     persisted.put(first.id(), first);
     persisted.put(second.id(), second);
     ShipRuntime failingRuntime =
         new ShipRuntime() {
           @Override
-          public void spawn(Ship ship) {
+          public void spawn(Vehicle ship) {
             if (ship.id().equals(second.id())) {
               throw new ShipRuntimeException(new IllegalStateException("spawn failed"));
             }
           }
 
           @Override
-          public void move(Ship ship, double oldY, double newY) {}
+          public void move(Vehicle ship, double oldY, double newY) {}
 
           @Override
-          public void remove(Ship ship) {
+          public void remove(Vehicle ship) {
             fakes.removedRuntime.add(ship);
           }
 
           @Override
-          public void removeAll(Collection<Ship> ships) {}
+          public void removeAll(Collection<Vehicle> ships) {}
         };
     ShipServiceImpl service =
         new ShipServiceImpl(
             new ShipStoreLike() {
               @Override
-              public Map<UUID, Ship> loadAll() {
+              public Map<UUID, Vehicle> loadAll() {
                 return persisted;
               }
 
               @Override
-              public void saveAll(Map<UUID, Ship> ships) {}
+              public void saveAll(Map<UUID, Vehicle> ships) {}
             },
             (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
             failingRuntime,
@@ -358,23 +358,23 @@ class ShipServiceImplTest {
     ShipRuntime failingRuntime =
         new ShipRuntime() {
           @Override
-          public void spawn(Ship ship) {}
+          public void spawn(Vehicle ship) {}
 
           @Override
-          public void move(Ship ship, double oldY, double newY) {}
+          public void move(Vehicle ship, double oldY, double newY) {}
 
           @Override
-          public void remove(Ship ship) {
+          public void remove(Vehicle ship) {
             throw new IllegalStateException(REMOVE_CALL);
           }
 
           @Override
-          public void removeAll(Collection<Ship> ships) {}
+          public void removeAll(Collection<Vehicle> ships) {}
         };
     RecordingBuoyancy buoyancy =
         new RecordingBuoyancy() {
           @Override
-          public void clear(Ship ship) {
+          public void clear(Vehicle ship) {
             calls.add(CLEAR_CALL);
             throw new IllegalStateException("clear");
           }
@@ -387,17 +387,17 @@ class ShipServiceImplTest {
           }
 
           @Override
-          public boolean clearBlocks(Ship ship) {
+          public boolean clearBlocks(Vehicle ship) {
             return true;
           }
 
           @Override
-          public boolean restoreBlocks(Ship ship) {
+          public boolean restoreBlocks(Vehicle ship) {
             throw new IllegalStateException(RESTORE_CALL);
           }
 
           @Override
-          public boolean validateRestore(Ship ship) {
+          public boolean validateRestore(Vehicle ship) {
             return true;
           }
 
@@ -409,12 +409,12 @@ class ShipServiceImplTest {
     ShipService service =
         new ShipServiceImpl(
             new ShipStoreLike() {
-              public Map<UUID, Ship> loadAll() {
+              public Map<UUID, Vehicle> loadAll() {
                 return Map.of();
               }
 
               @Override
-              public void saveAll(Map<UUID, Ship> ships) {
+              public void saveAll(Map<UUID, Vehicle> ships) {
                 throw new IllegalStateException("persist");
               }
             },
@@ -434,16 +434,16 @@ class ShipServiceImplTest {
   @Test
   void loadAllContinuesAfterPlainRuntimeCleanupFailures() {
     Fakes fakes = new Fakes();
-    Ship first = ship(fakes);
-    Ship second = ship(fakes);
-    Map<UUID, Ship> persisted = new java.util.LinkedHashMap<>();
+    Vehicle first = ship(fakes);
+    Vehicle second = ship(fakes);
+    Map<UUID, Vehicle> persisted = new java.util.LinkedHashMap<>();
     persisted.put(first.id(), first);
     persisted.put(second.id(), second);
     List<String> calls = new ArrayList<>();
     ShipRuntime runtime =
         new ShipRuntime() {
           @Override
-          public void spawn(Ship ship) {
+          public void spawn(Vehicle ship) {
             calls.add("spawn-" + ship.id());
             if (ship.id().equals(second.id())) {
               throw new IllegalStateException("spawn");
@@ -451,16 +451,16 @@ class ShipServiceImplTest {
           }
 
           @Override
-          public void move(Ship ship, double oldY, double newY) {}
+          public void move(Vehicle ship, double oldY, double newY) {}
 
           @Override
-          public void remove(Ship ship) {
+          public void remove(Vehicle ship) {
             calls.add(REMOVE_CALL);
             throw new IllegalStateException(REMOVE_CALL);
           }
 
           @Override
-          public void removeAll(Collection<Ship> ships) {}
+          public void removeAll(Collection<Vehicle> ships) {}
 
           @Override
           public void removeAllTagged() {
@@ -474,12 +474,12 @@ class ShipServiceImplTest {
         new ShipServiceImpl(
             new ShipStoreLike() {
               @Override
-              public Map<UUID, Ship> loadAll() {
+              public Map<UUID, Vehicle> loadAll() {
                 return persisted;
               }
 
               @Override
-              public void saveAll(Map<UUID, Ship> ships) {}
+              public void saveAll(Map<UUID, Vehicle> ships) {}
             },
             (x, y, z) -> List.of(),
             runtime,
@@ -498,8 +498,8 @@ class ShipServiceImplTest {
   @Test
   void assemblesAndPersistsShip() {
     Fakes fakes = new Fakes();
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             OWNER,
             fakes.origin,
@@ -515,7 +515,7 @@ class ShipServiceImplTest {
             true,
             true,
             WORLD);
-    Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
+    Vehicle result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNotNull(result);
     assertEquals(1, fakes.persisted.size());
     assertEquals(1, fakes.rendered.size());
@@ -530,12 +530,12 @@ class ShipServiceImplTest {
           int saves;
 
           @Override
-          public Map<UUID, Ship> loadAll() {
+          public Map<UUID, Vehicle> loadAll() {
             return fakes.persisted;
           }
 
           @Override
-          public void saveAll(Map<UUID, Ship> ships) {
+          public void saveAll(Map<UUID, Vehicle> ships) {
             if (++saves == 1) {
               throw new IllegalStateException("persist failed");
             }
@@ -570,20 +570,20 @@ class ShipServiceImplTest {
             (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
             new ShipRuntime() {
               @Override
-              public void spawn(Ship ship) {
+              public void spawn(Vehicle ship) {
                 throw new ShipRuntimeException("spawn failed", null);
               }
 
               @Override
-              public void move(Ship ship, double oldY, double newY) {}
+              public void move(Vehicle ship, double oldY, double newY) {}
 
               @Override
-              public void remove(Ship ship) {
+              public void remove(Vehicle ship) {
                 fakes.removedRuntime.add(ship);
               }
 
               @Override
-              public void removeAll(Collection<Ship> ships) {}
+              public void removeAll(Collection<Vehicle> ships) {}
             },
             fakes,
             new RecordingBuoyancy(),
@@ -615,18 +615,18 @@ class ShipServiceImplTest {
               }
 
               @Override
-              public boolean clearBlocks(Ship ship) {
+              public boolean clearBlocks(Vehicle ship) {
                 calls.add(CLEAR_CALL);
                 return true;
               }
 
               @Override
-              public boolean validateRestore(Ship ship) {
+              public boolean validateRestore(Vehicle ship) {
                 return true;
               }
 
               @Override
-              public boolean restoreBlocks(Ship ship) {
+              public boolean restoreBlocks(Vehicle ship) {
                 calls.add("restore");
                 return true;
               }
@@ -666,18 +666,18 @@ class ShipServiceImplTest {
               }
 
               @Override
-              public boolean clearBlocks(Ship ship) {
+              public boolean clearBlocks(Vehicle ship) {
                 calls.add(CLEAR_CALL);
                 return true;
               }
 
               @Override
-              public boolean validateRestore(Ship ship) {
+              public boolean validateRestore(Vehicle ship) {
                 return true;
               }
 
               @Override
-              public boolean restoreBlocks(Ship ship) {
+              public boolean restoreBlocks(Vehicle ship) {
                 calls.add("restore");
                 return true;
               }
@@ -700,8 +700,8 @@ class ShipServiceImplTest {
   @Test
   void findsOwnedShipInWorld() {
     Fakes fakes = new Fakes();
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             OWNER,
             fakes.origin,
@@ -718,15 +718,15 @@ class ShipServiceImplTest {
             true,
             WORLD);
     service.loadAll();
-    Ship found = service.findOwnedInWorld(OWNER, WORLD);
+    Vehicle found = service.findOwnedInWorld(OWNER, WORLD);
     assertEquals(ship.id(), found.id());
   }
 
   @Test
   void killRemovesRuntimeAndPersistedWithoutRestoringBlocks() {
     Fakes fakes = new Fakes();
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             OWNER,
             fakes.origin,
@@ -756,8 +756,8 @@ class ShipServiceImplTest {
   @Test
   void killRejectsNonOwnerWithoutOperator() {
     Fakes fakes = new Fakes();
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             OWNER,
             fakes.origin,
@@ -784,14 +784,14 @@ class ShipServiceImplTest {
   @Test
   void killAllRemovesEveryShipWithoutRestoring() {
     Fakes fakes = new Fakes();
-    Ship first =
-        new Ship(
+    Vehicle first =
+        new Vehicle(
             UUID.randomUUID(),
             OWNER,
             fakes.origin,
             List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
-    Ship second =
-        new Ship(
+    Vehicle second =
+        new Vehicle(
             UUID.randomUUID(),
             OWNER,
             new ShipOrigin(WORLD, 110, 200, 310),
@@ -821,8 +821,8 @@ class ShipServiceImplTest {
   @Test
   void disassembleRemovesRuntimeAndPersisted() {
     Fakes fakes = new Fakes();
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             OWNER,
             fakes.origin,
@@ -848,8 +848,8 @@ class ShipServiceImplTest {
   @Test
   void disassembleRejectsNonOwnerWithoutOperator() {
     Fakes fakes = new Fakes();
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             OWNER,
             fakes.origin,
@@ -874,8 +874,8 @@ class ShipServiceImplTest {
   @Test
   void a18DisassemblyAtAuthoritativeAnchor() {
     Fakes fakes = new Fakes();
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             OWNER,
             fakes.origin,
@@ -913,7 +913,7 @@ class ShipServiceImplTest {
             true,
             true,
             WORLD);
-    Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
+    Vehicle result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNull(result);
     assertEquals(0, fakes.persisted.size());
     assertEquals(0, fakes.rendered.size());
@@ -926,17 +926,17 @@ class ShipServiceImplTest {
     ShipRendererLike throwing =
         new ShipRendererLike() {
           @Override
-          public void render(Ship s, ShipHolder holder) {
+          public void render(Vehicle s, ShipHolder holder) {
             throw new ShipRuntimeException(new IllegalStateException("no display slots"));
           }
 
           @Override
-          public void removeRuntime(Ship s) {
+          public void removeRuntime(Vehicle s) {
             fakes.removedRuntime.add(s);
           }
 
           @Override
-          public void reposition(Ship s, double oldY, double newY) {}
+          public void reposition(Vehicle s, double oldY, double newY) {}
         };
     ShipService service =
         new ShipServiceImpl(
@@ -944,27 +944,27 @@ class ShipServiceImplTest {
             (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
             new ShipRuntime() {
               @Override
-              public void spawn(Ship ship) {
+              public void spawn(Vehicle ship) {
                 throwing.render(ship, ignored -> {});
               }
 
               @Override
-              public void move(Ship ship, double oldY, double newY) {}
+              public void move(Vehicle ship, double oldY, double newY) {}
 
               @Override
-              public void remove(Ship ship) {
+              public void remove(Vehicle ship) {
                 fakes.removedRuntime.add(ship);
               }
 
               @Override
-              public void removeAll(Collection<Ship> ships) {}
+              public void removeAll(Collection<Vehicle> ships) {}
             },
             fakes,
             new RecordingBuoyancy(),
             true,
             true,
             WORLD);
-    Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
+    Vehicle result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNull(result);
     assertEquals(0, fakes.persisted.size());
     assertEquals(STONE, fakes.blocks.get(ORIGIN_KEY));
@@ -977,18 +977,18 @@ class ShipServiceImplTest {
     ShipRendererLike holderThenThrow =
         new ShipRendererLike() {
           @Override
-          public void render(Ship s, ShipHolder holder) {
+          public void render(Vehicle s, ShipHolder holder) {
             holder.accept(s);
             throw new ShipRuntimeException(new IllegalStateException("second phase failed"));
           }
 
           @Override
-          public void removeRuntime(Ship s) {
+          public void removeRuntime(Vehicle s) {
             fakes.removedRuntime.add(s);
           }
 
           @Override
-          public void reposition(Ship s, double oldY, double newY) {}
+          public void reposition(Vehicle s, double oldY, double newY) {}
         };
     ShipService service =
         new ShipServiceImpl(
@@ -996,27 +996,27 @@ class ShipServiceImplTest {
             (x, y, z) -> List.of(new BlockPos(0, 0, 0)),
             new ShipRuntime() {
               @Override
-              public void spawn(Ship ship) {
+              public void spawn(Vehicle ship) {
                 holderThenThrow.render(ship, ignored -> {});
               }
 
               @Override
-              public void move(Ship ship, double oldY, double newY) {}
+              public void move(Vehicle ship, double oldY, double newY) {}
 
               @Override
-              public void remove(Ship ship) {
+              public void remove(Vehicle ship) {
                 fakes.removedRuntime.add(ship);
               }
 
               @Override
-              public void removeAll(Collection<Ship> ships) {}
+              public void removeAll(Collection<Vehicle> ships) {}
             },
             fakes,
             new RecordingBuoyancy(),
             true,
             true,
             WORLD);
-    Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
+    Vehicle result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNull(result);
     // The store must not retain the half-saved ship after rollback.
     assertEquals(0, fakes.persisted.size());
@@ -1037,7 +1037,7 @@ class ShipServiceImplTest {
             true,
             true,
             WORLD);
-    Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
+    Vehicle result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNotNull(result);
     assertEquals(List.of(RISE_CALL), buoyancy.calls);
   }
@@ -1058,7 +1058,7 @@ class ShipServiceImplTest {
             true,
             true,
             WORLD);
-    Ship result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
+    Vehicle result = service.assembleAt(OWNER, 100, 200, 300, WORLD);
     assertNull(result);
     assertEquals(0, fakes.persisted.size());
     assertEquals(STONE, fakes.blocks.get(ORIGIN_KEY));
@@ -1068,8 +1068,8 @@ class ShipServiceImplTest {
   void disassembleClearsBuoyancyState() {
     Fakes fakes = new Fakes();
     RecordingBuoyancy buoyancy = new RecordingBuoyancy();
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             OWNER,
             fakes.origin,
@@ -1093,8 +1093,8 @@ class ShipServiceImplTest {
   @Test
   void tickPersistsExactlyOnceOnlyWhenAnyShipMoves() {
     Fakes fakes = new Fakes();
-    Ship first = ship(fakes);
-    Ship second = ship(fakes);
+    Vehicle first = ship(fakes);
+    Vehicle second = ship(fakes);
     fakes.persisted.put(first.id(), first);
     fakes.persisted.put(second.id(), second);
     RecordingBuoyancy buoyancy = new RecordingBuoyancy();
@@ -1114,7 +1114,7 @@ class ShipServiceImplTest {
   @Test
   void togglePersistsOnce() {
     Fakes fakes = new Fakes();
-    Ship ship = ship(fakes);
+    Vehicle ship = ship(fakes);
     fakes.persisted.put(ship.id(), ship);
     CountingStore store = new CountingStore(fakes);
     ShipServiceImpl service =
@@ -1136,7 +1136,7 @@ class ShipServiceImplTest {
   @Test
   void sinkPersistsOnceOnSuccessAndNotOnFailure() {
     Fakes fakes = new Fakes();
-    Ship ship = ship(fakes);
+    Vehicle ship = ship(fakes);
     fakes.persisted.put(ship.id(), ship);
     RecordingBuoyancy buoyancy = new RecordingBuoyancy();
     CountingStore store = new CountingStore(fakes);
@@ -1155,7 +1155,7 @@ class ShipServiceImplTest {
   @Test
   void sinkRejectsNonPositiveBlocksWithoutCallingBuoyancyOrPersistence() {
     Fakes fakes = new Fakes();
-    Ship ship = ship(fakes);
+    Vehicle ship = ship(fakes);
     fakes.persisted.put(ship.id(), ship);
     RecordingBuoyancy buoyancy = new RecordingBuoyancy();
     CountingStore store = new CountingStore(fakes);
@@ -1186,7 +1186,7 @@ class ShipServiceImplTest {
             true,
             WORLD);
 
-    Ship ship = service.spawnSail(OWNER, WORLD, 5, 64, 8);
+    Vehicle ship = service.spawnSail(OWNER, WORLD, 5, 64, 8);
 
     assertNotNull(ship);
     assertEquals(SailShipTemplate.blocks().size(), ship.blockCount());
@@ -1215,7 +1215,7 @@ class ShipServiceImplTest {
             true,
             WORLD);
 
-    Ship large = service.spawnSail(OWNER, WORLD, 5, 64, 8, "large");
+    Vehicle large = service.spawnSail(OWNER, WORLD, 5, 64, 8, "large");
     assertNotNull(large);
     assertEquals(SailShipTemplate.blocks(SailShipTemplate.Size.LARGE).size(), large.blockCount());
 
@@ -1270,7 +1270,7 @@ class ShipServiceImplTest {
             true,
             WORLD);
 
-    Ship ship = service.spawnSail(OWNER, WORLD, 5, 64, 8);
+    Vehicle ship = service.spawnSail(OWNER, WORLD, 5, 64, 8);
 
     assertNotNull(ship);
     assertEquals(1, service.all().size());
@@ -1286,11 +1286,11 @@ class ShipServiceImplTest {
       this.fakes = fakes;
     }
 
-    public Map<UUID, Ship> loadAll() {
+    public Map<UUID, Vehicle> loadAll() {
       return fakes.persisted;
     }
 
-    public void saveAll(Map<UUID, Ship> ships) {
+    public void saveAll(Map<UUID, Vehicle> ships) {
       saves++;
       fakes.persisted.clear();
       fakes.persisted.putAll(ships);
@@ -1299,12 +1299,12 @@ class ShipServiceImplTest {
 
   private record MemoryStore(Fakes fakes) implements ShipStoreLike {
     @Override
-    public Map<UUID, Ship> loadAll() {
+    public Map<UUID, Vehicle> loadAll() {
       return fakes.persisted;
     }
 
     @Override
-    public void saveAll(Map<UUID, Ship> ships) {
+    public void saveAll(Map<UUID, Vehicle> ships) {
       fakes.persisted.clear();
       fakes.persisted.putAll(ships);
     }
@@ -1312,17 +1312,17 @@ class ShipServiceImplTest {
 
   private record RecordingRenderer(Fakes fakes) implements ShipRendererLike {
     @Override
-    public void render(Ship ship, ShipHolder holder) {
+    public void render(Vehicle ship, ShipHolder holder) {
       fakes.rendered.add(ship);
       holder.accept(ship);
     }
 
     @Override
-    public void removeRuntime(Ship ship) {
+    public void removeRuntime(Vehicle ship) {
       fakes.removedRuntime.add(ship);
     }
 
     @Override
-    public void reposition(Ship ship, double oldY, double newY) {}
+    public void reposition(Vehicle ship, double oldY, double newY) {}
   }
 }

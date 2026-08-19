@@ -1,8 +1,8 @@
 package dev.mintychochip.archimedes.collision;
 
 import dev.mintychochip.archimedes.model.BlockPos;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
+import dev.mintychochip.archimedes.model.Vehicle;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -23,7 +23,7 @@ public final class CollisionHull {
    * @param ship ship whose exposed blocks are selected
    * @return sorted exposed block positions
    */
-  public static List<BlockPos> exposedBlocks(Ship ship) {
+  public static List<BlockPos> exposedBlocks(Vehicle ship) {
     Set<BlockPos> occupied = new HashSet<>();
     for (ShipBlock block : ship.blocks()) {
       occupied.add(block.pos());
@@ -44,7 +44,7 @@ public final class CollisionHull {
    * @param ship ship whose top-bearing blocks are selected
    * @return sorted top-exposed block positions
    */
-  public static List<BlockPos> topExposedBlocks(Ship ship) {
+  public static List<BlockPos> topExposedBlocks(Vehicle ship) {
     Set<BlockPos> occupied = new HashSet<>();
     for (ShipBlock block : ship.blocks()) {
       occupied.add(block.pos());

@@ -1,6 +1,6 @@
 package dev.mintychochip.archimedes.phys;
 
-import dev.mintychochip.archimedes.model.Ship;
+import dev.mintychochip.archimedes.model.Vehicle;
 
 /**
  * Controls buoyancy-driven vertical movement for ships.
@@ -15,7 +15,7 @@ public interface ShipPhysics {
    * @param ship ship to update
    * @return whether the ship moved
    */
-  boolean tick(Ship ship);
+  boolean tick(Vehicle ship);
 
   /**
    * Steps the ship through the physics engine until vertical motion settles.
@@ -23,7 +23,7 @@ public interface ShipPhysics {
    * @param ship ship to raise
    * @return whether the request succeeded
    */
-  boolean rise(Ship ship);
+  boolean rise(Vehicle ship);
 
   /**
    * Moves the ship downward by up to the requested number of blocks.
@@ -32,14 +32,14 @@ public interface ShipPhysics {
    * @param blocks positive downward distance
    * @return whether the path was clear and movement succeeded
    */
-  boolean sink(Ship ship, int blocks);
+  boolean sink(Vehicle ship, int blocks);
 
   /**
    * Clears per-ship velocity state.
    *
    * @param ship ship whose transient physics state is removed
    */
-  void clear(Ship ship);
+  void clear(Vehicle ship);
 
   /**
    * Samples pose, mass factors, last-tick cost, and each attached force without moving the ship.
@@ -47,5 +47,5 @@ public interface ShipPhysics {
    * @param ship ship to inspect
    * @return diagnostic snapshot
    */
-  ShipInspection inspect(Ship ship);
+  ShipInspection inspect(Vehicle ship);
 }

@@ -1,8 +1,8 @@
 package dev.mintychochip.archimedes.ship;
 
 import dev.mintychochip.archimedes.collision.CollisionVolumeManager;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipPose;
+import dev.mintychochip.archimedes.model.Vehicle;
 import java.util.Collection;
 
 /** Transactional composition of renderer and collision runtime. */
@@ -46,7 +46,7 @@ public final class ShipRuntimeImpl implements ShipRuntime {
    * @param ship ship to spawn
    */
   @Override
-  public void spawn(Ship ship) {
+  public void spawn(Vehicle ship) {
     boolean rendererStarted = false;
     try {
       collisions.spawn(ship);
@@ -83,7 +83,7 @@ public final class ShipRuntimeImpl implements ShipRuntime {
    * @param newY new pose y
    */
   @Override
-  public void move(Ship ship, double oldY, double newY) {
+  public void move(Vehicle ship, double oldY, double newY) {
     move(
         ship,
         new ShipPose(ship.pose().x(), oldY, ship.pose().z()),
@@ -98,7 +98,7 @@ public final class ShipRuntimeImpl implements ShipRuntime {
    * @param to new pose
    */
   @Override
-  public void move(Ship ship, ShipPose from, ShipPose to) {
+  public void move(Vehicle ship, ShipPose from, ShipPose to) {
     boolean rendererStarted = false;
     boolean carrierStarted = false;
     boolean collisionsStarted = false;
@@ -144,7 +144,7 @@ public final class ShipRuntimeImpl implements ShipRuntime {
    * @param ship ship to remove
    */
   @Override
-  public void remove(Ship ship) {
+  public void remove(Vehicle ship) {
     ShipRuntimeException failure = null;
     try {
       renderer.removeRuntime(ship);
@@ -173,9 +173,9 @@ public final class ShipRuntimeImpl implements ShipRuntime {
    * @param ships ships to remove
    */
   @Override
-  public void removeAll(Collection<Ship> ships) {
+  public void removeAll(Collection<Vehicle> ships) {
     try {
-      for (Ship ship : ships) {
+      for (Vehicle ship : ships) {
         remove(ship);
       }
       collisions.removeAll();

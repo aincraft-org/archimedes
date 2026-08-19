@@ -5,10 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.mintychochip.archimedes.config.ShipConfig;
 import dev.mintychochip.archimedes.model.BlockPos;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
 import dev.mintychochip.archimedes.model.ShipPose;
+import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.ship.ShipRuntime;
 import dev.mintychochip.phys.FluidField;
 import dev.mintychochip.phys.PhysicsEngine;
@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test;
 class ShipPhysicsAcceptanceTest {
   @Test
   void a9StaleRiderRemovedAndMoveStillSucceeds() {
-    Ship ship = ship(List.of(new ShipBlock(new BlockPos(0, 0, 0), "light")));
+    Vehicle ship = ship(List.of(new ShipBlock(new BlockPos(0, 0, 0), "light")));
     ShipConfig config = config(200.0);
 
     World world = waterWorld(20.0, 1000.0);
@@ -48,7 +48,7 @@ class ShipPhysicsAcceptanceTest {
 
   @Test
   void a16ReloadedConfigRecalculatesTarget() {
-    Ship ship = ship(stackOf("medium", 5));
+    Vehicle ship = ship(stackOf("medium", 5));
     World world = waterWorld(20.0, 1000.0);
     ShipRuntime runtime = recordingRuntime();
 
@@ -70,8 +70,8 @@ class ShipPhysicsAcceptanceTest {
 
   @Test
   void a20ClearRemovesPerShipState() {
-    Ship first = ship(List.of(new ShipBlock(new BlockPos(0, 0, 0), "light")));
-    Ship second = ship(List.of(new ShipBlock(new BlockPos(0, 0, 0), "light")));
+    Vehicle first = ship(List.of(new ShipBlock(new BlockPos(0, 0, 0), "light")));
+    Vehicle second = ship(List.of(new ShipBlock(new BlockPos(0, 0, 0), "light")));
     ShipConfig config = config(1000.0);
     World world = waterWorld(20.0, 1000.0);
     ShipRuntime runtime = recordingRuntime();
@@ -93,14 +93,14 @@ class ShipPhysicsAcceptanceTest {
         firstY, first.pose().y(), 1e-9, "cleared ship starts from rest and matches the first step");
   }
 
-  private static void settle(ShipPhysics physics, Ship ship) {
+  private static void settle(ShipPhysics physics, Vehicle ship) {
     for (int i = 0; i < 50; i++) {
       physics.tick(ship);
     }
   }
 
-  private static Ship ship(List<ShipBlock> blocks) {
-    return new Ship(
+  private static Vehicle ship(List<ShipBlock> blocks) {
+    return new Vehicle(
         UUID.randomUUID(),
         UUID.randomUUID(),
         new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
@@ -141,13 +141,13 @@ class ShipPhysicsAcceptanceTest {
 
   private static ShipRuntime recordingRuntime() {
     return new ShipRuntime() {
-      public void spawn(Ship s) {}
+      public void spawn(Vehicle s) {}
 
-      public void move(Ship s, double oldY, double newY) {}
+      public void move(Vehicle s, double oldY, double newY) {}
 
-      public void remove(Ship s) {}
+      public void remove(Vehicle s) {}
 
-      public void removeAll(java.util.Collection<Ship> s) {}
+      public void removeAll(java.util.Collection<Vehicle> s) {}
     };
   }
 

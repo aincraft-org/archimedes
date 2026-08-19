@@ -4,9 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.mintychochip.archimedes.model.BlockPos;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
+import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.phys.Body;
 import dev.mintychochip.phys.BodyImpl;
 import dev.mintychochip.phys.DensityField;
@@ -30,7 +30,7 @@ class ShipSailsTest {
 
   @Test
   void hullBlocksAreIgnored() {
-    Ship ship = ship(new ShipBlock(new BlockPos(0, 0, 0), OAK_PLANKS));
+    Vehicle ship = ship(new ShipBlock(new BlockPos(0, 0, 0), OAK_PLANKS));
 
     List<Force> sails =
         ShipSails.forces(
@@ -45,7 +45,7 @@ class ShipSailsTest {
 
   @Test
   void eachSailBlockBecomesAForceAtItsCenter() {
-    Ship ship =
+    Vehicle ship =
         ship(
             new ShipBlock(new BlockPos(1, 2, 3), WHITE_WOOL),
             new ShipBlock(new BlockPos(0, 0, 0), OAK_PLANKS));
@@ -70,7 +70,7 @@ class ShipSailsTest {
 
   @Test
   void woolWithoutFacingDefaultsToPlusZ() {
-    Ship ship = ship(new ShipBlock(new BlockPos(0, 0, 0), WHITE_WOOL));
+    Vehicle ship = ship(new ShipBlock(new BlockPos(0, 0, 0), WHITE_WOOL));
     List<Force> sails =
         ShipSails.forces(
             ship,
@@ -88,7 +88,7 @@ class ShipSailsTest {
 
   @Test
   void blockFacingSetsTheClothNormal() {
-    Ship ship =
+    Vehicle ship =
         ship(new ShipBlock(new BlockPos(0, 0, 0), "minecraft:white_wall_banner[facing=west]"));
     List<Force> sails =
         ShipSails.forces(
@@ -109,7 +109,7 @@ class ShipSailsTest {
 
   @Test
   void structureSailsDriveABodyThroughTheEngine() {
-    Ship ship = ship(new ShipBlock(new BlockPos(0, 1, 0), WHITE_WOOL));
+    Vehicle ship = ship(new ShipBlock(new BlockPos(0, 1, 0), WHITE_WOOL));
     List<Force> sails =
         ShipSails.forces(
             ship,
@@ -130,8 +130,8 @@ class ShipSailsTest {
     MaterialKeyResolver resolver = block -> WHITE_WOOL;
     DensityField air = DensityField.uniform(1.2);
     FlowField wind = FlowField.uniform(new Vector3d(0, 0, 10));
-    Ship one = ship(new ShipBlock(new BlockPos(0, 0, 0), WHITE_WOOL));
-    Ship four =
+    Vehicle one = ship(new ShipBlock(new BlockPos(0, 0, 0), WHITE_WOOL));
+    Vehicle four =
         ship(
             new ShipBlock(new BlockPos(0, 0, 0), WHITE_WOOL),
             new ShipBlock(new BlockPos(1, 0, 0), WHITE_WOOL),
@@ -178,8 +178,8 @@ class ShipSailsTest {
     };
   }
 
-  private static Ship ship(ShipBlock... blocks) {
-    return new Ship(
+  private static Vehicle ship(ShipBlock... blocks) {
+    return new Vehicle(
         UUID.randomUUID(),
         UUID.randomUUID(),
         new ShipOrigin(UUID.randomUUID(), 0, 0, 0),

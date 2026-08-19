@@ -7,9 +7,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.mintychochip.archimedes.model.BlockPos;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
+import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.ship.ShipRuntimeException;
 import java.lang.reflect.Proxy;
 import java.util.List;
@@ -75,8 +75,8 @@ class BukkitCollisionVolumeManagerTest {
               }
               return defaultValue(method.getReturnType());
             });
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             shipId,
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 100, 64, 200),
@@ -112,7 +112,7 @@ class BukkitCollisionVolumeManagerTest {
     java.util.List<Location> twoTeleports = new java.util.ArrayList<>();
     Shulker one = recordingShulker(new Location(null, 0.5, -1.75, 0.5), oneTeleports);
     Shulker two = recordingShulker(new Location(null, 1.5, -1.75, 0.5), twoTeleports);
-    Ship ship = shipWithTwoBlocks(shipId);
+    Vehicle ship = shipWithTwoBlocks(shipId);
     ship.setPose(new dev.mintychochip.archimedes.model.ShipPose(-1.75));
     BukkitCollisionVolumeManager manager =
         new BukkitCollisionVolumeManager(
@@ -143,7 +143,7 @@ class BukkitCollisionVolumeManagerTest {
     java.util.List<Location> teleports = new java.util.ArrayList<>();
     Shulker one = recordingShulker(new Location(null, 0.5, 1.5, 0.5), teleports);
     Shulker two = recordingShulker(new Location(null, 1.5, 1.5, 0.5), teleports);
-    Ship ship = shipWithTwoBlocks(shipId);
+    Vehicle ship = shipWithTwoBlocks(shipId);
     ship.setPose(new dev.mintychochip.archimedes.model.ShipPose(1.5));
     BukkitCollisionVolumeManager manager =
         new BukkitCollisionVolumeManager(
@@ -249,7 +249,7 @@ class BukkitCollisionVolumeManagerTest {
     World world = worldSpawning(shulker);
     BukkitCollisionVolumeManager manager =
         new BukkitCollisionVolumeManager(world, new NamespacedKey(NAMESPACE, COLLISION_KEY));
-    Ship ship = ship(shipId);
+    Vehicle ship = ship(shipId);
     ship.setPose(new dev.mintychochip.archimedes.model.ShipPose(1.0));
     manager.spawn(ship);
 
@@ -277,16 +277,16 @@ class BukkitCollisionVolumeManagerTest {
     assertEquals(1, thrown.getSuppressed().length);
   }
 
-  private static Ship ship(UUID shipId) {
-    return new Ship(
+  private static Vehicle ship(UUID shipId) {
+    return new Vehicle(
         shipId,
         UUID.randomUUID(),
         new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
         List.of(new ShipBlock(new BlockPos(0, 0, 0), STONE)));
   }
 
-  private static Ship shipWithTwoBlocks(UUID shipId) {
-    return new Ship(
+  private static Vehicle shipWithTwoBlocks(UUID shipId) {
+    return new Vehicle(
         shipId,
         UUID.randomUUID(),
         new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
@@ -427,8 +427,8 @@ class BukkitCollisionVolumeManagerTest {
             (ignored, method, args) ->
                 method.getName().equals(SPAWN) ? shulker : defaultValue(method.getReturnType()));
     NamespacedKey ownerKey = new NamespacedKey("archimedes", "collision");
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 64, 0),

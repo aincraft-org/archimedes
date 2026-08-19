@@ -10,7 +10,7 @@ import dev.mintychochip.archimedes.command.ShipCommand;
 import dev.mintychochip.archimedes.command.ShipTabCompleter;
 import dev.mintychochip.archimedes.config.ShipConfig;
 import dev.mintychochip.archimedes.config.ShipConfigLoader;
-import dev.mintychochip.archimedes.model.Ship;
+import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.phys.ShipPhysics;
 import dev.mintychochip.archimedes.phys.ShipPhysicsImpl;
 import dev.mintychochip.archimedes.phys.bukkit.BukkitFluidField;
@@ -71,7 +71,7 @@ public final class ArchimedesPlugin extends JavaPlugin {
     try {
       NamespacedKey shipKey = shipKey();
       NamespacedKey collisionOwnerKey = new NamespacedKey(this, "collision-owner");
-      Supplier<Collection<Ship>> allShips = () -> service.all();
+      Supplier<Collection<Vehicle>> allShips = () -> service.all();
       BukkitShipRiderTracker tracker =
           new BukkitShipRiderTracker(world, allShips, collisionOwnerKey, shipKey);
       RenderSurface surface = RenderSurface.of(world);
@@ -235,7 +235,7 @@ public final class ArchimedesPlugin extends JavaPlugin {
    * @param ship ship whose riders are counted
    * @return number of online player riders
    */
-  static int playerRiders(BukkitShipRiderTracker tracker, Ship ship) {
+  static int playerRiders(BukkitShipRiderTracker tracker, Vehicle ship) {
     int players = 0;
     for (UUID id : tracker.riders(ship)) {
       Entity entity = Bukkit.getEntity(id);
@@ -298,7 +298,7 @@ public final class ArchimedesPlugin extends JavaPlugin {
      * @return the loaded ships by id
      */
     @Override
-    public Map<UUID, Ship> loadAll() {
+    public Map<UUID, Vehicle> loadAll() {
       try {
         return store.loadAll();
       } catch (java.io.IOException failure) {
@@ -313,7 +313,7 @@ public final class ArchimedesPlugin extends JavaPlugin {
      * @param ships ships to save
      */
     @Override
-    public void saveAll(Map<UUID, Ship> ships) {
+    public void saveAll(Map<UUID, Vehicle> ships) {
       try {
         store.saveAll(ships);
       } catch (java.io.IOException failure) {

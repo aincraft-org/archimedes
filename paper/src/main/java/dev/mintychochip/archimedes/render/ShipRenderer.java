@@ -1,8 +1,8 @@
 package dev.mintychochip.archimedes.render;
 
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipTransform;
+import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.sail.SailMesh;
 import dev.mintychochip.archimedes.sail.SailPiece;
 import java.util.ArrayList;
@@ -28,7 +28,7 @@ public final class ShipRenderer {
    * @param ship the ship to render
    * @param surface the rendering surface
    */
-  public void render(Ship ship, RenderSurface surface) {
+  public void render(Vehicle ship, RenderSurface surface) {
     List<BlockDisplay> displays = new ArrayList<>(ship.blockCount());
     for (ShipBlock block : ship.blocks()) {
       if (SailMesh.isCloth(block.blockData())) {

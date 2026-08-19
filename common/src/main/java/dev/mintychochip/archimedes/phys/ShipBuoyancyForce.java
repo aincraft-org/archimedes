@@ -6,7 +6,7 @@ import dev.mintychochip.phys.World;
 import org.joml.Vector3d;
 
 /**
- * Ship-column hydrostatic lift: wet-cell volume × fluid density × |g|, upward only.
+ * Vehicle-column hydrostatic lift: wet-cell volume × fluid density × |g|, upward only.
  *
  * <p>Displacement uses {@link WaterlineResolver#displacedMass} so a partially submerged deck
  * contributes only its wet fraction. Weight is applied separately by {@link GravityForce}.

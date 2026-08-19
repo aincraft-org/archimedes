@@ -6,10 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.mintychochip.archimedes.config.ShipConfig;
 import dev.mintychochip.archimedes.model.BlockPos;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
 import dev.mintychochip.archimedes.model.ShipPose;
+import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.ship.ShipRuntime;
 import dev.mintychochip.phys.FluidField;
 import dev.mintychochip.phys.PhysicsEngine;
@@ -29,8 +29,8 @@ class MassModelAcceptanceTest {
   void a1EqualVolumeDifferentMaterialsDeeperDraft() {
     List<ShipBlock> lightBlocks = stackOf("light", 20);
     List<ShipBlock> heavyBlocks = stackOf("heavy", 20);
-    Ship lightShip = ship(lightBlocks);
-    Ship heavyShip = ship(heavyBlocks);
+    Vehicle lightShip = ship(lightBlocks);
+    Vehicle heavyShip = ship(heavyBlocks);
 
     ShipConfig config =
         new ShipConfig(
@@ -70,7 +70,7 @@ class MassModelAcceptanceTest {
     List<ShipBlock> blocks = new ArrayList<>(15);
     for (int i = 0; i < 10; i++) blocks.add(new ShipBlock(new BlockPos(0, i, 0), "light"));
     for (int i = 10; i < 15; i++) blocks.add(new ShipBlock(new BlockPos(0, i, 0), "heavy"));
-    Ship ship = ship(blocks);
+    Vehicle ship = ship(blocks);
 
     ShipConfig config =
         new ShipConfig(
@@ -101,7 +101,7 @@ class MassModelAcceptanceTest {
 
   @Test
   void a3UnknownMaterialUsesDefaultDensity() {
-    Ship ship = ship(stackOf("unknown:custom", 10));
+    Vehicle ship = ship(stackOf("unknown:custom", 10));
 
     ShipConfig config =
         new ShipConfig(
@@ -132,7 +132,7 @@ class MassModelAcceptanceTest {
 
   @Test
   void a6OnlyTrackedPlayersContributeToRiderMass() {
-    Ship ship = ship(stackOf("light", 10));
+    Vehicle ship = ship(stackOf("light", 10));
 
     ShipConfig config =
         new ShipConfig(
@@ -164,8 +164,8 @@ class MassModelAcceptanceTest {
   void a7BoardingDeepensEquilibriumDraft() {
     ShipConfig config = riderConfig();
     World world = waterWorld(20.0, 1000.0);
-    Ship noRider = ship(stackOf("light", 10));
-    Ship oneRider = ship(stackOf("light", 10));
+    Vehicle noRider = ship(stackOf("light", 10));
+    Vehicle oneRider = ship(stackOf("light", 10));
     double emptyY = settle(noRider, config, world, 0);
     double boardedY = settle(oneRider, config, world, 1);
     assertTrue(boardedY < emptyY, "boarding deepens draft");
@@ -175,8 +175,8 @@ class MassModelAcceptanceTest {
   void a8UnboardingShallowerEquilibriumDraft() {
     ShipConfig config = riderConfig();
     World world = waterWorld(20.0, 1000.0);
-    Ship boarded = ship(stackOf("light", 10));
-    Ship empty = ship(stackOf("light", 10));
+    Vehicle boarded = ship(stackOf("light", 10));
+    Vehicle empty = ship(stackOf("light", 10));
     double boardedY = settle(boarded, config, world, 1);
     double emptyY = settle(empty, config, world, 0);
     assertTrue(emptyY > boardedY, "unboarding raises draft");
@@ -184,7 +184,7 @@ class MassModelAcceptanceTest {
 
   @Test
   void a10OverloadedShipReportsSinkingWithoutThrowing() {
-    Ship ship = ship(stackOf("heavy", 5));
+    Vehicle ship = ship(stackOf("heavy", 5));
     ShipConfig config =
         new ShipConfig(
             2048,
@@ -207,7 +207,7 @@ class MassModelAcceptanceTest {
             1e-3);
 
     assertEquals(1500.0, ShipMassModel.mass(ship, b -> b.blockData(), config, 0), 1e-9);
-    Ship tooHeavy = ship(stackOf("ballast", 5));
+    Vehicle tooHeavy = ship(stackOf("ballast", 5));
     ShipConfig ballast =
         new ShipConfig(
             2048,
@@ -235,7 +235,7 @@ class MassModelAcceptanceTest {
 
   @Test
   void a11NoWaterHoldsPoseWithoutFabricatingTarget() {
-    Ship ship = ship(stackOf("light", 10));
+    Vehicle ship = ship(stackOf("light", 10));
     ShipConfig config = riderConfig();
     World dryWorld =
         new World() {
@@ -269,7 +269,7 @@ class MassModelAcceptanceTest {
 
   @Test
   void a12SolverStaysInsideConfiguredBoundsAndMeetsTolerance() {
-    Ship ship = ship(stackOf("medium", 10));
+    Vehicle ship = ship(stackOf("medium", 10));
     ShipConfig config =
         new ShipConfig(
             2048,
@@ -299,8 +299,8 @@ class MassModelAcceptanceTest {
 
   @Test
   void a14LargerFootprintDampensDraftChangeForSameLoadDelta() {
-    Ship narrowShip = ship(stackOf("medium", 10));
-    Ship broadShip = ship(prismOf("medium", 2, 10));
+    Vehicle narrowShip = ship(stackOf("medium", 10));
+    Vehicle broadShip = ship(prismOf("medium", 2, 10));
     ShipConfig config =
         new ShipConfig(
             2048,
@@ -335,8 +335,8 @@ class MassModelAcceptanceTest {
 
   @Test
   void a13DetectsNonMonotonicFluidAndHoldsPose() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
@@ -368,7 +368,7 @@ class MassModelAcceptanceTest {
     assertTrue(Double.isFinite(ship.pose().y()), "odd fluid fields must not throw");
   }
 
-  private static double settle(Ship ship, ShipConfig config, World world, int riders) {
+  private static double settle(Vehicle ship, ShipConfig config, World world, int riders) {
     ShipPhysics physics = physics(config, world, s -> riders);
     for (int i = 0; i < 80; i++) {
       physics.tick(ship);
@@ -383,13 +383,13 @@ class MassModelAcceptanceTest {
 
   private static ShipRuntime noopRuntime() {
     return new ShipRuntime() {
-      public void spawn(Ship s) {}
+      public void spawn(Vehicle s) {}
 
-      public void move(Ship s, double oldY, double newY) {}
+      public void move(Vehicle s, double oldY, double newY) {}
 
-      public void remove(Ship s) {}
+      public void remove(Vehicle s) {}
 
-      public void removeAll(java.util.Collection<Ship> s) {}
+      public void removeAll(java.util.Collection<Vehicle> s) {}
     };
   }
 
@@ -415,8 +415,8 @@ class MassModelAcceptanceTest {
         1e-3);
   }
 
-  private static Ship ship(List<ShipBlock> blocks) {
-    return new Ship(
+  private static Vehicle ship(List<ShipBlock> blocks) {
+    return new Vehicle(
         UUID.randomUUID(),
         UUID.randomUUID(),
         new ShipOrigin(UUID.randomUUID(), 0, 0, 0),

@@ -1,7 +1,7 @@
 package dev.mintychochip.archimedes.phys;
 
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
+import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.phys.DensityField;
 import dev.mintychochip.phys.FlowField;
 import dev.mintychochip.phys.Force;
@@ -34,7 +34,7 @@ public final class ShipSails {
    * @return immutable list of sail forces, in block iteration order
    */
   public static List<Force> forces(
-      Ship ship,
+      Vehicle ship,
       MaterialKeyResolver resolver,
       Set<String> sailKeys,
       DensityField air,

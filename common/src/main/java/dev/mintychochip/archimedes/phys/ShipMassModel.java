@@ -1,8 +1,8 @@
 package dev.mintychochip.archimedes.phys;
 
 import dev.mintychochip.archimedes.config.ShipConfig;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
+import dev.mintychochip.archimedes.model.Vehicle;
 
 /**
  * Computes ship mass from block material densities and rider mass.
@@ -23,7 +23,7 @@ public final class ShipMassModel {
    * @throws IllegalArgumentException if {@code riderCount} is negative
    */
   public static double mass(
-      Ship ship, MaterialKeyResolver resolver, ShipConfig config, int riderCount) {
+      Vehicle ship, MaterialKeyResolver resolver, ShipConfig config, int riderCount) {
     if (riderCount < 0) throw new IllegalArgumentException("negative rider count");
     double total = riderCount * config.playerMass();
     for (ShipBlock block : ship.blocks()) {

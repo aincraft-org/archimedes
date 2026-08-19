@@ -1,6 +1,6 @@
 package dev.mintychochip.archimedes.bukkit;
 
-import dev.mintychochip.archimedes.model.Ship;
+import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.ship.WorldMutator;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -26,7 +26,7 @@ public final class BukkitWorldMutator implements WorldMutator {
     this.world = world;
   }
 
-  private static int baseY(Ship ship) {
+  private static int baseY(Vehicle ship) {
     return ship.origin().y() + ship.pose().anchorDy();
   }
 
@@ -52,7 +52,7 @@ public final class BukkitWorldMutator implements WorldMutator {
    *     Bukkit
    */
   @Override
-  public boolean clearBlocks(Ship ship) {
+  public boolean clearBlocks(Vehicle ship) {
     for (var block : ship.blocks()) {
       int ax = ship.origin().x() + block.pos().x();
       int ay = baseY(ship) + block.pos().y();
@@ -70,7 +70,7 @@ public final class BukkitWorldMutator implements WorldMutator {
    * @return {@code true} when every destination is empty; {@code false} when restoration is blocked
    */
   @Override
-  public boolean validateRestore(Ship ship) {
+  public boolean validateRestore(Vehicle ship) {
     for (var block : ship.blocks()) {
       int ax = ship.origin().x() + block.pos().x();
       int ay = baseY(ship) + block.pos().y();
@@ -86,13 +86,13 @@ public final class BukkitWorldMutator implements WorldMutator {
 
   /**
    * Restores every ship block's original serialized data at its destination. Callers should invoke
-   * {@link #validateRestore(Ship)} first when they need an all-or-nothing preflight.
+   * {@link #validateRestore(Vehicle)} first when they need an all-or-nothing preflight.
    *
    * @param ship the ship to restore
    * @return {@code true} after all block data has been written; failures propagate from Bukkit
    */
   @Override
-  public boolean restoreBlocks(Ship ship) {
+  public boolean restoreBlocks(Vehicle ship) {
     for (var block : ship.blocks()) {
       int ax = ship.origin().x() + block.pos().x();
       int ay = baseY(ship) + block.pos().y();

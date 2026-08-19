@@ -1,6 +1,6 @@
 package dev.mintychochip.archimedes.phys;
 
-import dev.mintychochip.archimedes.model.Ship;
+import dev.mintychochip.archimedes.model.Vehicle;
 
 /** Supplies the number of players whose mass is included in a ship body. */
 public interface RiderCount {
@@ -10,5 +10,5 @@ public interface RiderCount {
    * @param ship ship whose runtime riders are counted
    * @return a non-negative rider count
    */
-  int count(Ship ship);
+  int count(Vehicle ship);
 }

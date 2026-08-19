@@ -1,6 +1,6 @@
 package dev.mintychochip.archimedes.ship;
 
-import dev.mintychochip.archimedes.model.Ship;
+import dev.mintychochip.archimedes.model.Vehicle;
 
 /** Renderer backend the ship service depends on. */
 public interface ShipRendererLike {
@@ -10,14 +10,14 @@ public interface ShipRendererLike {
    * @param ship the ship to render
    * @param holder the finalization receiver
    */
-  void render(Ship ship, ShipHolder holder);
+  void render(Vehicle ship, ShipHolder holder);
 
   /**
    * Removes all runtime entities for a ship.
    *
    * @param ship the ship to clean up
    */
-  void removeRuntime(Ship ship);
+  void removeRuntime(Vehicle ship);
 
   /**
    * Repositions an already-rendered ship's displays from one pose to another.
@@ -26,7 +26,7 @@ public interface ShipRendererLike {
    * @param oldY the previous pose y
    * @param newY the new pose y
    */
-  void reposition(Ship ship, double oldY, double newY);
+  void reposition(Vehicle ship, double oldY, double newY);
 
   /** Removes every plugin-owned runtime display, including stale entities. */
   default void removeAllRuntime() {}

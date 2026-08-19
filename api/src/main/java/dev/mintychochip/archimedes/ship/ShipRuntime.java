@@ -1,7 +1,7 @@
 package dev.mintychochip.archimedes.ship;
 
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipPose;
+import dev.mintychochip.archimedes.model.Vehicle;
 import java.util.Collection;
 
 /** Composes visual and collision runtime lifecycle for a ship. */
@@ -11,7 +11,7 @@ public interface ShipRuntime {
    *
    * @param ship ship to spawn
    */
-  void spawn(Ship ship);
+  void spawn(Vehicle ship);
 
   /**
    * Moves all runtime components from one pose to another.
@@ -20,7 +20,7 @@ public interface ShipRuntime {
    * @param oldY previous pose y
    * @param newY new pose y
    */
-  void move(Ship ship, double oldY, double newY);
+  void move(Vehicle ship, double oldY, double newY);
 
   /**
    * Moves all runtime components from one pose to another.
@@ -29,7 +29,7 @@ public interface ShipRuntime {
    * @param from previous pose
    * @param to new pose
    */
-  default void move(Ship ship, ShipPose from, ShipPose to) {
+  default void move(Vehicle ship, ShipPose from, ShipPose to) {
     move(ship, from.y(), to.y());
   }
 
@@ -38,14 +38,14 @@ public interface ShipRuntime {
    *
    * @param ship ship to remove
    */
-  void remove(Ship ship);
+  void remove(Vehicle ship);
 
   /**
    * Removes all runtime components for a collection of ships.
    *
    * @param ships ships to remove
    */
-  void removeAll(Collection<Ship> ships);
+  void removeAll(Collection<Vehicle> ships);
 
   /** Removes stale plugin-owned runtime entities not represented by models. */
   default void removeAllTagged() {}

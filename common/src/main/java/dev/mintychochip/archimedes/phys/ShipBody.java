@@ -1,8 +1,8 @@
 package dev.mintychochip.archimedes.phys;
 
 import dev.mintychochip.archimedes.config.ShipConfig;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
+import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.phys.Aabb;
 import dev.mintychochip.phys.Body;
 import dev.mintychochip.phys.BodyImpl;
@@ -36,7 +36,11 @@ public final class ShipBody {
    * @return a body positioned at the ship origin and pose
    */
   public static Body from(
-      Ship ship, MaterialKeyResolver resolver, ShipConfig config, int riderCount, Force... forces) {
+      Vehicle ship,
+      MaterialKeyResolver resolver,
+      ShipConfig config,
+      int riderCount,
+      Force... forces) {
     List<Collider> colliders = new ArrayList<>();
     for (ShipBlock block : ship.blocks()) {
       String key = resolver.key(block);

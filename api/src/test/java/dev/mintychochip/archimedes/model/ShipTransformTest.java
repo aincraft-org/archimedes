@@ -12,7 +12,7 @@ class ShipTransformTest {
 
   @Test
   void projectsVisualAndAuthoritativeCoordinates() {
-    Ship ship = ship(new ShipOrigin(WORLD, 100, 200, 300), 1.75);
+    Vehicle ship = ship(new ShipOrigin(WORLD, 100, 200, 300), 1.75);
     BlockPos relative = new BlockPos(2, -1, 3);
 
     ShipTransform.VisualPosition visual = ShipTransform.visual(ship, relative);
@@ -27,7 +27,7 @@ class ShipTransformTest {
 
   @Test
   void projectsFractionalCollisionAnchorFromVisualPosition() {
-    Ship ship = ship(new ShipOrigin(WORLD, 100, 200, 300), 0.25);
+    Vehicle ship = ship(new ShipOrigin(WORLD, 100, 200, 300), 0.25);
 
     ShipTransform.CollisionAnchor anchor =
         ShipTransform.collisionAnchor(ship, new BlockPos(2, -1, 3));
@@ -39,8 +39,8 @@ class ShipTransformTest {
 
   @Test
   void horizontalPoseShiftsVisualAndCell() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(WORLD, 100, 200, 300),
@@ -62,15 +62,15 @@ class ShipTransformTest {
 
   @Test
   void floorsNegativePoseForAuthoritativeCell() {
-    Ship ship = ship(new ShipOrigin(WORLD, 100, 200, 300), -0.25);
+    Vehicle ship = ship(new ShipOrigin(WORLD, 100, 200, 300), -0.25);
     BlockPos cell = ShipTransform.cell(ship, new BlockPos(2, -1, 3));
     assertEquals(102, cell.x());
     assertEquals(198, cell.y());
     assertEquals(303, cell.z());
   }
 
-  private static Ship ship(ShipOrigin origin, double pose) {
-    return new Ship(
+  private static Vehicle ship(ShipOrigin origin, double pose) {
+    return new Vehicle(
         UUID.randomUUID(),
         UUID.randomUUID(),
         origin,

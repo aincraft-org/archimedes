@@ -8,11 +8,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.mintychochip.archimedes.model.BlockPos;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
 import dev.mintychochip.archimedes.model.ShipPose;
 import dev.mintychochip.archimedes.model.ShipTransform;
+import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.ship.ShipRuntimeException;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
@@ -272,7 +272,7 @@ class ShipRendererTest {
 
   @Test
   void renderNormalizesRuntimeFailureWithShipIdAndCause() {
-    Ship ship = shipWithBlock(0, 0, 0, STONE);
+    Vehicle ship = shipWithBlock(0, 0, 0, STONE);
     RuntimeException cause = new IllegalStateException("render boom");
     SpySurface surface = new SpySurface();
     surface.renderFailure = cause;
@@ -290,7 +290,7 @@ class ShipRendererTest {
   @Test
   void rendersSpawnedDisplayAtIntegerAlignedCorner() {
     SpySurface surface = new SpySurface();
-    Ship ship = shipWithBlock(10, 20, 30, STONE);
+    Vehicle ship = shipWithBlock(10, 20, 30, STONE);
     new ShipRenderer().render(ship, surface);
     BlockDisplay display = surface.spawned.get(0);
     assertEquals(110.0, display.getLocation().getX(), 0.001);
@@ -301,8 +301,8 @@ class ShipRendererTest {
   @Test
   void renderUsesOneUntransformedBlockDisplayPerCapturedBlock() {
     SpySurface surface = new SpySurface();
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(WORLD, 100, 200, 300),
@@ -334,7 +334,7 @@ class ShipRendererTest {
   @Test
   void appliesBlockDataToDisplay() {
     SpySurface surface = new SpySurface();
-    Ship ship = shipWithBlock(0, 0, 0, STONE);
+    Vehicle ship = shipWithBlock(0, 0, 0, STONE);
     new ShipRenderer().render(ship, surface);
     assertEquals(surface.dataById.get(STONE), surface.spawned.get(0).getBlock());
   }
@@ -342,7 +342,7 @@ class ShipRendererTest {
   @Test
   void reportsRenderedShipToSurface() {
     SpySurface surface = new SpySurface();
-    Ship ship = shipWithBlock(0, 0, 0, STONE);
+    Vehicle ship = shipWithBlock(0, 0, 0, STONE);
     new ShipRenderer().render(ship, surface);
     assertEquals(1, surface.renderedShips.size());
     assertEquals(ship.id(), surface.renderedShips.get(0));
@@ -351,8 +351,8 @@ class ShipRendererTest {
   @Test
   void rendersDisplayAtPose() {
     SpySurface surface = new SpySurface();
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(WORLD, 100, 200, 300),
@@ -367,8 +367,8 @@ class ShipRendererTest {
   @Test
   void repeatedRepositionUsesModelCoordinatesWithoutDrift() {
     SpySurface surface = new SpySurface();
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(WORLD, 100, 200, 300),
@@ -392,8 +392,8 @@ class ShipRendererTest {
   @Test
   void reversedTaggedIterationPreservesBlockIdentity() {
     SpySurface surface = new SpySurface();
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(WORLD, 100, 200, 300),
@@ -417,8 +417,8 @@ class ShipRendererTest {
   void stoneOnlyShipStillSpawnsOneUntransformedDisplayPerBlock() {
     SpySurface surface = new SpySurface();
     surface.dataById.put(STONE, markerData(STONE));
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(WORLD, 100, 200, 300),
@@ -445,7 +445,7 @@ class ShipRendererTest {
     SpySurface surface = new SpySurface();
     surface.dataById.put(STONE, markerData(STONE));
     surface.dataById.put(WHITE_WOOL, markerData(WHITE_WOOL));
-    Ship ship = stoneAndWoolWall();
+    Vehicle ship = stoneAndWoolWall();
     NamespacedKey shipKey = new NamespacedKey(NAMESPACE, "test");
     new dev.mintychochip.archimedes.bukkit.BukkitShipRenderer(surface, shipKey)
         .render(ship, ignored -> {});
@@ -482,7 +482,7 @@ class ShipRendererTest {
     SpySurface surface = new SpySurface();
     surface.dataById.put(STONE, markerData(STONE));
     surface.dataById.put(WHITE_WOOL, markerData(WHITE_WOOL));
-    Ship ship = stoneAndWoolWall();
+    Vehicle ship = stoneAndWoolWall();
     NamespacedKey shipKey = new NamespacedKey(NAMESPACE, "test");
     dev.mintychochip.archimedes.bukkit.BukkitShipRenderer renderer =
         new dev.mintychochip.archimedes.bukkit.BukkitShipRenderer(surface, shipKey);
@@ -514,8 +514,8 @@ class ShipRendererTest {
   void stoneShipVisualsGetNonZeroTeleportDurationAndStayUntransformed() {
     SpySurface surface = new SpySurface();
     surface.dataById.put(STONE, markerData(STONE));
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(WORLD, 100, 200, 300),
@@ -574,7 +574,7 @@ class ShipRendererTest {
     SpySurface surface = new SpySurface();
     surface.dataById.put(STONE, markerData(STONE));
     surface.dataById.put(WHITE_WOOL, markerData(WHITE_WOOL));
-    Ship ship = stoneAndWoolWall();
+    Vehicle ship = stoneAndWoolWall();
     NamespacedKey shipKey = new NamespacedKey(NAMESPACE, "test");
     dev.mintychochip.archimedes.bukkit.BukkitShipRenderer renderer =
         new dev.mintychochip.archimedes.bukkit.BukkitShipRenderer(surface, shipKey);
@@ -596,8 +596,8 @@ class ShipRendererTest {
     }
   }
 
-  private static Ship stoneAndWoolWall() {
-    return new Ship(
+  private static Vehicle stoneAndWoolWall() {
+    return new Vehicle(
         UUID.randomUUID(),
         UUID.randomUUID(),
         new ShipOrigin(WORLD, 100, 200, 300),
@@ -653,9 +653,9 @@ class ShipRendererTest {
             });
   }
 
-  private static Ship shipWithBlock(int dx, int dy, int dz, String data) {
+  private static Vehicle shipWithBlock(int dx, int dy, int dz, String data) {
     ShipOrigin origin = new ShipOrigin(WORLD, 100, 200, 300);
-    return new Ship(
+    return new Vehicle(
         UUID.randomUUID(),
         UUID.randomUUID(),
         origin,

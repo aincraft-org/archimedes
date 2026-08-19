@@ -5,9 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.mintychochip.archimedes.model.BlockPos;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
+import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.render.RenderSurface;
 import dev.mintychochip.archimedes.ship.ShipRuntimeException;
 import java.lang.reflect.Proxy;
@@ -35,7 +35,7 @@ class BukkitShipRendererTest {
         assertThrows(
             ShipRuntimeException.class,
             () -> {
-              Ship ship = ship();
+              Vehicle ship = ship();
               new BukkitShipRenderer(surface, new NamespacedKey(NAMESPACE, KEY))
                   .render(
                       ship,
@@ -54,7 +54,7 @@ class BukkitShipRendererTest {
     RenderSurface surface = surfaceThatFails(new RuntimeException("unused"), teleport);
     BukkitShipRenderer renderer =
         new BukkitShipRenderer(surface, new NamespacedKey(NAMESPACE, KEY));
-    Ship ship = ship();
+    Vehicle ship = ship();
     renderer.render(ship, ignored -> {});
 
     ShipRuntimeException thrown =
@@ -70,7 +70,7 @@ class BukkitShipRendererTest {
         new BukkitShipRenderer(
             surfaceThatFails(new RuntimeException("unused"), failure),
             new NamespacedKey(NAMESPACE, KEY));
-    Ship ship = ship();
+    Vehicle ship = ship();
 
     ShipRuntimeException thrown =
         assertThrows(ShipRuntimeException.class, () -> renderer.removeRuntime(ship));
@@ -211,8 +211,8 @@ class BukkitShipRendererTest {
     return null;
   }
 
-  private static Ship ship() {
-    return new Ship(
+  private static Vehicle ship() {
+    return new Vehicle(
         UUID.randomUUID(),
         UUID.randomUUID(),
         new ShipOrigin(WORLD, 0, 0, 0),

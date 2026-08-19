@@ -1,6 +1,6 @@
 package dev.mintychochip.archimedes.bukkit;
 
-import dev.mintychochip.archimedes.model.Ship;
+import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.ship.ShipStoreLike;
 import dev.mintychochip.archimedes.store.ShipStore;
 import java.io.IOException;
@@ -27,7 +27,7 @@ public final class BukkitShipStore implements ShipStoreLike {
    * @return all persisted ships keyed by identifier
    */
   @Override
-  public Map<UUID, Ship> loadAll() {
+  public Map<UUID, Vehicle> loadAll() {
     try {
       return store.loadAll();
     } catch (IOException failure) {
@@ -41,7 +41,7 @@ public final class BukkitShipStore implements ShipStoreLike {
    * @param ships the ships to save
    */
   @Override
-  public void saveAll(Map<UUID, Ship> ships) {
+  public void saveAll(Map<UUID, Vehicle> ships) {
     try {
       store.saveAll(ships);
     } catch (IOException failure) {

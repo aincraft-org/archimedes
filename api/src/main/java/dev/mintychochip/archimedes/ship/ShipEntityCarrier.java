@@ -1,7 +1,7 @@
 package dev.mintychochip.archimedes.ship;
 
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipPose;
+import dev.mintychochip.archimedes.model.Vehicle;
 
 /**
  * Carries non-ship entities that are standing on a ship so they move with it.
@@ -16,7 +16,7 @@ public interface ShipEntityCarrier {
    * @param ship ship to track
    * @param poseY committed pose used for initial overlap checks
    */
-  default void track(Ship ship, double poseY) {}
+  default void track(Vehicle ship, double poseY) {}
 
   /**
    * Starts tracking a ship and seeds riders using the supplied committed pose.
@@ -24,7 +24,7 @@ public interface ShipEntityCarrier {
    * @param ship ship to track
    * @param pose committed pose used for initial overlap checks
    */
-  default void track(Ship ship, ShipPose pose) {
+  default void track(Vehicle ship, ShipPose pose) {
     track(ship, pose.y());
   }
 
@@ -33,7 +33,7 @@ public interface ShipEntityCarrier {
    *
    * @param ship ship to untrack
    */
-  default void untrack(Ship ship) {}
+  default void untrack(Vehicle ship) {}
 
   /**
    * Updates the stored pose basis after a committed or rolled-back runtime move.
@@ -41,7 +41,7 @@ public interface ShipEntityCarrier {
    * @param ship ship whose basis is updated
    * @param poseY pose basis to store
    */
-  default void updatePoseBasis(Ship ship, double poseY) {}
+  default void updatePoseBasis(Vehicle ship, double poseY) {}
 
   /**
    * Updates the stored pose basis after a committed or rolled-back runtime move.
@@ -49,7 +49,7 @@ public interface ShipEntityCarrier {
    * @param ship ship whose basis is updated
    * @param pose pose basis to store
    */
-  default void updatePoseBasis(Ship ship, ShipPose pose) {
+  default void updatePoseBasis(Vehicle ship, ShipPose pose) {
     updatePoseBasis(ship, pose.y());
   }
 
@@ -63,7 +63,7 @@ public interface ShipEntityCarrier {
    * @param oldY old pose
    * @param newY new pose
    */
-  void carry(Ship ship, double oldY, double newY);
+  void carry(Vehicle ship, double oldY, double newY);
 
   /**
    * Carries eligible entities on the ship by the same pose delta.
@@ -72,7 +72,7 @@ public interface ShipEntityCarrier {
    * @param from previous pose
    * @param to new pose
    */
-  default void carry(Ship ship, ShipPose from, ShipPose to) {
+  default void carry(Vehicle ship, ShipPose from, ShipPose to) {
     carry(ship, from.y(), to.y());
   }
 }

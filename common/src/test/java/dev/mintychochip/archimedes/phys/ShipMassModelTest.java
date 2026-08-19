@@ -5,10 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import dev.mintychochip.archimedes.config.ShipConfig;
 import dev.mintychochip.archimedes.model.BlockPos;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
 import dev.mintychochip.archimedes.model.ShipPose;
+import dev.mintychochip.archimedes.model.Vehicle;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -18,8 +18,8 @@ import org.junit.jupiter.api.Test;
 class ShipMassModelTest {
   @Test
   void massIncludesMaterialBlocksAndRiders() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
@@ -62,7 +62,7 @@ class ShipMassModelTest {
     }
 
     @Override
-    public int count(Ship ship) {
+    public int count(Vehicle ship) {
       return count;
     }
   }

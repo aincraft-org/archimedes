@@ -1,7 +1,7 @@
 package dev.mintychochip.archimedes.bukkit;
 
 import dev.mintychochip.archimedes.model.BlockPos;
-import dev.mintychochip.archimedes.model.Ship;
+import dev.mintychochip.archimedes.model.Vehicle;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,7 +56,7 @@ final class TopSurfaceIndex {
    * @param ship ship being moved
    * @return a queryable top-surface index
    */
-  static TopSurfaceIndex build(List<BlockPos> topExposed, Ship ship) {
+  static TopSurfaceIndex build(List<BlockPos> topExposed, Vehicle ship) {
     Map<Long, TopSurface> grid = new HashMap<>(topExposed.size() * 2);
     double minX = Double.POSITIVE_INFINITY;
     double minY = Double.POSITIVE_INFINITY;

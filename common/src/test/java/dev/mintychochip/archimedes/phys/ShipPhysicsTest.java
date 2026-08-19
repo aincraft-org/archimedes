@@ -7,10 +7,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.mintychochip.archimedes.config.ShipConfig;
 import dev.mintychochip.archimedes.model.BlockPos;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
 import dev.mintychochip.archimedes.model.ShipPose;
+import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.sail.SailShipTemplate;
 import dev.mintychochip.archimedes.ship.ShipRuntime;
 import dev.mintychochip.phys.Body;
@@ -34,8 +34,8 @@ class ShipPhysicsTest {
 
   @Test
   void tickRestoresPoseOnBlockedMove() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
@@ -86,15 +86,15 @@ class ShipPhysicsTest {
         };
     ShipRuntime runtime =
         new ShipRuntime() {
-          public void spawn(Ship s) {}
+          public void spawn(Vehicle s) {}
 
-          public void move(Ship s, double oldY, double newY) {
+          public void move(Vehicle s, double oldY, double newY) {
             throw new IllegalStateException("blocked");
           }
 
-          public void remove(Ship s) {}
+          public void remove(Vehicle s) {}
 
-          public void removeAll(java.util.Collection<Ship> s) {}
+          public void removeAll(java.util.Collection<Vehicle> s) {}
         };
     ShipPhysics physics =
         new ShipPhysicsImpl(
@@ -106,8 +106,8 @@ class ShipPhysicsTest {
 
   @Test
   void tickMovesForwardWhenClothFacesTheWind() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
@@ -158,13 +158,13 @@ class ShipPhysicsTest {
         };
     ShipRuntime runtime =
         new ShipRuntime() {
-          public void spawn(Ship s) {}
+          public void spawn(Vehicle s) {}
 
-          public void move(Ship s, double oldY, double newY) {}
+          public void move(Vehicle s, double oldY, double newY) {}
 
-          public void remove(Ship s) {}
+          public void remove(Vehicle s) {}
 
-          public void removeAll(java.util.Collection<Ship> s) {}
+          public void removeAll(java.util.Collection<Vehicle> s) {}
         };
     ShipPhysics physics =
         new ShipPhysicsImpl(
@@ -183,8 +183,8 @@ class ShipPhysicsTest {
 
   @Test
   void tickStillSailsWhenTheSeafloorBlocksAGravityStep() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 10, 0),
@@ -244,13 +244,13 @@ class ShipPhysicsTest {
             config,
             new BukkitLikeResolver(),
             new ShipRuntime() {
-              public void spawn(Ship s) {}
+              public void spawn(Vehicle s) {}
 
-              public void move(Ship s, double oldY, double newY) {}
+              public void move(Vehicle s, double oldY, double newY) {}
 
-              public void remove(Ship s) {}
+              public void remove(Vehicle s) {}
 
-              public void removeAll(java.util.Collection<Ship> s) {}
+              public void removeAll(java.util.Collection<Vehicle> s) {}
             },
             s -> 0,
             DensityField.uniform(1.2),
@@ -263,8 +263,8 @@ class ShipPhysicsTest {
 
   @Test
   void tickStillSailsWhenStandingOnTheGround() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 10, 0),
@@ -324,13 +324,13 @@ class ShipPhysicsTest {
             config,
             new BukkitLikeResolver(),
             new ShipRuntime() {
-              public void spawn(Ship s) {}
+              public void spawn(Vehicle s) {}
 
-              public void move(Ship s, double oldY, double newY) {}
+              public void move(Vehicle s, double oldY, double newY) {}
 
-              public void remove(Ship s) {}
+              public void remove(Vehicle s) {}
 
-              public void removeAll(java.util.Collection<Ship> s) {}
+              public void removeAll(java.util.Collection<Vehicle> s) {}
             },
             s -> 0,
             DensityField.uniform(1.2),
@@ -344,8 +344,8 @@ class ShipPhysicsTest {
 
   @Test
   void tickStillSailsWhenTheDeckOverlapsTheSeafloor() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 10, 0),
@@ -405,13 +405,13 @@ class ShipPhysicsTest {
             config,
             new BukkitLikeResolver(),
             new ShipRuntime() {
-              public void spawn(Ship s) {}
+              public void spawn(Vehicle s) {}
 
-              public void move(Ship s, double oldY, double newY) {}
+              public void move(Vehicle s, double oldY, double newY) {}
 
-              public void remove(Ship s) {}
+              public void remove(Vehicle s) {}
 
-              public void removeAll(java.util.Collection<Ship> s) {}
+              public void removeAll(java.util.Collection<Vehicle> s) {}
             },
             s -> 0,
             DensityField.uniform(1.2),
@@ -425,8 +425,8 @@ class ShipPhysicsTest {
 
   @Test
   void tickFallsUnderGravityWhenThereIsNoWaterInsteadOfHoldingAnEquilibrium() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 10, 0),
@@ -477,13 +477,13 @@ class ShipPhysicsTest {
         };
     ShipRuntime runtime =
         new ShipRuntime() {
-          public void spawn(Ship s) {}
+          public void spawn(Vehicle s) {}
 
-          public void move(Ship s, double oldY, double newY) {}
+          public void move(Vehicle s, double oldY, double newY) {}
 
-          public void remove(Ship s) {}
+          public void remove(Vehicle s) {}
 
-          public void removeAll(java.util.Collection<Ship> s) {}
+          public void removeAll(java.util.Collection<Vehicle> s) {}
         };
     ShipPhysics physics =
         new ShipPhysicsImpl(
@@ -495,8 +495,8 @@ class ShipPhysicsTest {
 
   @Test
   void riseDoesNotTeleportASurfaceSailIntoTheWater() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 10, 0),
@@ -552,13 +552,13 @@ class ShipPhysicsTest {
             config,
             new BukkitLikeResolver(),
             new ShipRuntime() {
-              public void spawn(Ship s) {}
+              public void spawn(Vehicle s) {}
 
-              public void move(Ship s, double oldY, double newY) {}
+              public void move(Vehicle s, double oldY, double newY) {}
 
-              public void remove(Ship s) {}
+              public void remove(Vehicle s) {}
 
-              public void removeAll(java.util.Collection<Ship> s) {}
+              public void removeAll(java.util.Collection<Vehicle> s) {}
             },
             s -> 0);
     physics.rise(ship);
@@ -569,8 +569,8 @@ class ShipPhysicsTest {
   @Test
   void drySailFallsInsteadOfGlidingUnderPluginGravity() {
     double gravity = 10.0;
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 40, 0),
@@ -626,13 +626,13 @@ class ShipPhysicsTest {
             config,
             new BukkitLikeResolver(),
             new ShipRuntime() {
-              public void spawn(Ship s) {}
+              public void spawn(Vehicle s) {}
 
-              public void move(Ship s, double oldY, double newY) {}
+              public void move(Vehicle s, double oldY, double newY) {}
 
-              public void remove(Ship s) {}
+              public void remove(Vehicle s) {}
 
-              public void removeAll(java.util.Collection<Ship> s) {}
+              public void removeAll(java.util.Collection<Vehicle> s) {}
             },
             s -> 0,
             DensityField.uniform(1.2),
@@ -648,8 +648,8 @@ class ShipPhysicsTest {
 
   @Test
   void dryClothShipFallsAndDriftsDownwindInsteadOfHovering() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 40, 0),
@@ -700,13 +700,13 @@ class ShipPhysicsTest {
         };
     ShipRuntime runtime =
         new ShipRuntime() {
-          public void spawn(Ship s) {}
+          public void spawn(Vehicle s) {}
 
-          public void move(Ship s, double oldY, double newY) {}
+          public void move(Vehicle s, double oldY, double newY) {}
 
-          public void remove(Ship s) {}
+          public void remove(Vehicle s) {}
 
-          public void removeAll(java.util.Collection<Ship> s) {}
+          public void removeAll(java.util.Collection<Vehicle> s) {}
         };
     ShipPhysics physics =
         new ShipPhysicsImpl(
@@ -726,8 +726,8 @@ class ShipPhysicsTest {
 
   @Test
   void tickDoesNotApplyPhysicsWhenAShipChunkIsUnloaded() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 32, 0, 0),
@@ -786,15 +786,15 @@ class ShipPhysicsTest {
         };
     ShipRuntime runtime =
         new ShipRuntime() {
-          public void spawn(Ship s) {}
+          public void spawn(Vehicle s) {}
 
-          public void move(Ship s, double oldY, double newY) {
+          public void move(Vehicle s, double oldY, double newY) {
             moves.incrementAndGet();
           }
 
-          public void remove(Ship s) {}
+          public void remove(Vehicle s) {}
 
-          public void removeAll(java.util.Collection<Ship> s) {}
+          public void removeAll(java.util.Collection<Vehicle> s) {}
         };
     ShipPhysics physics =
         new ShipPhysicsImpl(
@@ -815,8 +815,8 @@ class ShipPhysicsTest {
 
   @Test
   void inspectReportsMassFactorsAndSampledForces() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 10, 0),
@@ -867,13 +867,13 @@ class ShipPhysicsTest {
         };
     ShipRuntime runtime =
         new ShipRuntime() {
-          public void spawn(Ship s) {}
+          public void spawn(Vehicle s) {}
 
-          public void move(Ship s, double oldY, double newY) {}
+          public void move(Vehicle s, double oldY, double newY) {}
 
-          public void remove(Ship s) {}
+          public void remove(Vehicle s) {}
 
-          public void removeAll(java.util.Collection<Ship> s) {}
+          public void removeAll(java.util.Collection<Vehicle> s) {}
         };
     ShipPhysics physics =
         new ShipPhysicsImpl(
@@ -923,8 +923,8 @@ class ShipPhysicsTest {
 
   @Test
   void tickMovesAPluginScaleSmallSail() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 63, 0),
@@ -980,13 +980,13 @@ class ShipPhysicsTest {
             config,
             new BukkitLikeResolver(),
             new ShipRuntime() {
-              public void spawn(Ship s) {}
+              public void spawn(Vehicle s) {}
 
-              public void move(Ship s, double oldY, double newY) {}
+              public void move(Vehicle s, double oldY, double newY) {}
 
-              public void remove(Ship s) {}
+              public void remove(Vehicle s) {}
 
-              public void removeAll(java.util.Collection<Ship> s) {}
+              public void removeAll(java.util.Collection<Vehicle> s) {}
             },
             s -> 0,
             DensityField.uniform(1.2),
@@ -1000,8 +1000,8 @@ class ShipPhysicsTest {
 
   @Test
   void displacedMassUsesOnlyTheWetFractionOfACell() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
@@ -1060,8 +1060,8 @@ class ShipPhysicsTest {
 
   @Test
   void pluginScaleLargeSailSitsInTheWaterNotOnTop() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 10, 0),
@@ -1081,16 +1081,16 @@ class ShipPhysicsTest {
 
   @Test
   void pluginScalePlayerLoadDeepensLargeSailDraft() {
-    Ship empty =
-        new Ship(
+    Vehicle empty =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 10, 0),
             SailShipTemplate.blocks(SailShipTemplate.Size.LARGE),
             new ShipPose(0),
             true);
-    Ship boarded =
-        new Ship(
+    Vehicle boarded =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 10, 0),
@@ -1117,8 +1117,8 @@ class ShipPhysicsTest {
   void pluginScaleWeightExceedsRestSailForce() {
     double oakDensity = 6.0;
     double defaultDensity = 10.0;
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
@@ -1172,13 +1172,13 @@ class ShipPhysicsTest {
             config,
             new BukkitLikeResolver(),
             new ShipRuntime() {
-              public void spawn(Ship s) {}
+              public void spawn(Vehicle s) {}
 
-              public void move(Ship s, double oldY, double newY) {}
+              public void move(Vehicle s, double oldY, double newY) {}
 
-              public void remove(Ship s) {}
+              public void remove(Vehicle s) {}
 
-              public void removeAll(java.util.Collection<Ship> s) {}
+              public void removeAll(java.util.Collection<Vehicle> s) {}
             },
             s -> 0,
             DensityField.uniform(1.2),
@@ -1202,8 +1202,8 @@ class ShipPhysicsTest {
 
   @Test
   void tickStillMovesThroughVegetationInsteadOfStopping() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
@@ -1262,13 +1262,13 @@ class ShipPhysicsTest {
         };
     ShipRuntime runtime =
         new ShipRuntime() {
-          public void spawn(Ship s) {}
+          public void spawn(Vehicle s) {}
 
-          public void move(Ship s, double oldY, double newY) {}
+          public void move(Vehicle s, double oldY, double newY) {}
 
-          public void remove(Ship s) {}
+          public void remove(Vehicle s) {}
 
-          public void removeAll(java.util.Collection<Ship> s) {}
+          public void removeAll(java.util.Collection<Vehicle> s) {}
         };
     ShipPhysics physics =
         new ShipPhysicsImpl(
@@ -1288,16 +1288,16 @@ class ShipPhysicsTest {
 
   @Test
   void inspectMergesSameFacingSailsIntoOneVector() {
-    Ship one =
-        new Ship(
+    Vehicle one =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
             List.of(new ShipBlock(new BlockPos(0, 1, 0), WHITE_WOOL)),
             new ShipPose(0),
             true);
-    Ship four =
-        new Ship(
+    Vehicle four =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
@@ -1319,8 +1319,8 @@ class ShipPhysicsTest {
 
   @Test
   void inspectKeepsDifferentSailFacingsAsSeparateVectors() {
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
@@ -1358,13 +1358,13 @@ class ShipPhysicsTest {
               return bracket < 0 ? data : data.substring(0, bracket);
             },
             new ShipRuntime() {
-              public void spawn(Ship s) {}
+              public void spawn(Vehicle s) {}
 
-              public void move(Ship s, double oldY, double newY) {}
+              public void move(Vehicle s, double oldY, double newY) {}
 
-              public void remove(Ship s) {}
+              public void remove(Vehicle s) {}
 
-              public void removeAll(java.util.Collection<Ship> s) {}
+              public void removeAll(java.util.Collection<Vehicle> s) {}
             },
             s -> 0,
             DensityField.uniform(1.2),
@@ -1379,8 +1379,8 @@ class ShipPhysicsTest {
 
   @Test
   void waterDragSlowsASailMoreThanAir() {
-    Ship dryShip = clothShip();
-    Ship wetShip = clothShip();
+    Vehicle dryShip = clothShip();
+    Vehicle wetShip = clothShip();
     World dry = mediumWorld(false, 0);
     World wet = mediumWorld(true, 1.0);
     ShipPhysics dryPhysics = sailPhysics(dry);
@@ -1397,8 +1397,8 @@ class ShipPhysicsTest {
     assertTrue(wetForces.get("WaterDrag").fz() < 0);
   }
 
-  private static Ship clothShip() {
-    return new Ship(
+  private static Vehicle clothShip() {
+    return new Vehicle(
         UUID.randomUUID(),
         UUID.randomUUID(),
         new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
@@ -1454,13 +1454,13 @@ class ShipPhysicsTest {
             1e-3);
     ShipRuntime runtime =
         new ShipRuntime() {
-          public void spawn(Ship s) {}
+          public void spawn(Vehicle s) {}
 
-          public void move(Ship s, double oldY, double newY) {}
+          public void move(Vehicle s, double oldY, double newY) {}
 
-          public void remove(Ship s) {}
+          public void remove(Vehicle s) {}
 
-          public void removeAll(java.util.Collection<Ship> s) {}
+          public void removeAll(java.util.Collection<Vehicle> s) {}
         };
     return new ShipPhysicsImpl(
         new PhysicsEngine(),
@@ -1484,7 +1484,7 @@ class ShipPhysicsTest {
   }
 
   private static java.util.Map<String, ShipInspection.ForceLine> forcesByName(
-      ShipPhysics physics, Ship ship) {
+      ShipPhysics physics, Vehicle ship) {
     java.util.Map<String, ShipInspection.ForceLine> byName = new java.util.HashMap<>();
     for (ShipInspection.ForceLine line : physics.inspect(ship).forces()) {
       byName.put(line.name(), line);
@@ -1545,13 +1545,13 @@ class ShipPhysicsTest {
         config,
         new BukkitLikeResolver(),
         new ShipRuntime() {
-          public void spawn(Ship s) {}
+          public void spawn(Vehicle s) {}
 
-          public void move(Ship s, double oldY, double newY) {}
+          public void move(Vehicle s, double oldY, double newY) {}
 
-          public void remove(Ship s) {}
+          public void remove(Vehicle s) {}
 
-          public void removeAll(java.util.Collection<Ship> s) {}
+          public void removeAll(java.util.Collection<Vehicle> s) {}
         },
         riders,
         DensityField.uniform(1.2),

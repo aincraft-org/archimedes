@@ -3,9 +3,9 @@ package dev.mintychochip.archimedes.collision;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import dev.mintychochip.archimedes.model.BlockPos;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
+import dev.mintychochip.archimedes.model.Vehicle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -17,7 +17,7 @@ class CollisionHullTest {
 
   @Test
   void singleBlockIsExposed() {
-    Ship ship = ship(List.of(new BlockPos(0, 0, 0)));
+    Vehicle ship = ship(List.of(new BlockPos(0, 0, 0)));
     assertEquals(List.of(new BlockPos(0, 0, 0)), CollisionHull.exposedBlocks(ship));
   }
 
@@ -39,7 +39,7 @@ class CollisionHullTest {
 
   @Test
   void orderingIsLexicographicRegardlessOfInputOrder() {
-    Ship ship =
+    Vehicle ship =
         ship(
             List.of(
                 new BlockPos(2, 0, 0),
@@ -57,12 +57,12 @@ class CollisionHullTest {
 
   @Test
   void topExposedOnlyIncludesBlocksWithMissingUpperNeighbor() {
-    Ship ship = ship(List.of(new BlockPos(0, 0, 0), new BlockPos(0, 1, 0)));
+    Vehicle ship = ship(List.of(new BlockPos(0, 0, 0), new BlockPos(0, 1, 0)));
     assertEquals(List.of(new BlockPos(0, 1, 0)), CollisionHull.topExposedBlocks(ship));
   }
 
-  private static Ship ship(List<BlockPos> positions) {
-    return new Ship(
+  private static Vehicle ship(List<BlockPos> positions) {
+    return new Vehicle(
         UUID.randomUUID(),
         UUID.randomUUID(),
         new ShipOrigin(WORLD, 100, 200, 300),

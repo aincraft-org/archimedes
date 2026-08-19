@@ -1,7 +1,7 @@
 package dev.mintychochip.archimedes.command;
 
 import dev.mintychochip.archimedes.config.ShipConfig;
-import dev.mintychochip.archimedes.model.Ship;
+import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.phys.ShipInspection;
 import dev.mintychochip.archimedes.phys.ShipInspectionLines;
 import dev.mintychochip.archimedes.phys.ShipPhysics;
@@ -16,10 +16,10 @@ import org.jetbrains.annotations.NotNull;
 
 /** Executor for ship management commands. */
 public final class ShipCommand implements org.bukkit.command.CommandExecutor {
-  /** Ship service. */
+  /** Vehicle service. */
   private final ShipService service;
 
-  /** Ship configuration. */
+  /** Vehicle configuration. */
   private final ShipConfig config;
 
   /** Target resolver. */
@@ -110,7 +110,7 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
           ChatColor.RED + "No target block within " + config.targetDistance() + " blocks.");
       return true;
     }
-    Ship ship =
+    Vehicle ship =
         service.assembleAt(
             player.getUniqueId(), target.x(), target.y(), target.z(), target.worldId());
     if (ship == null) {
@@ -128,7 +128,7 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
   }
 
   private boolean inspect(Player player) {
-    Ship ship = nearby(player);
+    Vehicle ship = nearby(player);
     if (ship == null) {
       player.sendMessage(ChatColor.RED + "No ship nearby.");
       return true;
@@ -141,7 +141,7 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
   }
 
   private boolean disassemble(Player player) {
-    Ship ship = nearby(player);
+    Vehicle ship = nearby(player);
     if (ship == null) {
       player.sendMessage(ChatColor.RED + "No ship nearby.");
       return true;
@@ -158,7 +158,7 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
     if (args.length >= 2 && "all".equalsIgnoreCase(args[1])) {
       return killAll(player);
     }
-    Ship ship = nearby(player);
+    Vehicle ship = nearby(player);
     if (ship == null) {
       player.sendMessage(ChatColor.RED + "No ship nearby.");
       return true;
@@ -181,7 +181,7 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
     return true;
   }
 
-  private Ship nearby(Player player) {
+  private Vehicle nearby(Player player) {
     org.bukkit.Location location = player.getLocation();
     return ShipTargeting.nearest(
         service.all(),
@@ -235,7 +235,8 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
     int x = player.getLocation().getBlockX() + facing.getModX() * 3;
     int y = player.getLocation().getBlockY();
     int z = player.getLocation().getBlockZ() + facing.getModZ() * 3;
-    Ship ship = service.spawnSail(player.getUniqueId(), player.getWorld().getUID(), x, y, z, size);
+    Vehicle ship =
+        service.spawnSail(player.getUniqueId(), player.getWorld().getUID(), x, y, z, size);
     if (ship == null) {
       player.sendMessage(ChatColor.RED + "Cannot spawn sail: " + service.lastError());
       return true;

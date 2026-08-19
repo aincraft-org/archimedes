@@ -5,10 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.mintychochip.archimedes.model.BlockPos;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
 import dev.mintychochip.archimedes.model.ShipPose;
+import dev.mintychochip.archimedes.model.Vehicle;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
@@ -28,15 +28,15 @@ class ShipStoreTest {
     UUID shipId = UUID.randomUUID();
     UUID owner = UUID.randomUUID();
     UUID world = UUID.randomUUID();
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             shipId,
             owner,
             new ShipOrigin(world, 100, 200, 300),
             List.of(
                 new ShipBlock(new BlockPos(0, 0, 0), "minecraft:oak_planks"),
                 new ShipBlock(new BlockPos(3, -2, 7), "minecraft:stone[waterlogged=true]")));
-    Map<UUID, Ship> ships = new LinkedHashMap<>();
+    Map<UUID, Vehicle> ships = new LinkedHashMap<>();
     ships.put(shipId, ship);
 
     ShipStore store = new ShipStore(tempDir);
@@ -44,9 +44,9 @@ class ShipStoreTest {
 
     assertTrue(Files.exists(tempDir.resolve("archimedes.json")));
     assertFalse(Files.exists(tempDir.resolve("ships.json")));
-    Map<UUID, Ship> loaded = store.loadAll();
+    Map<UUID, Vehicle> loaded = store.loadAll();
     assertEquals(1, loaded.size());
-    Ship restored = loaded.get(shipId);
+    Vehicle restored = loaded.get(shipId);
     assertEquals(owner, restored.ownerId());
     assertEquals(world, restored.origin().worldId());
     assertEquals(100, restored.origin().x());
@@ -81,28 +81,28 @@ class ShipStoreTest {
   void overwritesPreviousFile() throws Exception {
     UUID owner = UUID.randomUUID();
     UUID world = UUID.randomUUID();
-    Ship oldShip =
-        new Ship(
+    Vehicle oldShip =
+        new Vehicle(
             UUID.randomUUID(),
             owner,
             new ShipOrigin(world, 0, 0, 0),
             List.of(new ShipBlock(new BlockPos(0, 0, 0), "minecraft:stone")));
-    Map<UUID, Ship> first = new LinkedHashMap<>();
+    Map<UUID, Vehicle> first = new LinkedHashMap<>();
     first.put(oldShip.id(), oldShip);
     ShipStore store = new ShipStore(tempDir);
     store.saveAll(first);
 
-    Ship newShip =
-        new Ship(
+    Vehicle newShip =
+        new Vehicle(
             UUID.randomUUID(),
             owner,
             new ShipOrigin(world, 5, 6, 7),
             List.of(new ShipBlock(new BlockPos(0, 0, 0), "minecraft:dirt")));
-    Map<UUID, Ship> second = new LinkedHashMap<>();
+    Map<UUID, Vehicle> second = new LinkedHashMap<>();
     second.put(newShip.id(), newShip);
     store.saveAll(second);
 
-    Map<UUID, Ship> loaded = store.loadAll();
+    Map<UUID, Vehicle> loaded = store.loadAll();
     assertEquals(1, loaded.size());
     assertTrue(loaded.containsKey(newShip.id()));
   }
@@ -111,39 +111,39 @@ class ShipStoreTest {
   void restoresThroughTemporaryFile() throws Exception {
     UUID owner = UUID.randomUUID();
     UUID world = UUID.randomUUID();
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             UUID.randomUUID(),
             owner,
             new ShipOrigin(world, 1, 2, 3),
             List.of(new ShipBlock(new BlockPos(0, 0, 0), "minecraft:stone")));
-    Map<UUID, Ship> ships = new LinkedHashMap<>();
+    Map<UUID, Vehicle> ships = new LinkedHashMap<>();
     ships.put(ship.id(), ship);
     ShipStore store = new ShipStore(tempDir);
     store.saveAll(ships);
 
-    Map<UUID, Ship> loaded = store.loadAll();
+    Map<UUID, Vehicle> loaded = store.loadAll();
     assertEquals(ship.id(), loaded.keySet().iterator().next());
   }
 
   @Test
   void persistsPoseAndBuoyancyFlag() throws Exception {
     UUID shipId = UUID.randomUUID();
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             shipId,
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 1, 2, 3),
             List.of(new ShipBlock(new BlockPos(0, 0, 0), "minecraft:oak_planks")),
             new ShipPose(12.5),
             false);
-    Map<UUID, Ship> ships = new LinkedHashMap<>();
+    Map<UUID, Vehicle> ships = new LinkedHashMap<>();
     ships.put(shipId, ship);
 
     ShipStore store = new ShipStore(tempDir);
     store.saveAll(ships);
 
-    Ship restored = store.loadAll().get(shipId);
+    Vehicle restored = store.loadAll().get(shipId);
     assertEquals(12.5, restored.pose().y());
     assertFalse(restored.buoyancyEnabled());
   }
@@ -158,7 +158,7 @@ class ShipStoreTest {
             + "\"origin\":{\"world\":\"00000000-0000-0000-0000-000000000003\",\"x\":1,\"y\":2,\"z\":3},"
             + "\"blocks\":[{\"pos\":{\"x\":0,\"y\":0,\"z\":0},\"data\":\"minecraft:stone\"}]}]");
     ShipStore store = new ShipStore(tempDir);
-    Ship restored = store.loadAll().values().iterator().next();
+    Vehicle restored = store.loadAll().values().iterator().next();
     assertEquals(0.0, restored.pose().y());
     assertTrue(restored.buoyancyEnabled());
   }
@@ -166,20 +166,20 @@ class ShipStoreTest {
   @Test
   void a15RestartRestoresFloatedPoseAndRecomputesMassWithZeroRiders() throws Exception {
     UUID shipId = UUID.randomUUID();
-    Ship ship =
-        new Ship(
+    Vehicle ship =
+        new Vehicle(
             shipId,
             UUID.randomUUID(),
             new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
             List.of(new ShipBlock(new BlockPos(0, 0, 0), "minecraft:stone")),
             new ShipPose(7.5),
             true);
-    Map<UUID, Ship> ships = new LinkedHashMap<>();
+    Map<UUID, Vehicle> ships = new LinkedHashMap<>();
     ships.put(shipId, ship);
 
     ShipStore store = new ShipStore(tempDir);
     store.saveAll(ships);
-    Ship restored = store.loadAll().get(shipId);
+    Vehicle restored = store.loadAll().get(shipId);
 
     assertEquals(7.5, restored.pose().y(), 1e-9);
 

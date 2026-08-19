@@ -3,9 +3,9 @@ package dev.mintychochip.archimedes.bukkit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import dev.mintychochip.archimedes.model.BlockPos;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
+import dev.mintychochip.archimedes.model.Vehicle;
 import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.UUID;
@@ -20,7 +20,7 @@ class BukkitShipRiderTrackerTest {
   void eventOverlapUsesStoredSuppliedBasisInsteadOfMutableShipPose() {
     UUID worldId = UUID.randomUUID();
     UUID entityId = UUID.randomUUID();
-    Ship ship = ship(worldId);
+    Vehicle ship = ship(worldId);
     ship.setPose(new dev.mintychochip.archimedes.model.ShipPose(20));
     Entity entity = entity(entityId);
     World world = world(worldId, entity);
@@ -43,8 +43,8 @@ class BukkitShipRiderTrackerTest {
         (org.bukkit.entity.LivingEntity) entity, new Location(to.getWorld(), 0, 0, 0), to);
   }
 
-  private static Ship ship(UUID worldId) {
-    return new Ship(
+  private static Vehicle ship(UUID worldId) {
+    return new Vehicle(
         UUID.randomUUID(),
         UUID.randomUUID(),
         new ShipOrigin(worldId, 0, 0, 0),

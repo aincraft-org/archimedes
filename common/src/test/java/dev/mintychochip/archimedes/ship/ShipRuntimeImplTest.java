@@ -6,10 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.mintychochip.archimedes.collision.CollisionVolumeManager;
 import dev.mintychochip.archimedes.model.BlockPos;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
 import dev.mintychochip.archimedes.model.ShipPose;
+import dev.mintychochip.archimedes.model.Vehicle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -74,7 +74,7 @@ class ShipRuntimeImplTest {
     collision.moveFailure = true;
     RecordingCarrier carrier = new RecordingCarrier();
     carrier.recordCarryBasis = true;
-    Ship ship = ship();
+    Vehicle ship = ship();
     ship.setPose(new dev.mintychochip.archimedes.model.ShipPose(7));
 
     assertThrows(
@@ -91,7 +91,7 @@ class ShipRuntimeImplTest {
     RecordingCollision collision = new RecordingCollision(operations);
     collision.moveFailure = true;
     RecordingCarrier carrier = new RecordingCarrier(operations);
-    Ship ship = ship();
+    Vehicle ship = ship();
     ShipRuntime runtime = new ShipRuntimeImpl(renderer, collision, carrier);
     ship.setPose(new dev.mintychochip.archimedes.model.ShipPose(7));
     assertThrows(RuntimeException.class, () -> runtime.move(ship, 4, 7));
@@ -118,7 +118,7 @@ class ShipRuntimeImplTest {
     RecordingRenderer renderer = new RecordingRenderer(operations);
     RecordingCollision collision = new RecordingCollision(operations);
     RecordingCarrier carrier = new RecordingCarrier(operations);
-    Ship ship = ship();
+    Vehicle ship = ship();
     ShipRuntime runtime = new ShipRuntimeImpl(renderer, collision, carrier);
     ship.setPose(new dev.mintychochip.archimedes.model.ShipPose(7));
     runtime.move(ship, 4, 7);
@@ -129,7 +129,7 @@ class ShipRuntimeImplTest {
   @Test
   void successfulMoveCommitsCarrierPoseBasis() {
     RecordingCarrier carrier = new RecordingCarrier();
-    Ship ship = ship();
+    Vehicle ship = ship();
     ShipRuntime runtime =
         new ShipRuntimeImpl(new RecordingRenderer(), new RecordingCollision(), carrier);
     ship.setPose(new dev.mintychochip.archimedes.model.ShipPose(7));
@@ -145,7 +145,7 @@ class ShipRuntimeImplTest {
     RecordingRenderer renderer = new RecordingRenderer(operations);
     RecordingCollision collision = new RecordingCollision(operations);
     RecordingCarrier carrier = new RecordingCarrier(operations);
-    Ship ship = ship();
+    Vehicle ship = ship();
     ShipRuntime runtime = new ShipRuntimeImpl(renderer, collision, carrier);
     ship.setPose(new dev.mintychochip.archimedes.model.ShipPose(4));
     runtime.move(ship, 7, 4);
@@ -157,7 +157,7 @@ class ShipRuntimeImplTest {
   void failedMoveRestoresHorizontalPose() {
     RecordingCollision collision = new RecordingCollision();
     collision.moveFailure = true;
-    Ship ship = ship();
+    Vehicle ship = ship();
     ship.setPose(new ShipPose(3, 7, 9));
     ShipRuntime runtime = new ShipRuntimeImpl(new RecordingRenderer(), collision);
 
@@ -176,7 +176,7 @@ class ShipRuntimeImplTest {
     RecordingRenderer renderer = new RecordingRenderer(operations);
     RecordingCollision collision = new RecordingCollision(operations);
     RecordingCarrier carrier = new RecordingCarrier(operations);
-    Ship ship = ship();
+    Vehicle ship = ship();
     ship.setPose(new ShipPose(0, 5, 2));
     ShipRuntime runtime = new ShipRuntimeImpl(renderer, collision, carrier);
 
@@ -188,7 +188,7 @@ class ShipRuntimeImplTest {
   @Test
   void xzOnlyMoveStillCarriesRiders() {
     RecordingCarrier carrier = new RecordingCarrier();
-    Ship ship = ship();
+    Vehicle ship = ship();
     ship.setPose(new ShipPose(0, 5, 2));
     ShipRuntime runtime =
         new ShipRuntimeImpl(new RecordingRenderer(), new RecordingCollision(), carrier);
@@ -206,7 +206,7 @@ class ShipRuntimeImplTest {
     RecordingCollision collision = new RecordingCollision();
     collision.moveFailure = true;
     RecordingCarrier carrier = new RecordingCarrier();
-    Ship ship = ship();
+    Vehicle ship = ship();
     ship.setPose(new dev.mintychochip.archimedes.model.ShipPose(4));
 
     assertThrows(
@@ -222,7 +222,7 @@ class ShipRuntimeImplTest {
     RecordingRenderer renderer = new RecordingRenderer();
     RecordingCollision collision = new RecordingCollision();
     RecordingCarrier carrier = new RecordingCarrier();
-    Ship ship = ship();
+    Vehicle ship = ship();
     ShipRuntime runtime = new ShipRuntimeImpl(renderer, collision, carrier);
     ship.setPose(new dev.mintychochip.archimedes.model.ShipPose(0.0));
 
@@ -238,7 +238,7 @@ class ShipRuntimeImplTest {
   @Test
   void spawnTracksAtCommittedPoseAndRemoveUntracks() {
     RecordingCarrier carrier = new RecordingCarrier();
-    Ship ship = ship();
+    Vehicle ship = ship();
     ship.setPose(new dev.mintychochip.archimedes.model.ShipPose(9));
     ShipRuntime runtime =
         new ShipRuntimeImpl(new RecordingRenderer(), new RecordingCollision(), carrier);
@@ -294,8 +294,8 @@ class ShipRuntimeImplTest {
     assertEquals(1, carrier.cleared);
   }
 
-  private static Ship ship() {
-    return new Ship(
+  private static Vehicle ship() {
+    return new Vehicle(
         UUID.randomUUID(),
         UUID.randomUUID(),
         new ShipOrigin(UUID.randomUUID(), 1, 2, 3),
@@ -318,7 +318,7 @@ class ShipRuntimeImplTest {
     }
 
     @Override
-    public void render(Ship ship, ShipHolder holder) {
+    public void render(Vehicle ship, ShipHolder holder) {
       if (renderFailure) {
         throw new ShipRuntimeException(new IllegalStateException("render"));
       }
@@ -327,14 +327,14 @@ class ShipRuntimeImplTest {
     }
 
     @Override
-    public void removeRuntime(Ship ship) {
+    public void removeRuntime(Vehicle ship) {
       if (removeFailure) {
         throw new ShipRuntimeException(new IllegalStateException("renderer cleanup"));
       }
     }
 
     @Override
-    public void reposition(Ship ship, double oldY, double newY) {
+    public void reposition(Vehicle ship, double oldY, double newY) {
       operations.add("renderer:" + oldY + "->" + newY);
     }
 
@@ -362,7 +362,7 @@ class ShipRuntimeImplTest {
     }
 
     @Override
-    public void spawn(Ship ship) {
+    public void spawn(Vehicle ship) {
       if (spawnFailure) {
 
         throw new ShipRuntimeException(new IllegalStateException(COLLISION_MOVE));
@@ -370,7 +370,7 @@ class ShipRuntimeImplTest {
     }
 
     @Override
-    public void move(Ship ship) {
+    public void move(Vehicle ship) {
       operations.add(COLLISION_MOVE);
       if (moveFailure) {
         throw new ShipRuntimeException(new IllegalStateException("move"));
@@ -378,7 +378,7 @@ class ShipRuntimeImplTest {
     }
 
     @Override
-    public void rollback(Ship ship, double oldY) {
+    public void rollback(Vehicle ship, double oldY) {
       rolledBack = true;
       operations.add(COLLISION_ROLLBACK);
     }
@@ -425,19 +425,19 @@ class ShipRuntimeImplTest {
     }
 
     @Override
-    public void track(Ship ship, double poseY) {
+    public void track(Vehicle ship, double poseY) {
       tracked++;
       trackedPoseY = poseY;
       operations.add("track:" + poseY);
     }
 
     @Override
-    public void untrack(Ship ship) {
+    public void untrack(Vehicle ship) {
       untracked++;
     }
 
     @Override
-    public void updatePoseBasis(Ship ship, double poseY) {
+    public void updatePoseBasis(Vehicle ship, double poseY) {
       poseBasis = poseY;
     }
 
@@ -447,12 +447,12 @@ class ShipRuntimeImplTest {
     }
 
     @Override
-    public void carry(Ship ship, double oldY, double newY) {
+    public void carry(Vehicle ship, double oldY, double newY) {
       carry(ship, new ShipPose(oldY), new ShipPose(newY));
     }
 
     @Override
-    public void carry(Ship ship, ShipPose from, ShipPose to) {
+    public void carry(Vehicle ship, ShipPose from, ShipPose to) {
       carryCount++;
       operations.add("carrier:" + from.y() + "->" + to.y());
       carriedOldY = from.y();

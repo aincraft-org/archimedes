@@ -1,9 +1,9 @@
 package dev.mintychochip.archimedes.phys;
 
 import dev.mintychochip.archimedes.config.ShipConfig;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipPose;
+import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.sail.SailMesh;
 import dev.mintychochip.archimedes.ship.ShipRuntime;
 import dev.mintychochip.phys.Body;
@@ -42,7 +42,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
   /** Physics world adapter. */
   private final World world;
 
-  /** Ship physics configuration. */
+  /** Vehicle physics configuration. */
   private final ShipConfig config;
 
   /** Block material key resolver. */
@@ -132,7 +132,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
    * @return whether the ship moved
    */
   @Override
-  public boolean tick(Ship ship) {
+  public boolean tick(Vehicle ship) {
     if (!ship.buoyancyEnabled()) return false;
     if (!chunksLoaded(ship)) return false;
     long started = System.nanoTime();
@@ -148,7 +148,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
    * @return whether the request succeeded
    */
   @Override
-  public boolean rise(Ship ship) {
+  public boolean rise(Vehicle ship) {
     if (!ship.buoyancyEnabled()) return true;
     if (!chunksLoaded(ship)) return false;
     Body probe = body(ship, false);
@@ -165,7 +165,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
    * @return whether the path was clear and movement succeeded
    */
   @Override
-  public boolean sink(Ship ship, int blocks) {
+  public boolean sink(Vehicle ship, int blocks) {
     if (!ship.buoyancyEnabled() || blocks <= 0) return false;
     if (!chunksLoaded(ship)) return false;
     ShipPose old = ship.pose();
@@ -179,7 +179,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
    * @param ship ship whose transient physics state is removed
    */
   @Override
-  public void clear(Ship ship) {
+  public void clear(Vehicle ship) {
     velocities.remove(ship.id());
     lastTickNanos.remove(ship.id());
   }
@@ -191,7 +191,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
    * @return diagnostic snapshot
    */
   @Override
-  public ShipInspection inspect(Ship ship) {
+  public ShipInspection inspect(Vehicle ship) {
     int cloth = 0;
     for (ShipBlock block : ship.blocks()) {
       if (SailMesh.isCloth(block.blockData())) {
@@ -416,7 +416,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
    * @param ship ship whose cells are mapped to chunk coordinates
    * @return whether physics sampling is safe
    */
-  private boolean chunksLoaded(Ship ship) {
+  private boolean chunksLoaded(Vehicle ship) {
     for (ShipBlock block : ship.blocks()) {
       int worldX = ship.origin().x() + ship.pose().anchorDx() + block.pos().x();
       int worldZ = ship.origin().z() + ship.pose().anchorDz() + block.pos().z();
@@ -427,7 +427,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
     return true;
   }
 
-  private Body body(Ship ship, boolean withSails) {
+  private Body body(Vehicle ship, boolean withSails) {
     List<Force> forces = new ArrayList<>();
     forces.add(new GravityForce());
     forces.add(new ShipBuoyancyForce());
@@ -441,7 +441,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
         ship, resolver, config, riderCount.count(ship), forces.toArray(Force[]::new));
   }
 
-  private Set<String> clothKeys(Ship ship) {
+  private Set<String> clothKeys(Vehicle ship) {
     Set<String> keys = new HashSet<>();
     for (ShipBlock block : ship.blocks()) {
       String key = resolver.key(block);
@@ -464,7 +464,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
    * @param withSails whether to attach sails and air drag
    * @return whether the ship moved
    */
-  private boolean integrate(Ship ship, int steps, boolean withSails) {
+  private boolean integrate(Vehicle ship, int steps, boolean withSails) {
     ShipPose old = ship.pose();
     Body body = body(ship, withSails);
     body.setLinearVelocity(new Vector3d(velocities.getOrDefault(ship.id(), new Vector3d())));
@@ -501,7 +501,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
    * @param body simulated body whose position is being clamped
    * @return the clamped relative pose height
    */
-  private double clamp(Ship ship, double oldY, Body body) {
+  private double clamp(Vehicle ship, double oldY, Body body) {
     double rawY = body.transform().position().y() - ship.origin().y();
     double low = oldY - config.maxFall();
     double high = oldY + config.maxRise();
@@ -534,7 +534,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
    * @return whether the runtime move succeeded
    */
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
-  private boolean moveDirect(Ship ship, ShipPose oldPose, ShipPose newPose) {
+  private boolean moveDirect(Vehicle ship, ShipPose oldPose, ShipPose newPose) {
     ShipPose target = newPose;
     if (!WaterlineResolver.isPathClear(ship, world, target, config)) {
       target = new ShipPose(newPose.x(), oldPose.y(), newPose.z());

@@ -1,8 +1,8 @@
 package dev.mintychochip.archimedes.ship;
 
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipTransform;
+import dev.mintychochip.archimedes.model.Vehicle;
 import java.util.Collection;
 import java.util.UUID;
 
@@ -31,11 +31,11 @@ public final class ShipTargeting {
    * @param range maximum distance from the hull AABB
    * @return the nearest in-range hull, or {@code null}
    */
-  public static Ship nearest(
-      Collection<Ship> ships, UUID worldId, double x, double y, double z, double range) {
-    Ship best = null;
+  public static Vehicle nearest(
+      Collection<Vehicle> ships, UUID worldId, double x, double y, double z, double range) {
+    Vehicle best = null;
     double bestDistance = Double.POSITIVE_INFINITY;
-    for (Ship ship : ships) {
+    for (Vehicle ship : ships) {
       if (!worldId.equals(ship.origin().worldId())) {
         continue;
       }
@@ -58,7 +58,7 @@ public final class ShipTargeting {
    * @param z world z
    * @return non-negative distance
    */
-  public static double distanceToHull(Ship ship, double x, double y, double z) {
+  public static double distanceToHull(Vehicle ship, double x, double y, double z) {
     double minX = Double.POSITIVE_INFINITY;
     double minY = Double.POSITIVE_INFINITY;
     double minZ = Double.POSITIVE_INFINITY;

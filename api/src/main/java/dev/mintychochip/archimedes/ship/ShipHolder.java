@@ -1,6 +1,6 @@
 package dev.mintychochip.archimedes.ship;
 
-import dev.mintychochip.archimedes.model.Ship;
+import dev.mintychochip.archimedes.model.Vehicle;
 
 /** Receives the finalized ship model after rendering. */
 @FunctionalInterface
@@ -10,5 +10,5 @@ public interface ShipHolder {
    *
    * @param ship the finalized ship
    */
-  void accept(Ship ship);
+  void accept(Vehicle ship);
 }

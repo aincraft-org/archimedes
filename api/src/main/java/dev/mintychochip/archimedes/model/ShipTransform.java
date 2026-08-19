@@ -11,7 +11,7 @@ public final class ShipTransform {
    * @param relative relative block position
    * @return exact visual position
    */
-  public static VisualPosition visual(Ship ship, BlockPos relative) {
+  public static VisualPosition visual(Vehicle ship, BlockPos relative) {
     return visual(ship, relative, ship.pose().y());
   }
 
@@ -23,7 +23,7 @@ public final class ShipTransform {
    * @param y pose y offset
    * @return exact visual position
    */
-  public static VisualPosition visual(Ship ship, BlockPos relative, double y) {
+  public static VisualPosition visual(Vehicle ship, BlockPos relative, double y) {
     ShipOrigin origin = ship.origin();
     return new VisualPosition(
         origin.x() + ship.pose().x() + relative.x(),
@@ -38,7 +38,7 @@ public final class ShipTransform {
    * @param relative relative block position
    * @return authoritative cell position
    */
-  public static BlockPos cell(Ship ship, BlockPos relative) {
+  public static BlockPos cell(Vehicle ship, BlockPos relative) {
     ShipOrigin origin = ship.origin();
     return new BlockPos(
         origin.x() + ship.pose().anchorDx() + relative.x(),
@@ -53,7 +53,7 @@ public final class ShipTransform {
    * @param relative relative block position
    * @return centered collision anchor
    */
-  public static CollisionAnchor collisionAnchor(Ship ship, BlockPos relative) {
+  public static CollisionAnchor collisionAnchor(Vehicle ship, BlockPos relative) {
     VisualPosition visual = visual(ship, relative);
     return new CollisionAnchor(visual.x() + 0.5, visual.y(), visual.z() + 0.5);
   }

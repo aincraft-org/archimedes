@@ -8,10 +8,10 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 import dev.mintychochip.archimedes.model.BlockPos;
-import dev.mintychochip.archimedes.model.Ship;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
 import dev.mintychochip.archimedes.model.ShipPose;
+import dev.mintychochip.archimedes.model.Vehicle;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,9 +23,9 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Loads and saves {@link Ship} records as {@code archimedes.json}. Writes go to a temporary sibling
- * file first and are atomically moved into place so an interrupted save cannot corrupt the primary
- * file. A leftover {@code ships.json} is read when the new file is absent.
+ * Loads and saves {@link Vehicle} records as {@code archimedes.json}. Writes go to a temporary
+ * sibling file first and are atomically moved into place so an interrupted save cannot corrupt the
+ * primary file. A leftover {@code ships.json} is read when the new file is absent.
  */
 public final class ShipStore {
   /** Primary persistence file name. */
@@ -60,15 +60,15 @@ public final class ShipStore {
    * @return the persisted ships keyed by identifier
    * @throws IOException when the file cannot be read
    */
-  public Map<UUID, Ship> loadAll() throws IOException {
+  public Map<UUID, Vehicle> loadAll() throws IOException {
     Path source = Files.exists(file) ? file : legacyFile;
     if (!Files.exists(source)) {
       return Map.of();
     }
     JsonElement root = JsonParser.parseString(Files.readString(source));
-    Map<UUID, Ship> ships = new LinkedHashMap<>();
+    Map<UUID, Vehicle> ships = new LinkedHashMap<>();
     for (JsonElement element : root.getAsJsonArray()) {
-      Ship ship = parseShip(element.getAsJsonObject());
+      Vehicle ship = parseVehicle(element.getAsJsonObject());
       ships.put(ship.id(), ship);
     }
     return ships;
@@ -80,9 +80,9 @@ public final class ShipStore {
    * @param ships the ships to save
    * @throws IOException when the file cannot be written
    */
-  public void saveAll(Map<UUID, Ship> ships) throws IOException {
+  public void saveAll(Map<UUID, Vehicle> ships) throws IOException {
     JsonArray root = new JsonArray();
-    for (Ship ship : ships.values()) {
+    for (Vehicle ship : ships.values()) {
       root.add(toJson(ship));
     }
     Path parent = file.getParent();
@@ -99,7 +99,7 @@ public final class ShipStore {
     }
   }
 
-  private static JsonObject toJson(Ship ship) {
+  private static JsonObject toJson(Vehicle ship) {
     JsonObject object = new JsonObject();
     object.addProperty("id", ship.id().toString());
     object.addProperty("owner", ship.ownerId().toString());
@@ -138,7 +138,7 @@ public final class ShipStore {
     return object;
   }
 
-  private static Ship parseShip(JsonObject object) {
+  private static Vehicle parseVehicle(JsonObject object) {
     UUID id = UUID.fromString(requireString(object, "id"));
     UUID owner = UUID.fromString(requireString(object, "owner"));
     JsonObject originJson = requireObject(object, "origin");
@@ -174,7 +174,7 @@ public final class ShipStore {
       }
     }
     boolean buoyancyEnabled = !object.has("buoyancy") || object.get("buoyancy").getAsBoolean();
-    return new Ship(
+    return new Vehicle(
         id,
         owner,
         new ShipOrigin(world, x, y, z),
