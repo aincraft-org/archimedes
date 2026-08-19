@@ -5,7 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 /** Behavior tests for the Paper-free cloth region → BlockDisplay plate transform. */
@@ -47,10 +49,11 @@ class SailMeshTest {
     }
     assertSheetCoversRegion(cells, pieces);
     assertEveryCellIntersectedOrSheetMatches(cells, pieces);
+    assertUnionIsASheet(pieces);
   }
 
   @Test
-  void thickVolumeFitsASheetOfMultipleThinPlates() {
+  void thickVolumeEmitsPlatesOccupyingThreeDimensionalSpace() {
     List<SailCell> cells = new ArrayList<>();
     for (int x = 0; x < 2; x++) {
       for (int y = 0; y < 2; y++) {
@@ -67,8 +70,10 @@ class SailMeshTest {
       assertTrue(isTransformedPlate(piece));
       assertEquals(RED_WOOL, piece.appearance());
     }
-    assertSheetCoversRegion(cells, pieces);
-    assertUnionIsASheet(pieces);
+    assertUnionIsNotASingleAxisSheet(pieces);
+    assertTrue(
+        distinctOriginsOnAnyAxis(pieces) > 1 || hasNonIdentityRotation(pieces),
+        "3D cloth plate origins must occupy more than one thickness of space");
   }
 
   @Test
@@ -134,6 +139,15 @@ class SailMeshTest {
   }
 
   private static void assertUnionIsASheet(List<SailPiece> pieces) {
+    assertEquals(1, thinAxisCount(pieces), "fitted sheet union must be thin on exactly one axis");
+  }
+
+  private static void assertUnionIsNotASingleAxisSheet(List<SailPiece> pieces) {
+    assertTrue(
+        thinAxisCount(pieces) != 1, "multi-depth cloth must not collapse onto one thin plane");
+  }
+
+  private static int thinAxisCount(List<SailPiece> pieces) {
     Bounds sheet = sheetBounds(pieces);
     int thinAxes = 0;
     if (approx(sheet.spanX(), SailMesh.PLATE_THICKNESS)) {
@@ -145,7 +159,28 @@ class SailMeshTest {
     if (approx(sheet.spanZ(), SailMesh.PLATE_THICKNESS)) {
       thinAxes++;
     }
-    assertEquals(1, thinAxes, "fitted sheet union must be thin on exactly one axis");
+    return thinAxes;
+  }
+
+  private static int distinctOriginsOnAnyAxis(List<SailPiece> pieces) {
+    Set<Long> xs = new HashSet<>();
+    Set<Long> ys = new HashSet<>();
+    Set<Long> zs = new HashSet<>();
+    for (SailPiece piece : pieces) {
+      xs.add(Math.round(piece.originX() * 1_000_000.0));
+      ys.add(Math.round(piece.originY() * 1_000_000.0));
+      zs.add(Math.round(piece.originZ() * 1_000_000.0));
+    }
+    return Math.max(xs.size(), Math.max(ys.size(), zs.size()));
+  }
+
+  private static boolean hasNonIdentityRotation(List<SailPiece> pieces) {
+    for (SailPiece piece : pieces) {
+      if (!isIdentityRotation(piece)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static boolean intersectsCell(List<SailPiece> pieces, SailCell cell) {

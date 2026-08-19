@@ -16,9 +16,9 @@ import java.util.Set;
 /**
  * Turns a 3D region of cloth cells into a series of thin BlockDisplay plates.
  *
- * <p>Connected cells form one region. Each region is fitted to a sheet along its thinnest axis and
- * tessellated into one plate per in-plane cell. Geometry is computed from the region; no item model
- * or resource pack is involved.
+ * <p>Connected cells form one region. A 1-cell-thick wall stays a sheet along its thinnest axis. A
+ * multi-depth region emits one plate per cell at that cell's own depth so the union occupies 3D
+ * space. Geometry is computed from the region; no item model or resource pack is involved.
  */
 public final class SailMesh {
   /**
@@ -75,7 +75,7 @@ public final class SailMesh {
    * Tessellates cloth cells into thin plates covering each connected region.
    *
    * @param cells integer cells plus captured appearances
-   * @return immutable piece list in deterministic region / in-plane order
+   * @return immutable piece list in deterministic region / cell order
    */
   public static List<SailPiece> tessellate(Collection<SailCell> cells) {
     Objects.requireNonNull(cells, "cells");
@@ -146,34 +146,16 @@ public final class SailMesh {
     }
     int axis =
         thinAxis(maxX - minX + 1, maxY - minY + 1, maxZ - minZ + 1, region.get(0).appearance());
-    double mid;
-    if (axis == 0) {
-      mid = (minX + maxX + 1) * 0.5;
-    } else if (axis == 1) {
-      mid = (minY + maxY + 1) * 0.5;
-    } else {
-      mid = (minZ + maxZ + 1) * 0.5;
-    }
-    double originThin = mid - PLATE_THICKNESS * 0.5;
-    Map<CellKey, SailCell> plane = new LinkedHashMap<>();
+    List<SailPiece> pieces = new ArrayList<>(region.size());
     for (SailCell cell : region) {
-      plane.putIfAbsent(project(cell, axis), cell);
-    }
-    List<SailPiece> pieces = new ArrayList<>(plane.size());
-    for (SailCell cell : plane.values()) {
-      pieces.add(plate(cell, axis, originThin));
+      pieces.add(plate(cell, axis, thinOrigin(cell, axis)));
     }
     return pieces;
   }
 
-  private static CellKey project(SailCell cell, int axis) {
-    if (axis == 0) {
-      return new CellKey(0, cell.y(), cell.z());
-    }
-    if (axis == 1) {
-      return new CellKey(cell.x(), 0, cell.z());
-    }
-    return new CellKey(cell.x(), cell.y(), 0);
+  private static double thinOrigin(SailCell cell, int axis) {
+    int coord = axis == 0 ? cell.x() : axis == 1 ? cell.y() : cell.z();
+    return coord + 0.5 - PLATE_THICKNESS * 0.5;
   }
 
   private static SailPiece plate(SailCell cell, int axis, double originThin) {
