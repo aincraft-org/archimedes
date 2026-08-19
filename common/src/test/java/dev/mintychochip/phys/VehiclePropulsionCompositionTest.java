@@ -2,7 +2,6 @@ package dev.mintychochip.phys;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
@@ -18,15 +17,14 @@ import org.junit.jupiter.api.Test;
  */
 class VehiclePropulsionCompositionTest {
   @Test
-  void catalogHasSailsRocketsAndMediumThrustButNotLiftingSails() throws ClassNotFoundException {
+  void catalogHasSailsRocketsMediumThrustLiftingSailsAndKeel() throws ClassNotFoundException {
     Class.forName("dev.mintychochip.phys.PressureSailForce");
     Class.forName("dev.mintychochip.phys.ThrustForce");
     Class.forName("dev.mintychochip.phys.FluidBuoyancyForce");
     Class.forName("dev.mintychochip.phys.LiftForce");
     Class.forName("dev.mintychochip.phys.MediumThrustForce");
-    assertThrows(
-        ClassNotFoundException.class,
-        () -> Class.forName("dev.mintychochip.phys.LiftingSailForce"));
+    Class.forName("dev.mintychochip.phys.LiftingSailForce");
+    Class.forName("dev.mintychochip.phys.KeelForce");
     boolean densityDrag =
         Arrays.stream(QuadraticDragForce.class.getConstructors())
             .anyMatch(ctor -> Arrays.asList(ctor.getParameterTypes()).contains(DensityField.class));

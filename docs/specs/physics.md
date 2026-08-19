@@ -16,7 +16,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - Generic abstractions: `Body`, `Collider`, `Shape`, `Material`, `Force`, `World`, `FluidField`, `DensityField`, `FlowField`, `Physics`.
 - Default `BodyImpl`, `Aabb`, `ColliderImpl`, `Octree`, and `PhysicsEngine` in `:common`.
 - Octree broadphase plus AABB contact depenetration on `Physics.step` (body–body).
-- Reusable `Force` units: `GravityForce`, `FluidBuoyancyForce`, `QuadraticDragForce` (optional `DensityField`), `ThrustForce`, `MediumThrustForce`, `LiftForce`, `PressureSailForce`, `SupportForce`, `CoulombFrictionForce`, `ViscousDragForce`, `AngularDragForce`, `VegetationDragForce`.
+- Reusable `Force` units: `GravityForce`, `FluidBuoyancyForce`, `QuadraticDragForce` (optional `DensityField` and `FlowField`), `ThrustForce`, `MediumThrustForce`, `LiftForce`, `PressureSailForce`, `LiftingSailForce`, `KeelForce`, `SupportForce`, `CoulombFrictionForce`, `ViscousDragForce`, `AngularDragForce`, `VegetationDragForce`.
 - Ship client (`dev.mintychochip.archimedes.phys`):
   - `ShipBody` / `VehicleFactory` construction from `Vehicle` blocks.
   - `MaterialKeyResolver` for mapping `ShipBlock.blockData()` to canonical material keys.
@@ -67,6 +67,9 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - Hook sails to a structure with `ShipSails.forces`. `ShipPhysics.tick` attaches cloth (`*_wool`, `*_banner`, `*_wall_banner`) plus lumped air drag when a `FlowField` is supplied. The plugin default wind is `+Z`. `ShipPose` stores `x,y,z`; yaw is still out.
 - Support and Coulomb friction share a `ContactPlane`. Support cancels the compressive gravity load along the normal when the body is in contact; it is not a penetration constraint. Friction uses that same gravity-derived `N`: kinetic is `−μ_k N v̂_t`; static cancels sibling tangent load when `|T| ≤ μ_s N` at rest. `N = 0` off the plane.
 - Viscous linear drag is `F = −c v`, distinct from quadratic `−c |v| v`. Angular drag is `τ = −c ω`. Neither is applied to Archimedes ships.
+- Relative-flow quadratic drag is `F = −c ρ |v_app| v_app` with `v_app = v − u_flow`. Omit `FlowField` for still medium. Do not add `World.flowField()`.
+- `LiftingSailForce` is AoA lift/drag on `v_app` (rest in a breeze is non-zero). `KeelForce` is `−c ρ |s| s n̂` on the beam-normal slip `s`; it does not resist surge.
+- `BodyImpl` inertia is the AABB tensor about the body origin (scaled to `mass`); no colliders ⇒ `m I`. `PhysicsEngine` uses `I ω̇ = τ − ω × (Iω)`.
 - Put Bukkit-specific material/world parsing behind interfaces and implement them only in `:paper`.
 - Gate ship physics on `World.isChunkLoaded`. Bukkit implementation must call `org.bukkit.World#isChunkLoaded` (Paper: `ServerChunkCache` / `ChunkMap.getUpdatingChunkIfPresent`). Never `getChunkAt` or `loadChunk` for this probe.
 - The ship client is responsible for turning a `Ship` into a `Body` and for driving `ShipRuntime` after integration.
@@ -109,7 +112,8 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - [x] Wet-cell fraction drives displacement, so a large deck sits in the water and a boarded player deepens draft.
 - [x] `MediumThrustForce` samples `DensityField` at a body-local point and produces `r × F` torque.
 - [x] `QuadraticDragForce` optional `DensityField` overload; one-arg lumped law unchanged.
-- [x] Catalog/field inventory (2026-08-19): 12 phys `Force`s + `ShipBuoyancyForce` + `EnvelopeBuoyancyForce`; `World` has gravity/fluid/timeStep/obstacle/chunk/vegetation only. Proof: `CatalogAndFieldInventoryTest`.
+- [x] Catalog/field inventory (2026-08-19): phys `Force`s including `LiftingSailForce` and `KeelForce` plus `ShipBuoyancyForce` + `EnvelopeBuoyancyForce`; `World` has gravity/fluid/timeStep/obstacle/chunk/vegetation only. Proof: `CatalogAndFieldInventoryTest`.
+- [x] Relative-flow quadratic drag, anisotropic AABB inertia, gyroscopic `ω × Iω`, `LiftingSailForce`, `KeelForce`.
 
 ### Current notes
 
@@ -121,18 +125,18 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - Generic 6DOF is available to any caller. Archimedes `ShipPose` stores `x,y,z`; yaw is still out. `ShipBody` is rebuilt at identity orientation every tick, so sail torque never becomes heading.
 - `archimedes.phys` review (2026-08-17): `Body` is the per-step physics object. `ShipPhysics` is the ship facade (rebuild body, clamp, path, `ShipRuntime`). `RiderCount` and `MaterialKeyResolver` are one-method seams so `:common` stays off Bukkit; they are not unused. No type in that package is a pass-through.
 - Propulsion split from the 2026-08-17 review: watercraft stay liquid buoyancy + sails (lifting sails later); airships should hover on envelope/`FluidBuoyancy(uniform ρ_air)` and drive with `MediumThrustForce`. Pressure sails on airships are optional flavor, not the look.
-- Accuracy inventory 2026-08-19: drag uses body `v`, not `v − u_flow` (`FlowField` is sail-only; `FluidField`/`World` have no current). `BodyImpl` inertia is isotropic `m I`. `PhysicsEngine` has no `ω × Iω`. Waterline and envelope lift apply zero torque. `LiftingSailForce` is not on the classpath. `VehicleFactory` can attach envelope + engines; `ShipPhysicsImpl.tick` still does not.
+- Accuracy (2026-08-19): `QuadraticDragForce` can take a `FlowField` (`v_app = v − u`). AABB colliders give anisotropic `I`; `PhysicsEngine` includes `ω × Iω`. `LiftingSailForce` and `KeelForce` are catalog units. Live `ShipPhysicsImpl.tick` still uses still-medium hull drag and does not attach lifting sails or keels. Waterline/envelope lift remain τ = 0.
 
 ## Next
 
 - [x] `MediumThrustForce`: density-scaled actuator at a body-local point with `r × F` torque
 - [x] `QuadraticDragForce(c, DensityField)`: `−c · ρ · |v| v`; one-arg constructor stays lumped
 - [x] Water drag on ships via density-scaled `QuadraticDragForce` (air keeps a small lumped drag).
-- [ ] Relative-flow drag: `F = −c ρ |v_app| v_app` with `v_app = v − u_flow`. Currents/wind on drag via injected `FlowField` or `FluidField` velocity — not `World.densityField()`.
-- [ ] Anisotropic inertia from collider AABBs (`BodyImpl` is still `I = m I`).
-- [ ] Gyroscopic `ω × Iω` in `PhysicsEngine` (no-op until inertia is anisotropic).
-- [ ] `LiftingSailForce`: angle-of-attack lift/drag catalog unit.
-- [ ] Keel / lateral-resistance catalog unit (opposes sideslip).
+- [x] Relative-flow drag: `F = −c ρ |v_app| v_app` with `v_app = v − u_flow`. Currents/wind on drag via injected `FlowField` — not `World.densityField()`.
+- [x] Anisotropic inertia from collider AABBs (`BodyImpl` uses `m I` only when there are no AABB colliders).
+- [x] Gyroscopic `ω × Iω` in `PhysicsEngine` (zero when inertia is isotropic).
+- [x] `LiftingSailForce`: angle-of-attack lift/drag catalog unit.
+- [x] Keel / lateral-resistance catalog unit (opposes sideslip).
 - [ ] Horizontal movement and steering for ships beyond sail-driven XZ.
 - [ ] `PhysicsWorld` that owns and steps a collection of bodies.
 - [ ] More `Shape` primitives (sphere, capsule).
@@ -191,7 +195,8 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 | 2026-08-17 | `PhysicsEngine` renormalizes after `integrate` | Live ticks threw `quaternion must be normalized` on plugin-scale small sails (JOML Taylor band) and aborted every ship |
 | 2026-08-17 | Rider carry applies the full pose delta | Sail XZ left standing players behind; carry used to no-op when `dy = 0` |
 | 2026-08-17 | Displacement is the wet fraction of each cell | A barely-wet deck was counted fully, so large rafts sat on the water and player load did not bob |
-| 2026-08-19 | Accuracy gaps ranked as relative-flow drag, anisotropic I, gyro, `LiftingSailForce`, keel — not new `World` fields | Inventory of 14 `Force` types; `FlowField` already exists for sails; drag still ignores it |
+| 2026-08-19 | Accuracy gaps ranked as relative-flow drag, anisotropic I, gyro, `LiftingSailForce`, keel — not new `World` fields | Inventory of catalog types; `FlowField` already exists for sails |
+| 2026-08-19 | Ship relative-flow drag, AABB inertia, gyro, lifting sail, and keel as catalog units | User asked to implement the accuracy list; plugin tick still uses still-medium hull drag |
 
 ## Open questions
 

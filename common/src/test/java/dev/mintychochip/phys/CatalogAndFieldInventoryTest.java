@@ -39,6 +39,8 @@ class CatalogAndFieldInventoryTest {
             "dev.mintychochip.phys.ViscousDragForce",
             "dev.mintychochip.phys.AngularDragForce",
             "dev.mintychochip.phys.VegetationDragForce",
+            "dev.mintychochip.phys.LiftingSailForce",
+            "dev.mintychochip.phys.KeelForce",
             "dev.mintychochip.archimedes.phys.ShipBuoyancyForce",
             "dev.mintychochip.archimedes.phys.EnvelopeBuoyancyForce")) {
       assertTrue(Force.class.isAssignableFrom(Class.forName(type)), type);
