@@ -95,6 +95,50 @@ class QuadraticDragForceTest {
   }
 
   @Test
+  void driftingWithTheCurrentProducesZeroDrag() {
+    BodyImpl body =
+        new BodyImpl(new Transform(new Vector3d(), new Quaterniond()), 1, List.of(), List.of());
+    body.setLinearVelocity(new Vector3d(4, 0, 0));
+    World world = PhysFixtures.world(0.1, new Vector3d(0, -10, 0), PhysFixtures.vacuum());
+    FlowField current = FlowField.uniform(new Vector3d(4, 0, 0));
+
+    Force.Result result =
+        new QuadraticDragForce(2, DensityField.uniform(1), current).apply(body, world);
+
+    assertEquals(0.0, result.force().length(), 1e-12);
+  }
+
+  @Test
+  void restInACurrentIsDraggedWithTheFlow() {
+    BodyImpl body =
+        new BodyImpl(new Transform(new Vector3d(), new Quaterniond()), 1, List.of(), List.of());
+    World world = PhysFixtures.world(0.1, new Vector3d(0, -10, 0), PhysFixtures.vacuum());
+    FlowField current = FlowField.uniform(new Vector3d(3, 0, 0));
+
+    Force.Result result = new QuadraticDragForce(2, current).apply(body, world);
+
+    assertEquals(18.0, result.force().x(), 1e-9);
+    assertEquals(0.0, result.force().y(), 1e-9);
+    assertEquals(0.0, result.force().z(), 1e-9);
+  }
+
+  @Test
+  void relativeFlowDragAcceleratesAParkedBodyTowardTheCurrentOnStep() {
+    FlowField current = FlowField.uniform(new Vector3d(5, 0, 0));
+    BodyImpl body =
+        new BodyImpl(
+            new Transform(new Vector3d(), new Quaterniond()),
+            1,
+            List.of(),
+            List.of(new QuadraticDragForce(0.2, current)));
+    World world = PhysFixtures.world(0.05, new Vector3d(0, -10, 0), PhysFixtures.vacuum());
+
+    new PhysicsEngine().step(world, List.of(body));
+
+    assertTrue(body.linearVelocity().x() > 0);
+  }
+
+  @Test
   void denserMediumBleedsSpeedFasterOnStep() {
     QuadraticDragForce waterDrag = new QuadraticDragForce(0.001, DensityField.uniform(1000));
     QuadraticDragForce airDrag = new QuadraticDragForce(0.001, DensityField.uniform(1.2));

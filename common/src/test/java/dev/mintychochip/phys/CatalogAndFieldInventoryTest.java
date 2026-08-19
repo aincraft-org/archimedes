@@ -3,7 +3,6 @@ package dev.mintychochip.phys;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.mintychochip.archimedes.phys.EnvelopeBuoyancyForce;
@@ -47,13 +46,6 @@ class CatalogAndFieldInventoryTest {
   }
 
   @Test
-  void liftingSailForceIsNotOnTheClasspath() {
-    assertThrows(
-        ClassNotFoundException.class,
-        () -> Class.forName("dev.mintychochip.phys.LiftingSailForce"));
-  }
-
-  @Test
   void worldHasNoDensityOrFlowOrCurrentSampler() {
     Set<String> names = new HashSet<>();
     for (Method method : World.class.getMethods()) {
@@ -83,21 +75,25 @@ class CatalogAndFieldInventoryTest {
   }
 
   @Test
-  void quadraticDragConstructorsDoNotTakeFlow() {
+  void quadraticDragConstructorsTakeOptionalFlow() {
     boolean sawLumped = false;
     boolean sawDensity = false;
+    boolean sawFlow = false;
     for (Constructor<?> ctor : QuadraticDragForce.class.getConstructors()) {
       List<Class<?>> params = Arrays.asList(ctor.getParameterTypes());
-      assertFalse(params.contains(FlowField.class), "drag must not already take FlowField");
       if (params.equals(List.of(double.class))) {
         sawLumped = true;
       }
       if (params.contains(DensityField.class)) {
         sawDensity = true;
       }
+      if (params.contains(FlowField.class)) {
+        sawFlow = true;
+      }
     }
     assertTrue(sawLumped);
     assertTrue(sawDensity);
+    assertTrue(sawFlow);
   }
 
   @Test
