@@ -11,6 +11,7 @@ import dev.mintychochip.phys.DensityField;
 import dev.mintychochip.phys.FlowField;
 import dev.mintychochip.phys.Force;
 import dev.mintychochip.phys.GravityForce;
+import dev.mintychochip.phys.MediumThrustForce;
 import dev.mintychochip.phys.Physics;
 import dev.mintychochip.phys.PressureSailForce;
 import dev.mintychochip.phys.QuadraticDragForce;
@@ -436,6 +437,23 @@ public final class ShipPhysicsImpl implements ShipPhysics {
     if (withSails) {
       forces.add(new QuadraticDragForce(0.05));
       forces.addAll(ShipSails.forces(ship, resolver, clothKeys(ship), air, wind));
+      if (ship.enginesEnabled()) {
+        DensityField medium =
+            point ->
+                world.fluidField().isFluid(point)
+                    ? world.fluidField().density(point)
+                    : air.density(point);
+        for (ShipBlock block : ship.blocks()) {
+          if (!config.engineMaterials().contains(resolver.key(block))) {
+            continue;
+          }
+          Vector3d point =
+              new Vector3d(block.pos().x() + 0.5, block.pos().y() + 0.5, block.pos().z() + 0.5);
+          forces.add(
+              new MediumThrustForce(
+                  point, ShipSails.facingNormal(block.blockData()), config.engineThrust(), medium));
+        }
+      }
     }
     return ShipBody.from(
         ship, resolver, config, riderCount.count(ship), forces.toArray(Force[]::new));

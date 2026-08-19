@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 class ShipPhysicsTest {
   private static final String OAK_PLANKS = "minecraft:oak_planks";
   private static final String WHITE_WOOL = "minecraft:white_wool";
+  private static final String FURNACE_SOUTH = "minecraft:furnace[facing=south]";
 
   @Test
   void tickRestoresPoseOnBlockedMove() {
@@ -1397,6 +1398,92 @@ class ShipPhysicsTest {
     assertTrue(wetForces.get("WaterDrag").fz() < 0);
   }
 
+  @Test
+  void furnaceFacingSouthAdvancesPoseZOnTick() {
+    Vehicle ship = furnaceShip();
+    ShipPhysics physics = enginePhysics(mediumWorld(true, 1000), DensityField.uniform(1.2));
+    assertTrue(physics.tick(ship));
+    assertTrue(ship.pose().z() > 0, "density-scaled engine thrust must drive the live tick");
+  }
+
+  @Test
+  void vacuumEngineTickDoesNotAdvanceWhileDenseMediumDoes() {
+    Vehicle vacuumHull = furnaceShip();
+    Vehicle denseHull = furnaceShip();
+    ShipPhysics vacuum = enginePhysics(mediumWorld(false, 0), DensityField.uniform(0));
+    ShipPhysics dense = enginePhysics(mediumWorld(true, 1000), DensityField.uniform(1.2));
+    vacuum.tick(vacuumHull);
+    dense.tick(denseHull);
+    assertEquals(0.0, vacuumHull.pose().z(), 1e-6);
+    assertTrue(denseHull.pose().z() > vacuumHull.pose().z() + 0.01);
+  }
+
+  @Test
+  void enginesOffKeepMassAndDropThrustOnLiveInspect() {
+    Vehicle ship = furnaceShip();
+    ShipPhysics physics = enginePhysics(mediumWorld(true, 1000), DensityField.uniform(1.2));
+    double massOn = physics.inspect(ship).mass();
+    assertTrue(
+        physics.inspect(ship).forces().stream()
+            .anyMatch(line -> line.name().contains("MediumThrust")));
+    ship.setEnginesEnabled(false);
+    ShipInspection off = physics.inspect(ship);
+    assertEquals(massOn, off.mass(), 1e-9);
+    assertFalse(off.forces().stream().anyMatch(line -> line.name().contains("MediumThrust")));
+  }
+
+  private static Vehicle furnaceShip() {
+    return new Vehicle(
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        new ShipOrigin(UUID.randomUUID(), 0, 0, 0),
+        List.of(new ShipBlock(new BlockPos(0, 0, 0), FURNACE_SOUTH)),
+        new ShipPose(0),
+        true);
+  }
+
+  private static ShipPhysics enginePhysics(World world, DensityField air) {
+    ShipConfig config =
+        new ShipConfig(
+            2048,
+            8,
+            Set.of(),
+            Set.of(),
+            true,
+            1,
+            0.5,
+            16.0,
+            0.05,
+            1.0,
+            0.5,
+            0.9,
+            Map.of("minecraft:furnace", 10.0),
+            10.0,
+            80.0,
+            16.0,
+            1e-6,
+            1e-3);
+    ShipRuntime runtime =
+        new ShipRuntime() {
+          public void spawn(Vehicle s) {}
+
+          public void move(Vehicle s, double oldY, double newY) {}
+
+          public void remove(Vehicle s) {}
+
+          public void removeAll(java.util.Collection<Vehicle> s) {}
+        };
+    return new ShipPhysicsImpl(
+        new PhysicsEngine(),
+        world,
+        config,
+        new EngineKeyResolver(),
+        runtime,
+        s -> 0,
+        air,
+        FlowField.still());
+  }
+
   private static Vehicle clothShip() {
     return new Vehicle(
         UUID.randomUUID(),
@@ -1561,6 +1648,14 @@ class ShipPhysicsTest {
   static final class BukkitLikeResolver implements MaterialKeyResolver {
     public String key(ShipBlock block) {
       return block.blockData();
+    }
+  }
+
+  static final class EngineKeyResolver implements MaterialKeyResolver {
+    public String key(ShipBlock block) {
+      String data = block.blockData();
+      int bracket = data.indexOf('[');
+      return (bracket < 0 ? data : data.substring(0, bracket)).toLowerCase();
     }
   }
 }
