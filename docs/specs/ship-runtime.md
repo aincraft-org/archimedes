@@ -1,7 +1,7 @@
 # Ship Runtime — Living Spec
 
 > Status: active
-> Last updated: 2026-08-19
+> Last updated: 2026-08-20
 > Owners: jlo
 
 ## Intent
@@ -17,7 +17,8 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 - `ShipTransform` consumption: displays at visual corners, hulls at collision anchors
 - `ShipRenderer` / `RenderSurface` / `BukkitShipRenderer` — per-block BlockDisplays plus tessellated cloth plates
 - `SailMesh` / `SailPiece` / `SailCell` — Paper-free cloth region → thin-plate series
-- `CollisionHull` / `CollisionVolume` / `CollisionVolumeManager` / `BukkitCollisionVolumeManager` — invisible Shulker hulls
+- `CollisionHull` / `CollisionVolume` / `CollisionVolumeManager` / `BukkitCollisionVolumeManager` — invisible Shulker hulls, streamed by default
+- `ExposedCellIndex` / `CollisionVolumePool` / `BukkitCollisionObserverSampler` — edge-distance observer pool (mode B)
 - `ShipRuntime` / `ShipRuntimeImpl` — spawn/move/remove transactions, rollback
 - `ShipEntityCarrier` / `BukkitShipEntityCarrier` / `BukkitShipRiderTracker` / `TopSurfaceIndex` — rider carry
 - `ShipServiceImpl` assembly/disassembly/load reconciliation wiring
@@ -40,6 +41,7 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 - Carrier tracking is explicit: successful spawn tracks at the committed pose, remove untracks, and every runtime cleanup path clears tracker state.
 - Rider seed and overlap checks use the move transaction's supplied pose basis `(x,y,z)`; the top-surface index is stored at pose zero and shifted by that basis. Tracker updates do not read a concurrently changing pose for that transaction.
 - No barrier/deck blocks are placed by production code; Shulker collision hulls provide runtime collision.
+- Default collision mode is streamed: one cube per exposed cell that an observer can hit, refcounted, hidden from other clients. Full spawn (every exposed cell, globally visible) is the A/B control and is not persisted.
 - The server cannot upload an arbitrary triangle mesh. Ship visuals are `BlockDisplay` entities the client already knows how to draw.
 
 ## Implementation guidance
@@ -57,6 +59,7 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 
 - [x] Canonical drift-free rendering and deterministic exposed hulls
 - [x] Production Shulker hull attached to spawn/move/remove lifecycle
+- [x] Streamed collision cubes: index at assemble, spawn on observer edge-distance, share/refcount, despawn at 0; full spawn remains the A/B control
 - [x] Transactional spawn and direction-ordered move rollback
 - [x] Persistent rider tracking and best-effort XYZ carry (players and other entities teleport by the hull delta; a normal jump stays on the deck)
 - [x] Carry runs before collision on every move so a sailing hull cannot shove standees off the deck
@@ -102,3 +105,4 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 | 2026-08-17 | Visual displays use 1-tick teleport interpolation; Shulkers snap | 20 TPS teleports look stuttery; duration > 1 lags the picture behind collision |
 | 2026-08-19 | Ship cannons derive from captured dispenser/button blocks and fire through tagged BlockDisplay interaction | Assembled ships have no live blocks; renderer ship/block PDC tags preserve a physical control without custom item models |
 | 2026-08-19 | Torn cloth ragdolls as a `BlockDisplay` cube, not a remaining sail plate | User: the piece that comes off should look like a block and tumble |
+| 2026-08-20 | Player-solid hulls stream 1×1×1 Shulkers by observer edge-distance; full spawn is an A/B control | Entity count and client FPS; cubes already have tops and sides |

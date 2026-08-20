@@ -53,6 +53,9 @@ public final class ArchimedesPlugin extends JavaPlugin {
   /** Runtime-only cannon interaction state. */
   private CannonService cannonService;
 
+  /** Collision volume manager used by inspect and the A/B switch. */
+  private BukkitCollisionVolumeManager collisions;
+
   /**
    * Enables the plugin by loading configuration, constructing the Bukkit-backed ship runtime, and
    * starting the ship service. Invalid configuration disables the plugin; other startup failures
@@ -84,8 +87,7 @@ public final class ArchimedesPlugin extends JavaPlugin {
       RenderSurface surface = RenderSurface.of(world);
       FlowField wind = FlowField.uniform(new org.joml.Vector3d(0, 0, 8));
       BukkitShipRenderer renderer = new BukkitShipRenderer(surface, shipKey, wind);
-      BukkitCollisionVolumeManager collisions =
-          new BukkitCollisionVolumeManager(world, collisionOwnerKey);
+      collisions = new BukkitCollisionVolumeManager(world, collisionOwnerKey);
       BukkitCollisionObserverListener collisionObservers =
           new BukkitCollisionObserverListener(allShips, collisions);
       BukkitShipEntityCarrier carrier =
@@ -211,6 +213,11 @@ public final class ArchimedesPlugin extends JavaPlugin {
       }
 
       @Override
+      public boolean turnSail(UUID shipId, UUID requesterId, boolean operator, String facing) {
+        return service.turnSail(shipId, requesterId, operator, facing);
+      }
+
+      @Override
       public Vehicle findOwnedInWorld(UUID playerId, UUID worldId) {
         return service.findOwnedInWorld(playerId, worldId);
       }
@@ -323,7 +330,8 @@ public final class ArchimedesPlugin extends JavaPlugin {
             service,
             config,
             new dev.mintychochip.archimedes.command.BukkitTargetResolver(config.targetDistance()),
-            shipPhysics);
+            shipPhysics,
+            collisions);
     command.setExecutor(executor);
     command.setTabCompleter(new ShipTabCompleter());
   }

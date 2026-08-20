@@ -34,7 +34,16 @@ class ShipTabCompleterTest {
   @Test
   void returnsAllSubcommandsForEmptyPrefix() {
     assertEquals(
-        List.of("assemble", "inspect", "disassemble", "kill", "buoyancy", "sink", "sail"),
+        List.of(
+            "assemble",
+            "inspect",
+            "disassemble",
+            "kill",
+            "buoyancy",
+            "sink",
+            "sail",
+            "turn",
+            "collision"),
         new ShipTabCompleter().onTabComplete(SENDER, COMMAND, SHIP_COMMAND, new String[] {""}));
   }
 
@@ -59,7 +68,23 @@ class ShipTabCompleterTest {
     assertEquals(
         List.of("small"),
         new ShipTabCompleter()
-            .onTabComplete(SENDER, COMMAND, SHIP_COMMAND, new String[] {SAIL, "s"}));
+            .onTabComplete(SENDER, COMMAND, SHIP_COMMAND, new String[] {SAIL, "sm"}));
+  }
+
+  @Test
+  void completesSailFacings() {
+    assertEquals(
+        List.of("south"),
+        new ShipTabCompleter()
+            .onTabComplete(SENDER, COMMAND, SHIP_COMMAND, new String[] {SAIL, "so"}));
+  }
+
+  @Test
+  void completesTurnHeadings() {
+    assertEquals(
+        List.of("left"),
+        new ShipTabCompleter()
+            .onTabComplete(SENDER, COMMAND, SHIP_COMMAND, new String[] {"turn", "l"}));
   }
 
   @Test

@@ -7,7 +7,7 @@ author: jlo
 commands:
   arch:
     description: Archimedes ships
-    usage: /arch assemble|inspect|disassemble|kill|buoyancy|sink|sail
+    usage: /arch assemble|inspect|disassemble|kill|buoyancy|sink|sail|turn|collision
     aliases: [ship]
     permission: archimedes.command
 permissions:
@@ -33,5 +33,5 @@ permissions:
     description: Lower a ship
     default: true
   archimedes.sail:
-    description: Spawn a predetermined sail ship
+    description: Spawn or turn a predetermined sail ship
     default: true

@@ -201,7 +201,8 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
       spawnCells(ship, CollisionHull.exposedBlocks(ship), true);
       return;
     }
-    observe(ship, List.of());
+    pools.put(ship.id(), new CollisionVolumePool());
+    reconcileObservers(ship);
   }
 
   @Override

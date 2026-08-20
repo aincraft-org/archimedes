@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import dev.mintychochip.archimedes.collision.CollisionMode;
+import dev.mintychochip.archimedes.collision.CollisionSnapshot;
 import dev.mintychochip.archimedes.config.ShipConfig;
 import dev.mintychochip.archimedes.model.BlockPos;
 import dev.mintychochip.archimedes.model.ShipBlock;
@@ -45,6 +47,9 @@ class ShipCommandTest {
 
   /** Sail spawn subcommand label. */
   private static final String SUB_SAIL = "sail";
+
+  /** Sail turn subcommand label. */
+  private static final String SUB_TURN = "turn";
 
   /** Destroy subcommand label. */
   private static final String SUB_KILL = "kill";
@@ -96,6 +101,15 @@ class ShipCommandTest {
       targetY = y;
       targetZ = z;
       return assembled;
+    }
+
+    @Override
+    public boolean turnSail(UUID shipId, UUID requesterId, boolean operator, String facing) {
+      calls.add(SUB_TURN);
+      lastRequester = requesterId;
+      lastOperator = operator;
+      lastSailSize = facing;
+      return assembled != null;
     }
 
     @Override
@@ -206,6 +220,11 @@ class ShipCommandTest {
                       : defaultFor(method.getReturnType()));
 
   private static Player player(RecordingService service, boolean permission) {
+    return player(service, permission, org.bukkit.block.BlockFace.SOUTH);
+  }
+
+  private static Player player(
+      RecordingService service, boolean permission, org.bukkit.block.BlockFace facing) {
     return (Player)
         Proxy.newProxyInstance(
             ShipCommandTest.class.getClassLoader(),
@@ -223,7 +242,7 @@ class ShipCommandTest {
                 case "getLocation":
                   return new org.bukkit.Location(WORLD_PROXY, 10, 64, 20);
                 case "getFacing":
-                  return org.bukkit.block.BlockFace.SOUTH;
+                  return facing;
                 case "sendMessage":
                   service.messages.add(String.valueOf(args[0]));
                   return null;
@@ -695,5 +714,172 @@ class ShipCommandTest {
     commandNoTarget(service).onCommand(player(service, true), CMD, SHIP, new String[] {SUB_SAIL});
     assertEquals(List.of(SUB_SAIL), service.calls);
     assertTrue(service.messages.get(0).contains("Cannot spawn sail: Ship assembly is disabled"));
+  }
+
+  @Test
+  void sailUsesPlayerLookAsDefaultFacing() {
+    RecordingService service = new RecordingService();
+    service.assembled = ship();
+    commandNoTarget(service)
+        .onCommand(
+            player(service, true, org.bukkit.block.BlockFace.EAST),
+            CMD,
+            SHIP,
+            new String[] {SUB_SAIL});
+    assertEquals("medium-east", service.lastSailSize);
+    assertEquals(13, service.targetX);
+    assertEquals(20, service.targetZ);
+  }
+
+  @Test
+  void sailNamedFacingOverridesLook() {
+    RecordingService service = new RecordingService();
+    service.assembled = ship();
+    commandNoTarget(service)
+        .onCommand(
+            player(service, true, org.bukkit.block.BlockFace.EAST),
+            CMD,
+            SHIP,
+            new String[] {SUB_SAIL, "south"});
+    assertEquals("medium", service.lastSailSize);
+  }
+
+  @Test
+  void sailAcceptsSizeMeshAndFacing() {
+    RecordingService service = new RecordingService();
+    service.assembled = ship();
+    commandNoTarget(service)
+        .onCommand(
+            player(service, true), CMD, SHIP, new String[] {SUB_SAIL, "large", "mesh", "west"});
+    assertEquals("large-mesh-west", service.lastSailSize);
+  }
+
+  @Test
+  void turnRequiresHeading() {
+    RecordingService service = new RecordingService();
+    commandNoTarget(service).onCommand(player(service, true), CMD, SHIP, new String[] {SUB_TURN});
+    assertTrue(service.messages.get(0).contains("Usage: /arch turn"));
+    assertTrue(service.calls.isEmpty());
+  }
+
+  @Test
+  void turnRequiresNearbyShip() {
+    RecordingService service = new RecordingService();
+    service.owned = shipAt(0, 64, 790);
+    commandNoTarget(service)
+        .onCommand(player(service, true), CMD, SHIP, new String[] {SUB_TURN, "left"});
+    assertTrue(service.messages.get(0).contains("No ship nearby"));
+    assertFalse(service.calls.contains(SUB_TURN));
+  }
+
+  @Test
+  void turnDelegatesToService() {
+    RecordingService service = new RecordingService();
+    service.assembled = nearbyShip();
+    service.owned = service.assembled;
+    commandNoTarget(service)
+        .onCommand(player(service, true), CMD, SHIP, new String[] {SUB_TURN, "left"});
+    assertTrue(service.calls.contains(SUB_TURN));
+    assertEquals(service.owner, service.lastRequester);
+    assertEquals("left", service.lastSailSize);
+    assertTrue(service.messages.get(0).contains("Turned sail left"));
+  }
+
+  @Test
+  void turnReportsServiceFailure() {
+    RecordingService service = new RecordingService();
+    service.assembled = null;
+    service.owned = nearbyShip();
+    service.error = "Unknown heading: up";
+    commandNoTarget(service)
+        .onCommand(player(service, true), CMD, SHIP, new String[] {SUB_TURN, "up"});
+    assertTrue(service.calls.contains(SUB_TURN));
+    assertTrue(service.messages.get(0).contains("Cannot turn sail: Unknown heading: up"));
+  }
+
+  @Test
+  void turnRejectsWithoutPermission() {
+    RecordingService service = new RecordingService();
+    commandNoTarget(service)
+        .onCommand(player(service, false), CMD, SHIP, new String[] {SUB_TURN, "left"});
+    assertTrue(service.calls.isEmpty());
+  }
+
+  @Test
+  void collisionSwitchRequiresOperator() {
+    RecordingService service = new RecordingService();
+    service.owned = nearbyShip();
+    service.opUser = false;
+    RecordingCollision collisions = new RecordingCollision();
+    command(service, player1 -> null, collisions)
+        .onCommand(player(service, true), CMD, SHIP, new String[] {"collision", "a"});
+    assertTrue(service.messages.get(0).contains("Only operators"));
+    assertEquals(null, collisions.last);
+  }
+
+  @Test
+  void collisionSwitchSetsStreamedMode() {
+    RecordingService service = new RecordingService();
+    service.owned = nearbyShip();
+    service.opUser = true;
+    RecordingCollision collisions = new RecordingCollision();
+    command(service, player1 -> null, collisions)
+        .onCommand(player(service, true), CMD, SHIP, new String[] {"collision", "b"});
+    assertEquals(CollisionMode.STREAMED, collisions.mode);
+    assertEquals(service.owned.id(), collisions.last.id());
+    assertTrue(service.messages.get(0).contains("Collision mode B (streamed)"));
+  }
+
+  @Test
+  void inspectAppendsCollisionSnapshot() {
+    RecordingService service = new RecordingService();
+    service.owned = nearbyShip();
+    RecordingCollision collisions = new RecordingCollision();
+    command(service, player1 -> null, collisions)
+        .onCommand(player(service, true), CMD, SHIP, new String[] {SUB_INSPECT});
+    String joined = String.join("\n", service.messages);
+    assertTrue(joined.contains("collision=B live=2 exposed=10 visibleToYou=2"));
+  }
+
+  private static ShipCommand command(
+      RecordingService service, TargetResolver resolver, RecordingCollision collisions) {
+    return new ShipCommand(service, config(), resolver, unusedPhysics(), collisions);
+  }
+
+  private static final class RecordingCollision
+      implements dev.mintychochip.archimedes.collision.CollisionVolumeManager {
+    CollisionMode mode = CollisionMode.STREAMED;
+    Vehicle last;
+
+    @Override
+    public void spawn(Vehicle ship) {}
+
+    @Override
+    public void move(Vehicle ship) {}
+
+    @Override
+    public void rollback(Vehicle ship, double oldY) {}
+
+    @Override
+    public void remove(UUID shipId) {}
+
+    @Override
+    public void removeAll() {}
+
+    @Override
+    public CollisionMode mode(UUID shipId) {
+      return mode;
+    }
+
+    @Override
+    public void setMode(Vehicle ship, CollisionMode mode) {
+      this.mode = mode;
+      this.last = ship;
+    }
+
+    @Override
+    public CollisionSnapshot snapshot(UUID shipId, UUID playerId) {
+      return new CollisionSnapshot(mode, 2, 10, 2);
+    }
   }
 }
