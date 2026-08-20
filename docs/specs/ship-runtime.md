@@ -67,6 +67,7 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 - [x] Cloth regions render as tessellated thin transformed `BlockDisplay` plates (`SailMesh`); 1-thick walls stay a sheet, multi-depth cloth occupies 3D, and wind billows plates; hull cells stay one untransformed cube; sail plates tag with the ship, move on reposition, and vanish on tagged remove
 - [x] Visual BlockDisplays interpolate pose teleports (`setTeleportDuration` ≥ 1 tick); collision Shulkers do not
 - [x] Torn cloth spawns a `BlockDisplay` ragdoll that is teleported and reoriented each debris step; remaining sail plates retessellate from `intactBlocks`
+- [x] Captured dispenser cannons use exactly one attached stone-button display as the interaction control; owner/operator clicks launch a non-incendiary bounded vanilla projectile from the current transformed muzzle with a runtime-only two-second cooldown and no ammunition or item model.
 
 ## Next
 
@@ -99,4 +100,5 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 | 2026-08-17 | No GPU mesh upload; hull stays voxel `BlockDisplay`; curves are Future overlays | Paper protocol has no triangle-mesh packet; the ship is the scanned build |
 | 2026-08-17 | Cloth sails are tessellated `BlockDisplay` plates from the captured region | User asked for a series of block displays from a 3D cloth region before any resource pack |
 | 2026-08-17 | Visual displays use 1-tick teleport interpolation; Shulkers snap | 20 TPS teleports look stuttery; duration > 1 lags the picture behind collision |
+| 2026-08-19 | Ship cannons derive from captured dispenser/button blocks and fire through tagged BlockDisplay interaction | Assembled ships have no live blocks; renderer ship/block PDC tags preserve a physical control without custom item models |
 | 2026-08-19 | Torn cloth ragdolls as a `BlockDisplay` cube, not a remaining sail plate | User: the piece that comes off should look like a block and tumble |

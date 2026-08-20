@@ -52,6 +52,9 @@ public final class BukkitShipRenderer implements ShipRendererLike {
   /** Tag key carrying each sail plate's tessellation index. */
   private final NamespacedKey sailKey;
 
+  /** Tag key carrying each cannon control's relative position. */
+  private final NamespacedKey cannonControlKey;
+
   /** Torn cloth ragdoll displays keyed by debris id. */
   private final Map<UUID, Ragdoll> ragdolls = new HashMap<>();
 
@@ -81,6 +84,22 @@ public final class BukkitShipRenderer implements ShipRendererLike {
     this.blockKey = new NamespacedKey(shipKey.getNamespace(), shipKey.getKey() + "-block");
     this.sailKey = new NamespacedKey(shipKey.getNamespace(), shipKey.getKey() + "-sail");
     this.wind = Objects.requireNonNull(wind, "wind");
+    this.cannonControlKey =
+        new NamespacedKey(shipKey.getNamespace(), shipKey.getKey() + "-cannon-control");
+  }
+
+  /**
+   * Returns the stable relative-block identity key used by hull displays.
+   *
+   * @return renderer block identity key
+   */
+  public NamespacedKey blockKey() {
+    return blockKey;
+  }
+
+  /** Returns the identity key used by cannon interaction hitboxes. */
+  public NamespacedKey cannonControlKey() {
+    return cannonControlKey;
   }
 
   /**
@@ -137,6 +156,37 @@ public final class BukkitShipRenderer implements ShipRendererLike {
     for (int i = 0; i < pieces.size(); i++) {
       displays.add(spawnSail(ship, pieces.get(i), i));
     }
+    spawnCannonControls(ship);
+  }
+
+  private void spawnCannonControls(Vehicle ship) {
+    for (dev.mintychochip.archimedes.cannon.CannonMount mount :
+        dev.mintychochip.archimedes.cannon.ShipCannons.discover(ship)) {
+      surface.spawnInteraction(
+          controlLocation(ship, mount.control()),
+          interaction -> {
+            interaction.setPersistent(false);
+            interaction.setInteractionWidth(0.75F);
+            interaction.setInteractionHeight(1.0F);
+            interaction.setResponsive(true);
+            interaction
+                .getPersistentDataContainer()
+                .set(shipKey, PersistentDataType.STRING, ship.id().toString());
+            interaction
+                .getPersistentDataContainer()
+                .set(cannonControlKey, PersistentDataType.STRING, key(mount.control()));
+          });
+    }
+  }
+
+  private Location controlLocation(
+      Vehicle ship, dev.mintychochip.archimedes.model.BlockPos control) {
+    ShipTransform.VisualPosition position = ShipTransform.visual(ship, control);
+    return surface.location(
+        ship.origin(),
+        position.x() - ship.origin().x() + 0.5,
+        position.y() - ship.origin().y(),
+        position.z() - ship.origin().z() + 0.5);
   }
 
   private List<SailPiece> plates(Vehicle ship) {
@@ -232,6 +282,24 @@ public final class BukkitShipRenderer implements ShipRendererLike {
           display.setTransformation(SailTransform.transformation(piece));
         }
       }
+      Map<String, org.bukkit.entity.Interaction> controls = new HashMap<>();
+      for (org.bukkit.entity.Interaction interaction :
+          surface.taggedInteractions(shipKey, ship.id().toString())) {
+        String control =
+            interaction
+                .getPersistentDataContainer()
+                .get(cannonControlKey, PersistentDataType.STRING);
+        if (control != null) {
+          controls.put(control, interaction);
+        }
+      }
+      for (dev.mintychochip.archimedes.cannon.CannonMount mount :
+          dev.mintychochip.archimedes.cannon.ShipCannons.discover(ship)) {
+        org.bukkit.entity.Interaction interaction = controls.get(key(mount.control()));
+        if (interaction != null) {
+          surface.teleport(interaction, controlLocation(ship, mount.control()));
+        }
+      }
     } catch (ShipRuntimeException failure) {
       throw failure;
     } catch (RuntimeException failure) {
@@ -278,6 +346,10 @@ public final class BukkitShipRenderer implements ShipRendererLike {
 
   private static String key(ShipBlock block) {
     return block.pos().x() + "," + block.pos().y() + "," + block.pos().z();
+  }
+
+  private static String key(dev.mintychochip.archimedes.model.BlockPos pos) {
+    return pos.x() + "," + pos.y() + "," + pos.z();
   }
 
   @Override
