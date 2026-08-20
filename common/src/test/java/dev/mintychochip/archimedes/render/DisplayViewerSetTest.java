@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.mintychochip.archimedes.model.BlockPos;
+import java.util.HashSet;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
@@ -41,5 +42,18 @@ class DisplayViewerSetTest {
     assertTrue(fromEast.contains(BACK));
     assertFalse(fromEast.contains(WALL));
     assertFalse(fromWest.equals(fromEast));
+  }
+
+  @Test
+  void standingOnAWideDeckKeepsTheFarCells() {
+    HashSet<BlockPos> occupied = new HashSet<>();
+    for (int x = 0; x < 5; x++) {
+      for (int z = 0; z < 5; z++) {
+        occupied.add(new BlockPos(x, 0, z));
+      }
+    }
+    Set<BlockPos> visible =
+        DisplayViewerSet.visibleTo(occupied, Set.of(), 2.5, 1.62, 2.5, occupied);
+    assertEquals(occupied, visible);
   }
 }

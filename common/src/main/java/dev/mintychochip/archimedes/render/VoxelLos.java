@@ -4,14 +4,19 @@ import dev.mintychochip.archimedes.model.BlockPos;
 import java.util.Set;
 
 /**
- * Voxel DDA line of sight. Occupied ship cells and world solids on the ray occlude; the target cell
- * itself does not.
+ * Voxel DDA line of sight. A cell is visible when the eye is inside it, or when any exposed face
+ * that faces the viewer has a clear ray. Occupied ship cells and world solids occlude; the target
+ * cell itself does not. Sampling the facing face (not the cell center) keeps coplanar hull from
+ * hiding its own surface.
  */
 public final class VoxelLos {
+  /** Pushes the sample point into the air just outside an exposed face. */
+  private static final double FACE_OUTSET = 1.0e-3;
+
   private VoxelLos() {}
 
   /**
-   * Returns whether the ray from the eye to the center of {@code target} is free of occluders.
+   * Returns whether {@code target} is visible from the eye.
    *
    * @param occupied ship cells in the same integer space as {@code target}
    * @param worldSolids extra solid world cells
@@ -19,7 +24,7 @@ public final class VoxelLos {
    * @param eyeY eye y
    * @param eyeZ eye z
    * @param target display cell
-   * @return {@code true} when no occupied or world-solid cell lies on the ray before the target
+   * @return {@code true} when an exposed facing face is unoccluded
    */
   public static boolean hasLineOfSight(
       Set<BlockPos> occupied,
@@ -38,7 +43,7 @@ public final class VoxelLos {
   }
 
   /**
-   * Returns whether the ray from the eye to the target is free of ship occupancy and extra solids.
+   * Returns whether {@code target} is visible from the eye through occupancy and extra solids.
    *
    * @param occupied ship cells
    * @param extra additional solid probe (world blocks)
@@ -61,9 +66,88 @@ public final class VoxelLos {
     if (x == target.x() && y == target.y() && z == target.z()) {
       return true;
     }
-    double destX = target.x() + 0.5;
-    double destY = target.y() + 0.5;
-    double destZ = target.z() + 0.5;
+    return facingFaceClear(occupied, extra, eyeX, eyeY, eyeZ, target, -1, 0, 0)
+        || facingFaceClear(occupied, extra, eyeX, eyeY, eyeZ, target, 1, 0, 0)
+        || facingFaceClear(occupied, extra, eyeX, eyeY, eyeZ, target, 0, -1, 0)
+        || facingFaceClear(occupied, extra, eyeX, eyeY, eyeZ, target, 0, 1, 0)
+        || facingFaceClear(occupied, extra, eyeX, eyeY, eyeZ, target, 0, 0, -1)
+        || facingFaceClear(occupied, extra, eyeX, eyeY, eyeZ, target, 0, 0, 1);
+  }
+
+  /**
+   * Returns whether the exposed face along {@code (dx, dy, dz)} faces the eye and the air just
+   * outside it is reachable.
+   *
+   * @param occupied ship cells
+   * @param extra world solids
+   * @param eyeX eye x
+   * @param eyeY eye y
+   * @param eyeZ eye z
+   * @param target display cell
+   * @param dx face normal x
+   * @param dy face normal y
+   * @param dz face normal z
+   * @return {@code true} when this facing face is visible
+   */
+  private static boolean facingFaceClear(
+      Set<BlockPos> occupied,
+      VoxelSolid extra,
+      double eyeX,
+      double eyeY,
+      double eyeZ,
+      BlockPos target,
+      int dx,
+      int dy,
+      int dz) {
+    if (occupied.contains(new BlockPos(target.x() + dx, target.y() + dy, target.z() + dz))) {
+      return false;
+    }
+    double faceX = target.x() + 0.5 + dx * 0.5;
+    double faceY = target.y() + 0.5 + dy * 0.5;
+    double faceZ = target.z() + 0.5 + dz * 0.5;
+    double toward = (eyeX - faceX) * dx + (eyeY - faceY) * dy + (eyeZ - faceZ) * dz;
+    if (toward <= 0) {
+      return false;
+    }
+    return segmentClear(
+        occupied,
+        extra,
+        eyeX,
+        eyeY,
+        eyeZ,
+        faceX + dx * FACE_OUTSET,
+        faceY + dy * FACE_OUTSET,
+        faceZ + dz * FACE_OUTSET,
+        target);
+  }
+
+  /**
+   * Returns whether the segment from the eye to {@code (destX, destY, destZ)} is free of occluders.
+   *
+   * @param occupied ship cells
+   * @param extra world solids
+   * @param eyeX eye x
+   * @param eyeY eye y
+   * @param eyeZ eye z
+   * @param destX sample x
+   * @param destY sample y
+   * @param destZ sample z
+   * @param target display cell that does not occlude
+   * @return {@code true} when the sample is reached
+   */
+  private static boolean segmentClear(
+      Set<BlockPos> occupied,
+      VoxelSolid extra,
+      double eyeX,
+      double eyeY,
+      double eyeZ,
+      double destX,
+      double destY,
+      double destZ,
+      BlockPos target) {
+    int x = floor(eyeX);
+    int y = floor(eyeY);
+    int z = floor(eyeZ);
     double dx = destX - eyeX;
     double dy = destY - eyeY;
     double dz = destZ - eyeZ;
@@ -81,39 +165,36 @@ public final class VoxelLos {
       if (!first && occludes(occupied, extra, x, y, z, target)) {
         return false;
       }
-      if (x == target.x() && y == target.y() && z == target.z()) {
-        return true;
-      }
       first = false;
       if (tMaxX < tMaxY) {
         if (tMaxX < tMaxZ) {
-          if (tMaxX > 1.0) {
-            break;
+          if (tMaxX >= 1.0) {
+            return true;
           }
           x += stepX;
           tMaxX += tDeltaX;
         } else {
-          if (tMaxZ > 1.0) {
-            break;
+          if (tMaxZ >= 1.0) {
+            return true;
           }
           z += stepZ;
           tMaxZ += tDeltaZ;
         }
       } else if (tMaxY < tMaxZ) {
-        if (tMaxY > 1.0) {
-          break;
+        if (tMaxY >= 1.0) {
+          return true;
         }
         y += stepY;
         tMaxY += tDeltaY;
       } else {
-        if (tMaxZ > 1.0) {
-          break;
+        if (tMaxZ >= 1.0) {
+          return true;
         }
         z += stepZ;
         tMaxZ += tDeltaZ;
       }
     }
-    return x == target.x() && y == target.y() && z == target.z();
+    return false;
   }
 
   private static boolean occludes(
