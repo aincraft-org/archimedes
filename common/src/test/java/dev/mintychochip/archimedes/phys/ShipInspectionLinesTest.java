@@ -24,6 +24,9 @@ class ShipInspectionLinesTest {
             0,
             0,
             0,
+            4.0,
+            -1.0,
+            8.0,
             0,
             0,
             0,
@@ -38,6 +41,10 @@ class ShipInspectionLinesTest {
     assertTrue(force.contains("\u00A7a-2.50\u00A7r"), force);
     assertTrue(force.contains("\u00A7b3.75\u00A7r"), force);
     assertTrue(force.contains("\u00A7e"), force);
+    String wind = lines.stream().filter(line -> line.contains("wind=")).findFirst().orElse("");
+    assertTrue(wind.contains("\u00A7c4.00\u00A7r"), wind);
+    assertTrue(wind.contains("\u00A7a-1.00\u00A7r"), wind);
+    assertTrue(wind.contains("\u00A7b8.00\u00A7r"), wind);
     String net = lines.stream().filter(line -> line.contains("net ")).findFirst().orElse("");
     assertTrue(net.contains("\u00A7c1.25\u00A7r"), net);
     assertTrue(net.contains("\u00A7a-2.50\u00A7r"), net);

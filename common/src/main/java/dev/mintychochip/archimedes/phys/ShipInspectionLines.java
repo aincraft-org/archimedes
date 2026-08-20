@@ -76,6 +76,7 @@ public final class ShipInspectionLines {
                 report.velX(),
                 report.velY(),
                 report.velZ()));
+    lines.add(GOLD + "wind=" + vector(report.windX(), report.windY(), report.windZ()));
     lines.add(
         GOLD
             + String.format(

@@ -193,7 +193,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
   }
 
   /**
-   * Samples attached forces and ship factors without committing a move.
+   * Samples attached forces, wind, and ship factors without committing a move.
    *
    * @param ship ship to inspect
    * @return diagnostic snapshot
@@ -208,6 +208,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
     }
     int riders = riderCount.count(ship);
     Vector3d velocity = velocities.getOrDefault(ship.id(), new Vector3d());
+    Vector3d sampledWind = sampledWind(ship);
     long lastTick = lastTickNanos.getOrDefault(ship.id(), 0L);
     boolean loaded = chunksLoaded(ship);
     if (!loaded) {
@@ -225,6 +226,9 @@ public final class ShipPhysicsImpl implements ShipPhysics {
           velocity.x(),
           velocity.y(),
           velocity.z(),
+          sampledWind.x(),
+          sampledWind.y(),
+          sampledWind.z(),
           0,
           lastTick,
           0L,
@@ -288,6 +292,9 @@ public final class ShipPhysicsImpl implements ShipPhysics {
         velocity.x(),
         velocity.y(),
         velocity.z(),
+        sampledWind.x(),
+        sampledWind.y(),
+        sampledWind.z(),
         WaterlineResolver.submergedVolume(body, world),
         lastTick,
         sample,
@@ -295,6 +302,22 @@ public final class ShipPhysicsImpl implements ShipPhysics {
         netX,
         netY,
         netZ);
+  }
+
+  /**
+   * Samples the facade wind at the ship's world origin.
+   *
+   * @param ship ship whose origin and pose locate the sample
+   * @return wind velocity at that point
+   */
+  private Vector3d sampledWind(Vehicle ship) {
+    Vector3dc sample =
+        wind.velocity(
+            new Vector3d(
+                ship.origin().x() + ship.pose().x(),
+                ship.origin().y() + ship.pose().y(),
+                ship.origin().z() + ship.pose().z()));
+    return new Vector3d(sample);
   }
 
   /**

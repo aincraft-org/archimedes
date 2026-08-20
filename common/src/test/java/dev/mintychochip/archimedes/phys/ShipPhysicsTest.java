@@ -920,6 +920,28 @@ class ShipPhysicsTest {
     assertTrue(lines.stream().anyMatch(line -> line.contains("Sail +Z")));
     assertTrue(lines.stream().anyMatch(line -> line.contains("net ")));
     assertTrue(lines.stream().anyMatch(line -> line.contains("sample=")));
+    String wind = lines.stream().filter(line -> line.contains("wind=")).findFirst().orElse("");
+    assertTrue(wind.contains("wind="), "inspect must report the sampled wind vector");
+    assertTrue(wind.contains("\u00A7c0.00\u00A7r"), wind);
+    assertTrue(wind.contains("\u00A7a0.00\u00A7r"), wind);
+    assertTrue(wind.contains("\u00A7b10.00\u00A7r"), wind);
+  }
+
+  @Test
+  void inspectReportsStillWindWhenSailForceIsZero() {
+    ShipInspection report =
+        sailPhysics(mediumWorld(false, 0), FlowField.still()).inspect(clothShip());
+    java.util.List<String> lines = ShipInspectionLines.lines(report);
+    String wind = lines.stream().filter(line -> line.contains("wind=")).findFirst().orElse("");
+    assertTrue(wind.contains("wind="), wind);
+    assertTrue(wind.contains("\u00A7c0.00\u00A7r"), wind);
+    assertTrue(wind.contains("\u00A7a0.00\u00A7r"), wind);
+    assertTrue(wind.contains("\u00A7b0.00\u00A7r"), wind);
+    assertTrue(lines.stream().anyMatch(line -> line.contains("Sail ")));
+    ShipInspection.ForceLine sail = sailLines(report).get(0);
+    assertEquals(0.0, sail.fx(), 1e-9);
+    assertEquals(0.0, sail.fy(), 1e-9);
+    assertEquals(0.0, sail.fz(), 1e-9);
   }
 
   @Test
@@ -1605,6 +1627,10 @@ class ShipPhysicsTest {
   }
 
   private static ShipPhysics sailPhysics(World world) {
+    return sailPhysics(world, FlowField.uniform(new Vector3d(0, 0, 10)));
+  }
+
+  private static ShipPhysics sailPhysics(World world, FlowField wind) {
     ShipConfig config =
         new ShipConfig(
             2048,
@@ -1643,7 +1669,7 @@ class ShipPhysicsTest {
         runtime,
         s -> 0,
         DensityField.uniform(1.2),
-        FlowField.uniform(new Vector3d(0, 0, 10)));
+        wind);
   }
 
   private static java.util.List<ShipInspection.ForceLine> sailLines(ShipInspection report) {

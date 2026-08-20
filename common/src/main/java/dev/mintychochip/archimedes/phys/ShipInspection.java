@@ -19,6 +19,9 @@ import java.util.UUID;
  * @param velX retained linear x
  * @param velY retained linear y
  * @param velZ retained linear z
+ * @param windX sampled wind x
+ * @param windY sampled wind y
+ * @param windZ sampled wind z
  * @param submerged submerged collider count
  * @param lastTickNanos last {@code tick} duration, or 0 if none
  * @param sampleNanos time spent sampling forces for this report
@@ -41,6 +44,9 @@ public record ShipInspection(
     double velX,
     double velY,
     double velZ,
+    double windX,
+    double windY,
+    double windZ,
     int submerged,
     long lastTickNanos,
     long sampleNanos,

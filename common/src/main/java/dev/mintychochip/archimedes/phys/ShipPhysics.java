@@ -42,7 +42,8 @@ public interface ShipPhysics {
   void clear(Vehicle ship);
 
   /**
-   * Samples pose, mass factors, last-tick cost, and each attached force without moving the ship.
+   * Samples pose, mass factors, last-tick cost, wind, and each attached force without moving the
+   * ship.
    *
    * @param ship ship to inspect
    * @return diagnostic snapshot
