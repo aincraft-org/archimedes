@@ -337,9 +337,7 @@ public final class SailMesh {
   }
 
   private static Quaterniond rotationFromAxes(Vector3dc x, Vector3dc y, Vector3dc z) {
-    Matrix3d matrix =
-        new Matrix3d(x.x(), y.x(), z.x(), x.y(), y.y(), z.y(), x.z(), y.z(), z.z());
-    return new Quaterniond().setFromUnnormalized(matrix).normalize();
+    return new Quaterniond().setFromUnnormalized(new Matrix3d(x, y, z)).normalize();
   }
 
   private static int planeU(int axis, SailCell cell) {

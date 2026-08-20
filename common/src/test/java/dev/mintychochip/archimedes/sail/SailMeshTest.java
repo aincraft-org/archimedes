@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.joml.Quaterniond;
 import org.joml.Vector3d;
 import org.junit.jupiter.api.Test;
 
@@ -129,6 +130,52 @@ class SailMeshTest {
     assertTrue(rotated > 1, "multiple plates must tilt with the cloth surface");
     assertTrue(
         distinctRotations(breeze) > 1, "neighboring plates must not share one cardinal tilt");
+  }
+
+  @Test
+  void cuppedPlateLocalZPointsAlongTheSailNormal() {
+    List<SailCell> cells = new ArrayList<>();
+    for (int x = 0; x < 5; x++) {
+      for (int y = 0; y < 5; y++) {
+        cells.add(new SailCell(x, y, 1, WHITE_WOOL));
+      }
+    }
+
+    List<SailPiece> breeze = SailMesh.tessellate(cells, FlowField.uniform(new Vector3d(0, 0, 8)));
+
+    for (SailPiece piece : breeze) {
+      Quaterniond rot =
+          new Quaterniond(piece.rotX(), piece.rotY(), piece.rotZ(), piece.rotW());
+      Vector3d thin = rot.transform(new Vector3d(0, 0, 1));
+      assertEquals(1.0, rot.lengthSquared(), 1e-6);
+      assertTrue(
+          thin.z > 0.25,
+          "thin axis must face the windward side, not a scrambled basis: " + thin);
+      assertTrue(
+          piece.scaleX() < 2.0 && piece.scaleY() < 2.0,
+          "connected cloth plates must stay about one cell, got "
+              + piece.scaleX()
+              + "x"
+              + piece.scaleY());
+    }
+    double minX = Double.POSITIVE_INFINITY;
+    for (SailPiece piece : breeze) {
+      minX = Math.min(minX, piece.originX());
+    }
+    int sloped = 0;
+    for (SailPiece piece : breeze) {
+      if (piece.originX() > minX + 0.25) {
+        continue;
+      }
+      Vector3d localX =
+          new Quaterniond(piece.rotX(), piece.rotY(), piece.rotZ(), piece.rotW())
+              .transform(new Vector3d(1, 0, 0));
+      if (localX.z < 0) {
+        sloped++;
+      }
+    }
+    assertTrue(
+        sloped > 0, "left-wing plates must slope down toward the mast so the sheet stays joined");
   }
 
   private static int distinctRotations(List<SailPiece> pieces) {
