@@ -1,14 +1,24 @@
 package dev.mintychochip.archimedes.bukkit;
 
 import dev.mintychochip.archimedes.collision.CollisionHull;
+import dev.mintychochip.archimedes.collision.CollisionMode;
+import dev.mintychochip.archimedes.collision.CollisionObserver;
+import dev.mintychochip.archimedes.collision.CollisionSnapshot;
 import dev.mintychochip.archimedes.collision.CollisionVolume;
 import dev.mintychochip.archimedes.collision.CollisionVolumeManager;
+import dev.mintychochip.archimedes.collision.CollisionVolumePool;
+import dev.mintychochip.archimedes.collision.ExposedCellIndex;
 import dev.mintychochip.archimedes.model.BlockPos;
+import dev.mintychochip.archimedes.model.ShipPose;
 import dev.mintychochip.archimedes.model.ShipTransform;
 import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.ship.ShipRuntimeException;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
@@ -40,6 +50,15 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
   /** Collision volumes indexed by ship and relative block position. */
   private final Map<UUID, Map<BlockPos, CollisionVolume>> volumes = new HashMap<>();
 
+  /** Per-ship spawn policy, defaulting to streamed. */
+  private final Map<UUID, CollisionMode> modes = new HashMap<>();
+
+  /** Exposed-cell indexes keyed by ship. */
+  private final Map<UUID, ExposedCellIndex> indices = new HashMap<>();
+
+  /** Observer pools keyed by ship. */
+  private final Map<UUID, CollisionVolumePool> pools = new HashMap<>();
+
   /**
    * Creates a manager for the supplied Bukkit world and owner key.
    *
@@ -62,43 +81,203 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   public void spawn(Vehicle ship) {
     normalizeRemoval(ship.id(), "collision spawn pre-cleanup");
+    indices.put(ship.id(), ExposedCellIndex.build(ship));
+    pools.put(ship.id(), new CollisionVolumePool());
+    volumes.put(ship.id(), new HashMap<>());
+    if (mode(ship.id()) == CollisionMode.FULL) {
+      spawnCells(ship, CollisionHull.exposedBlocks(ship), true);
+    }
+  }
 
-    Map<BlockPos, CollisionVolume> spawned = new HashMap<>();
+  /**
+   * Spawns one Shulker per supplied cell and records it in the live map.
+   *
+   * @param ship ship receiving volumes
+   * @param cells relative cells to spawn
+   * @param globallyVisible whether clients see the cubes by default
+   */
+  @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
+  private void spawnCells(Vehicle ship, Collection<BlockPos> cells, boolean globallyVisible) {
+    Map<BlockPos, CollisionVolume> spawned = volumes.get(ship.id());
+    Map<BlockPos, CollisionVolume> created = new HashMap<>();
     try {
-      for (BlockPos relative : CollisionHull.exposedBlocks(ship)) {
+      for (BlockPos relative : cells) {
+        if (spawned.containsKey(relative)) {
+          continue;
+        }
         ShipTransform.CollisionAnchor anchor = ShipTransform.collisionAnchor(ship, relative);
         Shulker shulker =
             world.spawn(
                 new Location(world, anchor.x(), anchor.y(), anchor.z()),
                 Shulker.class,
-                entity -> {
-                  entity.setAI(false);
-                  entity.setInvisible(true);
-                  entity.setInvulnerable(true);
-                  entity.setSilent(true);
-                  entity.setGravity(false);
-                  entity.setCollidable(true);
-                  entity.setPeek(0.0f);
-                  entity.setPersistent(false);
-                  entity
-                      .getPersistentDataContainer()
-                      .set(ownerKey, PersistentDataType.STRING, ship.id().toString());
-                  entity
-                      .getPersistentDataContainer()
-                      .set(blockKey, PersistentDataType.STRING, key(relative));
-                  entity.addScoreboardTag("archimedes-collision-" + ship.id());
-                });
-        spawned.put(relative, new BukkitShulkerCollisionVolume(ship.id(), shulker));
+                entity -> configure(entity, ship.id(), relative, globallyVisible));
+        BukkitShulkerCollisionVolume volume = new BukkitShulkerCollisionVolume(ship.id(), shulker);
+        spawned.put(relative, volume);
+        created.put(relative, volume);
       }
-      volumes.put(ship.id(), spawned);
     } catch (RuntimeException failure) {
       ShipRuntimeException normalized =
           failure instanceof ShipRuntimeException
               ? (ShipRuntimeException) failure
               : new ShipRuntimeException(
                   "Bukkit collision spawn failed for ship " + ship.id(), failure);
-      cleanupSpawned(spawned, normalized);
+      cleanupSpawned(created, normalized);
+      for (BlockPos relative : created.keySet()) {
+        spawned.remove(relative);
+      }
       throw normalized;
+    }
+  }
+
+  /**
+   * Applies the standard collision-entity flags and identity tags.
+   *
+   * @param entity spawned shulker
+   * @param shipId owning ship
+   * @param relative hull cell
+   * @param globallyVisible whether the entity is visible by default
+   */
+  private void configure(Shulker entity, UUID shipId, BlockPos relative, boolean globallyVisible) {
+    entity.setAI(false);
+    entity.setInvisible(true);
+    entity.setInvulnerable(true);
+    entity.setSilent(true);
+    entity.setGravity(false);
+    entity.setCollidable(true);
+    entity.setPeek(0.0f);
+    entity.setPersistent(false);
+    entity.setVisibleByDefault(globallyVisible);
+    entity.getPersistentDataContainer().set(ownerKey, PersistentDataType.STRING, shipId.toString());
+    entity.getPersistentDataContainer().set(blockKey, PersistentDataType.STRING, key(relative));
+    entity.addScoreboardTag("archimedes-collision-" + shipId);
+  }
+
+  @Override
+  public CollisionMode mode(UUID shipId) {
+    return modes.getOrDefault(shipId, CollisionMode.STREAMED);
+  }
+
+  @Override
+  public void setMode(Vehicle ship, CollisionMode mode) {
+    modes.put(ship.id(), mode);
+    if (volumes.get(ship.id()) == null) {
+      return;
+    }
+    if (mode == CollisionMode.FULL) {
+      spawnCells(ship, CollisionHull.exposedBlocks(ship), true);
+      return;
+    }
+    observe(ship, List.of());
+  }
+
+  @Override
+  public CollisionSnapshot snapshot(UUID shipId, UUID playerId) {
+    ExposedCellIndex index = indices.get(shipId);
+    int exposed = index == null ? 0 : index.size();
+    Map<BlockPos, CollisionVolume> live = volumes.get(shipId);
+    int liveCount = live == null ? 0 : live.size();
+    CollisionVolumePool pool = pools.get(shipId);
+    int visible = 0;
+    if (pool != null) {
+      for (BlockPos cell : pool.live()) {
+        if (pool.observers(cell).contains(playerId)) {
+          visible++;
+        }
+      }
+    } else if (mode(shipId) == CollisionMode.FULL) {
+      visible = liveCount;
+    }
+    return new CollisionSnapshot(mode(shipId), liveCount, exposed, visible);
+  }
+
+  @Override
+  public void observe(Vehicle ship, Collection<CollisionObserver> observers) {
+    if (mode(ship.id()) == CollisionMode.FULL) {
+      return;
+    }
+    if (volumes.get(ship.id()) == null) {
+      spawn(ship);
+    }
+    ExposedCellIndex index = indices.get(ship.id());
+    CollisionVolumePool pool = pools.get(ship.id());
+    if (index == null || pool == null) {
+      return;
+    }
+    ShipPose pose = ship.pose();
+    Map<UUID, Set<BlockPos>> desired = new HashMap<>();
+    Set<UUID> players = new HashSet<>();
+    for (CollisionObserver observer : observers) {
+      Set<BlockPos> held = new HashSet<>();
+      for (BlockPos cell : pool.live()) {
+        if (pool.observers(cell).contains(observer.id())) {
+          held.add(cell);
+        }
+      }
+      Set<BlockPos> enter =
+          new HashSet<>(
+              index.cellsWithin(
+                  observer.box(), pose.x(), pose.y(), pose.z(), ExposedCellIndex.ENTER_RANGE));
+      Set<BlockPos> leave =
+          new HashSet<>(
+              index.cellsWithin(
+                  observer.box(), pose.x(), pose.y(), pose.z(), ExposedCellIndex.LEAVE_RANGE));
+      Set<BlockPos> needed = new HashSet<>(enter);
+      for (BlockPos cell : held) {
+        if (leave.contains(cell)) {
+          needed.add(cell);
+        }
+      }
+      desired.put(observer.id(), needed);
+      if (observer.player()) {
+        players.add(observer.id());
+      }
+    }
+    CollisionVolumePool.Diff diff = pool.reconcile(desired, players);
+    apply(ship, diff);
+    dropUnpooled(ship, pool);
+  }
+
+  /**
+   * Spawns and despawns volumes to match a pool diff.
+   *
+   * @param ship ship whose live map is updated
+   * @param diff occupancy changes
+   */
+  private void apply(Vehicle ship, CollisionVolumePool.Diff diff) {
+    if (!diff.spawn().isEmpty()) {
+      spawnCells(ship, diff.spawn(), false);
+    }
+    Map<BlockPos, CollisionVolume> live = volumes.get(ship.id());
+    if (live == null) {
+      return;
+    }
+    for (BlockPos cell : diff.despawn()) {
+      CollisionVolume volume = live.remove(cell);
+      if (volume != null) {
+        volume.remove();
+      }
+    }
+  }
+
+  /**
+   * Drops streamed volumes that the pool no longer holds, including leftovers from full mode.
+   *
+   * @param ship ship whose live map is pruned
+   * @param pool current observer pool
+   */
+  private void dropUnpooled(Vehicle ship, CollisionVolumePool pool) {
+    Map<BlockPos, CollisionVolume> live = volumes.get(ship.id());
+    if (live == null) {
+      return;
+    }
+    Set<BlockPos> kept = pool.live();
+    for (BlockPos cell : List.copyOf(live.keySet())) {
+      if (!kept.contains(cell)) {
+        CollisionVolume volume = live.remove(cell);
+        if (volume != null) {
+          volume.remove();
+        }
+      }
     }
   }
 
@@ -204,6 +383,8 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
 
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   private void normalizeRemoval(UUID shipId, String operation) {
+    indices.remove(shipId);
+    pools.remove(shipId);
     Map<BlockPos, CollisionVolume> shipVolumes = volumes.remove(shipId);
     if (shipVolumes == null) {
       return;

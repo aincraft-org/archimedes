@@ -6,6 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import dev.mintychochip.archimedes.collision.CollisionBox;
+import dev.mintychochip.archimedes.collision.CollisionMode;
+import dev.mintychochip.archimedes.collision.CollisionObserver;
+import dev.mintychochip.archimedes.collision.CollisionSnapshot;
 import dev.mintychochip.archimedes.model.BlockPos;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
@@ -85,7 +89,7 @@ class BukkitCollisionVolumeManagerTest {
             true);
     BukkitCollisionVolumeManager manager =
         new BukkitCollisionVolumeManager(world, new NamespacedKey(NAMESPACE, COLLISION_KEY));
-    manager.spawn(ship);
+    spawnFull(manager, ship);
     assertEquals(100.5, spawnedAt.get(SPAWNED_AT_KEY).getX());
     assertEquals(66.25, spawnedAt.get(SPAWNED_AT_KEY).getY());
     assertEquals(200.5, spawnedAt.get(SPAWNED_AT_KEY).getZ());
@@ -117,7 +121,7 @@ class BukkitCollisionVolumeManagerTest {
     BukkitCollisionVolumeManager manager =
         new BukkitCollisionVolumeManager(
             worldSpawning(List.of(one, two)), new NamespacedKey(NAMESPACE, COLLISION_KEY));
-    manager.spawn(ship);
+    spawnFull(manager, ship);
 
     ship.setPose(new dev.mintychochip.archimedes.model.ShipPose(-1.25));
     manager.move(ship);
@@ -148,7 +152,7 @@ class BukkitCollisionVolumeManagerTest {
     BukkitCollisionVolumeManager manager =
         new BukkitCollisionVolumeManager(
             worldSpawning(List.of(one, two)), new NamespacedKey(NAMESPACE, COLLISION_KEY));
-    manager.spawn(ship);
+    spawnFull(manager, ship);
 
     manager.rollback(ship, 0.25);
 
@@ -218,8 +222,10 @@ class BukkitCollisionVolumeManagerTest {
     BukkitCollisionVolumeManager manager =
         new BukkitCollisionVolumeManager(world, new NamespacedKey(NAMESPACE, COLLISION_KEY));
 
+    Vehicle ship = shipWithTwoBlocks(shipId);
+    manager.setMode(ship, CollisionMode.FULL);
     ShipRuntimeException thrown =
-        assertThrows(ShipRuntimeException.class, () -> manager.spawn(shipWithTwoBlocks(shipId)));
+        assertThrows(ShipRuntimeException.class, () -> manager.spawn(ship));
     assertSame(failure, thrown.getCause());
     assertTrue(thrown.getMessage().contains(shipId.toString()));
     assertTrue(thrown.getSuppressed().length > 0);
@@ -234,8 +240,10 @@ class BukkitCollisionVolumeManagerTest {
         new BukkitCollisionVolumeManager(
             worldSpawningThenFails(first, failure), new NamespacedKey(NAMESPACE, COLLISION_KEY));
 
+    Vehicle ship = shipWithTwoBlocks(shipId);
+    manager.setMode(ship, CollisionMode.FULL);
     ShipRuntimeException thrown =
-        assertThrows(ShipRuntimeException.class, () -> manager.spawn(shipWithTwoBlocks(shipId)));
+        assertThrows(ShipRuntimeException.class, () -> manager.spawn(ship));
 
     assertSame(failure, thrown);
     assertTrue(thrown.getSuppressed().length > 0);
@@ -251,7 +259,7 @@ class BukkitCollisionVolumeManagerTest {
         new BukkitCollisionVolumeManager(world, new NamespacedKey(NAMESPACE, COLLISION_KEY));
     Vehicle ship = ship(shipId);
     ship.setPose(new dev.mintychochip.archimedes.model.ShipPose(1.0));
-    manager.spawn(ship);
+    spawnFull(manager, ship);
 
     ShipRuntimeException thrown =
         assertThrows(ShipRuntimeException.class, () -> manager.move(ship));
@@ -270,11 +278,109 @@ class BukkitCollisionVolumeManagerTest {
     BukkitCollisionVolumeManager manager =
         new BukkitCollisionVolumeManager(
             worldSpawning(List.of(one, two)), new NamespacedKey(NAMESPACE, COLLISION_KEY));
-    manager.spawn(shipWithTwoBlocks(shipId));
+    spawnFull(manager, shipWithTwoBlocks(shipId));
     ShipRuntimeException thrown =
         assertThrows(ShipRuntimeException.class, () -> manager.remove(shipId));
     assertEquals(2, attempts.size());
     assertEquals(1, thrown.getSuppressed().length);
+  }
+
+  @Test
+  void streamedSpawnCreatesNoEntities() {
+    java.util.concurrent.atomic.AtomicInteger spawns =
+        new java.util.concurrent.atomic.AtomicInteger();
+    World world =
+        proxy(
+            World.class,
+            (ignored, method, args) -> {
+              if (SPAWN.equals(method.getName())) {
+                spawns.incrementAndGet();
+              }
+              return defaultValue(method.getReturnType());
+            });
+    Vehicle ship = ship(UUID.randomUUID());
+    BukkitCollisionVolumeManager manager =
+        new BukkitCollisionVolumeManager(world, new NamespacedKey(NAMESPACE, COLLISION_KEY));
+    manager.spawn(ship);
+    assertEquals(0, spawns.get());
+    CollisionSnapshot snapshot = manager.snapshot(ship.id(), UUID.randomUUID());
+    assertEquals(CollisionMode.STREAMED, snapshot.mode());
+    assertEquals(0, snapshot.live());
+    assertEquals(1, snapshot.exposed());
+  }
+
+  @Test
+  void streamedObserveSpawnsOverlappingCellAtCanonicalAnchor() {
+    java.util.Map<String, Object> values = new java.util.HashMap<>();
+    java.util.Map<String, Location> spawnedAt = new java.util.HashMap<>();
+    org.bukkit.persistence.PersistentDataContainer data =
+        proxy(
+            org.bukkit.persistence.PersistentDataContainer.class,
+            (ignored, method, args) -> {
+              if ("set".equals(method.getName())) {
+                values.put(args[0].toString(), args[2]);
+              }
+              return defaultValue(method.getReturnType());
+            });
+    Shulker shulker =
+        proxy(
+            Shulker.class,
+            (ignored, method, args) -> {
+              String name = method.getName();
+              if (GET_PERSISTENT_DATA_CONTAINER.equals(name)) return data;
+              if (name.startsWith("set")) {
+                values.put(name, args[0]);
+                return null;
+              }
+              if ("remove".equals(name)) return null;
+              return defaultValue(method.getReturnType());
+            });
+    World world =
+        proxy(
+            World.class,
+            (ignored, method, args) -> {
+              if (SPAWN.equals(method.getName()) && args.length == 3) {
+                spawnedAt.put(SPAWNED_AT_KEY, (Location) args[0]);
+                @SuppressWarnings("unchecked")
+                java.util.function.Consumer<Shulker> callback =
+                    (java.util.function.Consumer<Shulker>) args[2];
+                callback.accept(shulker);
+                return shulker;
+              }
+              return defaultValue(method.getReturnType());
+            });
+    UUID shipId = UUID.randomUUID();
+    Vehicle ship =
+        new Vehicle(
+            shipId,
+            UUID.randomUUID(),
+            new ShipOrigin(UUID.randomUUID(), 100, 64, 200),
+            List.of(new ShipBlock(new BlockPos(0, 1, 0), STONE)),
+            new dev.mintychochip.archimedes.model.ShipPose(1.25),
+            true);
+    BukkitCollisionVolumeManager manager =
+        new BukkitCollisionVolumeManager(world, new NamespacedKey(NAMESPACE, COLLISION_KEY));
+    manager.spawn(ship);
+    UUID player = UUID.randomUUID();
+    manager.observe(
+        ship,
+        List.of(
+            new CollisionObserver(
+                player, true, new CollisionBox(100.2, 66.3, 200.2, 100.8, 68.0, 200.8))));
+    assertEquals(100.5, spawnedAt.get(SPAWNED_AT_KEY).getX());
+    assertEquals(66.25, spawnedAt.get(SPAWNED_AT_KEY).getY());
+    assertEquals(200.5, spawnedAt.get(SPAWNED_AT_KEY).getZ());
+    assertEquals(false, values.get("setVisibleByDefault"));
+    CollisionSnapshot snapshot = manager.snapshot(shipId, player);
+    assertEquals(1, snapshot.live());
+    assertEquals(1, snapshot.visibleToPlayer());
+    manager.observe(ship, List.of());
+    assertEquals(0, manager.snapshot(shipId, player).live());
+  }
+
+  private static void spawnFull(BukkitCollisionVolumeManager manager, Vehicle ship) {
+    manager.setMode(ship, CollisionMode.FULL);
+    manager.spawn(ship);
   }
 
   private static Vehicle ship(UUID shipId) {
@@ -435,7 +541,7 @@ class BukkitCollisionVolumeManagerTest {
             List.of(new ShipBlock(new BlockPos(0, 0, 0), "minecraft:stone")));
 
     BukkitCollisionVolumeManager manager = new BukkitCollisionVolumeManager(world, ownerKey);
-    manager.spawn(ship);
+    spawnFull(manager, ship);
 
     ShipRuntimeException failure =
         assertThrows(ShipRuntimeException.class, () -> manager.move(ship));
