@@ -35,6 +35,18 @@ public interface RenderSurface {
       Location location, java.util.function.Consumer<BlockDisplay> config);
 
   /**
+   * Spawns an invisible interaction hitbox at a location.
+   *
+   * @param location spawn location
+   * @param config initial configuration
+   * @return spawned interaction entity
+   */
+  default org.bukkit.entity.Interaction spawnInteraction(
+      Location location, java.util.function.Consumer<org.bukkit.entity.Interaction> config) {
+    throw new UnsupportedOperationException("Interaction hitboxes are not supported");
+  }
+
+  /**
    * Resolves block data from its string form.
    *
    * @param serialized the serialized block data
@@ -83,6 +95,18 @@ public interface RenderSurface {
   void removeTagged(NamespacedKey key, String shipId);
 
   /**
+   * Returns interaction hitboxes carrying the supplied ship tag.
+   *
+   * @param key ship tag key
+   * @param shipId ship identifier
+   * @return matching interaction hitboxes
+   */
+  default Collection<org.bukkit.entity.Interaction> taggedInteractions(
+      NamespacedKey key, String shipId) {
+    return List.of();
+  }
+
+  /**
    * Returns every entity carrying the ship identifier in its tag.
    *
    * @param key the tag key
@@ -117,6 +141,12 @@ public interface RenderSurface {
         } catch (IllegalArgumentException failure) {
           throw new dev.mintychochip.archimedes.ship.ShipRuntimeException(failure);
         }
+      }
+
+      @Override
+      public org.bukkit.entity.Interaction spawnInteraction(
+          Location location, java.util.function.Consumer<org.bukkit.entity.Interaction> config) {
+        return world.spawn(location, org.bukkit.entity.Interaction.class, config::accept);
       }
 
       @Override
@@ -155,7 +185,7 @@ public interface RenderSurface {
 
       @Override
       public void shipRendered(UUID shipId, Collection<BlockDisplay> displays) {
-        // Rendered displays are tracked in their tags and removed by tag.
+        // Runtime entities are tracked through persistent data tags.
       }
 
       @Override
@@ -163,7 +193,7 @@ public interface RenderSurface {
       public void removeTagged(NamespacedKey key, String shipId) {
         ShipRuntimeException failure = null;
         try {
-          for (Entity entity : world.getEntitiesByClass(BlockDisplay.class)) {
+          for (Entity entity : world.getEntities()) {
             try {
               String tag = entity.getPersistentDataContainer().get(key, PersistentDataType.STRING);
               if (shipId.equals(tag)) {
@@ -188,11 +218,24 @@ public interface RenderSurface {
 
       @Override
       public Collection<BlockDisplay> tagged(NamespacedKey key, String shipId) {
-        final List<BlockDisplay> found = new ArrayList<>();
+        List<BlockDisplay> found = new ArrayList<>();
         for (Entity entity : world.getEntitiesByClass(BlockDisplay.class)) {
           String tag = entity.getPersistentDataContainer().get(key, PersistentDataType.STRING);
           if (shipId.equals(tag)) {
             found.add((BlockDisplay) entity);
+          }
+        }
+        return found;
+      }
+
+      @Override
+      public Collection<org.bukkit.entity.Interaction> taggedInteractions(
+          NamespacedKey key, String shipId) {
+        List<org.bukkit.entity.Interaction> found = new ArrayList<>();
+        for (Entity entity : world.getEntitiesByClass(org.bukkit.entity.Interaction.class)) {
+          String tag = entity.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+          if (shipId.equals(tag)) {
+            found.add((org.bukkit.entity.Interaction) entity);
           }
         }
         return found;
@@ -203,7 +246,7 @@ public interface RenderSurface {
       public void removeAllTagged(NamespacedKey key) {
         ShipRuntimeException failure = null;
         try {
-          for (Entity entity : world.getEntitiesByClass(BlockDisplay.class)) {
+          for (Entity entity : world.getEntities()) {
             try {
               if (entity.getPersistentDataContainer().has(key, PersistentDataType.STRING)) {
                 entity.remove();

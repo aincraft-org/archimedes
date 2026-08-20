@@ -6,6 +6,9 @@ import dev.mintychochip.archimedes.bukkit.BukkitShipEntityCarrier;
 import dev.mintychochip.archimedes.bukkit.BukkitShipRenderer;
 import dev.mintychochip.archimedes.bukkit.BukkitShipRiderTracker;
 import dev.mintychochip.archimedes.bukkit.BukkitWorldMutator;
+import dev.mintychochip.archimedes.cannon.BukkitCannonInteractionListener;
+import dev.mintychochip.archimedes.cannon.BukkitCannonLauncher;
+import dev.mintychochip.archimedes.cannon.CannonService;
 import dev.mintychochip.archimedes.command.ShipCommand;
 import dev.mintychochip.archimedes.command.ShipTabCompleter;
 import dev.mintychochip.archimedes.config.ShipConfig;
@@ -46,6 +49,9 @@ public final class ArchimedesPlugin extends JavaPlugin {
   /** Active physics facade. */
   private ShipPhysics shipPhysics;
 
+  /** Runtime-only cannon interaction state. */
+  private CannonService cannonService;
+
   /**
    * Enables the plugin by loading configuration, constructing the Bukkit-backed ship runtime, and
    * starting the ship service. Invalid configuration disables the plugin; other startup failures
@@ -81,6 +87,15 @@ public final class ArchimedesPlugin extends JavaPlugin {
       BukkitShipEntityCarrier carrier =
           new BukkitShipEntityCarrier(world, collisionOwnerKey, shipKey, tracker);
       ShipRuntime runtime = new ShipRuntimeImpl(renderer, collisions, carrier);
+      cannonService = new CannonService(new BukkitCannonLauncher(world));
+      BukkitCannonInteractionListener cannonListener =
+          new BukkitCannonInteractionListener(
+              serviceProxy(),
+              cannonService,
+              shipKey,
+              renderer.cannonControlKey(),
+              System::currentTimeMillis,
+              getLogger());
       BukkitFluidField fluidField = new BukkitFluidField(world, config.waterDensity());
       BukkitMaterialKeyResolver materialResolver = new BukkitMaterialKeyResolver();
       World physicsWorld = new BukkitPhysicsWorld(world, config, fluidField);
@@ -107,7 +122,10 @@ public final class ArchimedesPlugin extends JavaPlugin {
       try {
         registerAfterLoad(
             () -> service.loadAll(),
-            () -> getServer().getPluginManager().registerEvents(tracker, this));
+            () -> {
+              getServer().getPluginManager().registerEvents(tracker, this);
+              getServer().getPluginManager().registerEvents(cannonListener, this);
+            });
       } finally {
         if (service == null) {
           tracker.clear();
@@ -144,6 +162,9 @@ public final class ArchimedesPlugin extends JavaPlugin {
         () -> service.removeAllRuntime(),
         () -> ((ShipServiceImpl) service).runtime().removeAllTagged(),
         message -> getLogger().severe(message));
+    if (cannonService != null) {
+      cannonService.clearAll();
+    }
   }
 
   /**
@@ -165,6 +186,80 @@ public final class ArchimedesPlugin extends JavaPlugin {
   static void registerAfterLoad(Runnable load, Runnable registration) {
     load.run();
     registration.run();
+  }
+
+  private ShipService serviceProxy() {
+    return new ShipService() {
+      @Override
+      public Collection<Vehicle> all() {
+        return service.all();
+      }
+
+      @Override
+      public Vehicle assembleAt(UUID playerId, int x, int y, int z, UUID worldId) {
+        return service.assembleAt(playerId, x, y, z, worldId);
+      }
+
+      @Override
+      public Vehicle spawnSail(UUID playerId, UUID worldId, int x, int y, int z, String size) {
+        return service.spawnSail(playerId, worldId, x, y, z, size);
+      }
+
+      @Override
+      public Vehicle findOwnedInWorld(UUID playerId, UUID worldId) {
+        return service.findOwnedInWorld(playerId, worldId);
+      }
+
+      @Override
+      public boolean disassemble(UUID shipId, UUID requesterId, boolean operator) {
+        return service.disassemble(shipId, requesterId, operator);
+      }
+
+      @Override
+      public boolean kill(UUID shipId, UUID requesterId, boolean operator) {
+        return service.kill(shipId, requesterId, operator);
+      }
+
+      @Override
+      public int killAll() {
+        return service.killAll();
+      }
+
+      @Override
+      public String lastError() {
+        return service.lastError();
+      }
+
+      @Override
+      public Map<UUID, Vehicle> loadAll() {
+        return service.loadAll();
+      }
+
+      @Override
+      public void saveAll() {
+        service.saveAll();
+      }
+
+      @Override
+      public void removeAllRuntime() {
+        service.removeAllRuntime();
+      }
+
+      @Override
+      public void tick() {
+        service.tick();
+      }
+
+      @Override
+      public boolean toggleBuoyancy(UUID requesterId, UUID worldId) {
+        return service.toggleBuoyancy(requesterId, worldId);
+      }
+
+      @Override
+      public boolean sink(UUID requesterId, UUID worldId, int blocks) {
+        return service.sink(requesterId, worldId, blocks);
+      }
+    };
   }
 
   static final class CleanupCoordinator {
