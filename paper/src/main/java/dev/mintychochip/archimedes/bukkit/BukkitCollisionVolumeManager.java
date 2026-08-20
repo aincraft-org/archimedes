@@ -4,18 +4,16 @@ import dev.mintychochip.archimedes.collision.CollisionHull;
 import dev.mintychochip.archimedes.collision.CollisionMode;
 import dev.mintychochip.archimedes.collision.CollisionObserver;
 import dev.mintychochip.archimedes.collision.CollisionSnapshot;
+import dev.mintychochip.archimedes.collision.CollisionStreamer;
 import dev.mintychochip.archimedes.collision.CollisionVolume;
 import dev.mintychochip.archimedes.collision.CollisionVolumeManager;
 import dev.mintychochip.archimedes.collision.CollisionVolumePool;
-import dev.mintychochip.archimedes.collision.ExposedCellIndex;
 import dev.mintychochip.archimedes.model.BlockPos;
-import dev.mintychochip.archimedes.model.ShipPose;
 import dev.mintychochip.archimedes.model.ShipTransform;
 import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.ship.ShipRuntimeException;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -56,11 +54,8 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
   /** Per-ship spawn policy, defaulting to streamed. */
   private final Map<UUID, CollisionMode> modes = new HashMap<>();
 
-  /** Exposed-cell indexes keyed by ship. */
-  private final Map<UUID, ExposedCellIndex> indices = new HashMap<>();
-
-  /** Observer pools keyed by ship. */
-  private final Map<UUID, CollisionVolumePool> pools = new HashMap<>();
+  /** Paper-free occupancy algorithm keyed by ship. */
+  private final Map<UUID, CollisionStreamer> streamers = new HashMap<>();
 
   /**
    * Creates a manager for the supplied Bukkit world and owner key.
@@ -97,8 +92,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   public void spawn(Vehicle ship) {
     normalizeRemoval(ship.id(), "collision spawn pre-cleanup");
-    indices.put(ship.id(), ExposedCellIndex.build(ship));
-    pools.put(ship.id(), new CollisionVolumePool());
+    streamers.put(ship.id(), CollisionStreamer.of(ship));
     volumes.put(ship.id(), new HashMap<>());
     if (mode(ship.id()) == CollisionMode.FULL) {
       spawnCells(ship, CollisionHull.exposedBlocks(ship), true);
@@ -116,11 +110,11 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     if (mode(ship.id()) != CollisionMode.STREAMED) {
       return;
     }
-    ExposedCellIndex index = indices.get(ship.id());
-    if (index == null) {
+    CollisionStreamer streamer = streamers.get(ship.id());
+    if (streamer == null) {
       return;
     }
-    observe(ship, sampler.sample(ship, index));
+    observe(ship, sampler.sample(ship, streamer.index()));
   }
 
   /**
@@ -201,27 +195,20 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
       spawnCells(ship, CollisionHull.exposedBlocks(ship), true);
       return;
     }
-    pools.put(ship.id(), new CollisionVolumePool());
+    streamers.put(ship.id(), CollisionStreamer.of(ship));
     reconcileObservers(ship);
   }
 
   @Override
   public CollisionSnapshot snapshot(UUID shipId, UUID playerId) {
-    ExposedCellIndex index = indices.get(shipId);
-    int exposed = index == null ? 0 : index.size();
+    CollisionStreamer streamer = streamers.get(shipId);
+    int exposed = streamer == null ? 0 : streamer.exposed();
     Map<BlockPos, CollisionVolume> live = volumes.get(shipId);
     int liveCount = live == null ? 0 : live.size();
-    CollisionVolumePool pool = pools.get(shipId);
-    int visible = 0;
-    if (pool != null) {
-      for (BlockPos cell : pool.live()) {
-        if (pool.observers(cell).contains(playerId)) {
-          visible++;
-        }
-      }
-    } else if (mode(shipId) == CollisionMode.FULL) {
-      visible = liveCount;
-    }
+    int visible =
+        mode(shipId) == CollisionMode.FULL
+            ? liveCount
+            : streamer == null ? 0 : streamer.visibleTo(playerId);
     return new CollisionSnapshot(mode(shipId), liveCount, exposed, visible);
   }
 
@@ -233,43 +220,13 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     if (volumes.get(ship.id()) == null) {
       spawn(ship);
     }
-    ExposedCellIndex index = indices.get(ship.id());
-    CollisionVolumePool pool = pools.get(ship.id());
-    if (index == null || pool == null) {
+    CollisionStreamer streamer = streamers.get(ship.id());
+    if (streamer == null) {
       return;
     }
-    ShipPose pose = ship.pose();
-    Map<UUID, Set<BlockPos>> desired = new HashMap<>();
-    Set<UUID> players = new HashSet<>();
-    for (CollisionObserver observer : observers) {
-      Set<BlockPos> held = new HashSet<>();
-      for (BlockPos cell : pool.live()) {
-        if (pool.observers(cell).contains(observer.id())) {
-          held.add(cell);
-        }
-      }
-      Set<BlockPos> enter =
-          new HashSet<>(
-              index.cellsWithin(
-                  observer.box(), pose.x(), pose.y(), pose.z(), ExposedCellIndex.ENTER_RANGE));
-      Set<BlockPos> leave =
-          new HashSet<>(
-              index.cellsWithin(
-                  observer.box(), pose.x(), pose.y(), pose.z(), ExposedCellIndex.LEAVE_RANGE));
-      Set<BlockPos> needed = new HashSet<>(enter);
-      for (BlockPos cell : held) {
-        if (leave.contains(cell)) {
-          needed.add(cell);
-        }
-      }
-      desired.put(observer.id(), needed);
-      if (observer.player()) {
-        players.add(observer.id());
-      }
-    }
-    CollisionVolumePool.Diff diff = pool.reconcile(desired, players);
+    CollisionVolumePool.Diff diff = streamer.observe(observers, ship.pose());
     apply(ship, diff);
-    dropUnpooled(ship, pool);
+    dropUnpooled(ship, streamer.live());
   }
 
   /**
@@ -295,17 +252,17 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
   }
 
   /**
-   * Drops streamed volumes that the pool no longer holds, including leftovers from full mode.
+   * Drops streamed volumes that the occupancy algorithm no longer holds, including leftovers from
+   * full mode.
    *
    * @param ship ship whose live map is pruned
-   * @param pool current observer pool
+   * @param kept cells that should remain
    */
-  private void dropUnpooled(Vehicle ship, CollisionVolumePool pool) {
+  private void dropUnpooled(Vehicle ship, Set<BlockPos> kept) {
     Map<BlockPos, CollisionVolume> live = volumes.get(ship.id());
     if (live == null) {
       return;
     }
-    Set<BlockPos> kept = pool.live();
     for (BlockPos cell : List.copyOf(live.keySet())) {
       if (!kept.contains(cell)) {
         CollisionVolume volume = live.remove(cell);
@@ -419,8 +376,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
 
   @SuppressWarnings({"checkstyle:IllegalCatch", "PMD.AvoidCatchingGenericException"})
   private void normalizeRemoval(UUID shipId, String operation) {
-    indices.remove(shipId);
-    pools.remove(shipId);
+    streamers.remove(shipId);
     Map<BlockPos, CollisionVolume> shipVolumes = volumes.remove(shipId);
     if (shipVolumes == null) {
       return;

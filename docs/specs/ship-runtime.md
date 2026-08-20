@@ -18,7 +18,7 @@ Success looks like: exact visual alignment to canonical block corners, player-so
 - `ShipRenderer` / `RenderSurface` / `BukkitShipRenderer` — per-block BlockDisplays plus tessellated cloth plates
 - `SailMesh` / `SailPiece` / `SailCell` — Paper-free cloth region → thin-plate series
 - `CollisionHull` / `CollisionVolume` / `CollisionVolumeManager` / `BukkitCollisionVolumeManager` — invisible Shulker hulls, streamed by default
-- `ExposedCellIndex` / `CollisionVolumePool` / `BukkitCollisionObserverSampler` — edge-distance observer pool (mode B)
+- `CollisionStreamer` / `ExposedCellIndex` / `CollisionVolumePool` — Paper-free occupancy (edge distance, hysteresis, share, refcount); Bukkit only applies the diff
 - `ShipRuntime` / `ShipRuntimeImpl` — spawn/move/remove transactions, rollback
 - `ShipEntityCarrier` / `BukkitShipEntityCarrier` / `BukkitShipRiderTracker` / `TopSurfaceIndex` — rider carry
 - `ShipServiceImpl` assembly/disassembly/load reconciliation wiring
