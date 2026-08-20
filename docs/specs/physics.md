@@ -123,6 +123,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - [x] Live tick attaches density-scaled engine/turbine thrust (`MediumThrustForce`) from `engine-materials` when `enginesEnabled`.
 - [x] Unsupported cloth snaps when wind load exceeds rigging strength (`SailRigging`); mast-adjacent cells hold default wind, far cells tear.
 - [x] Torn cloth leaves mass/colliders/sail force and becomes `ClothDebris` stepped with gravity + drag + spin.
+- [x] `ShipPhysics.inspect` reports the sampled `FlowField` wind plus sail force; cloth plates billow from the same wind.
 
 ### Current notes
 
