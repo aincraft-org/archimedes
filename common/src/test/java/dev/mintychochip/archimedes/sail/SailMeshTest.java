@@ -102,6 +102,50 @@ class SailMeshTest {
     assertEquals(SailMesh.tessellate(cells), still);
   }
 
+  @Test
+  void windCupsTheSheetIntoConnectedClothInsteadOfOneCardinalTilt() {
+    List<SailCell> cells = new ArrayList<>();
+    for (int x = 0; x < 5; x++) {
+      for (int y = 0; y < 5; y++) {
+        cells.add(new SailCell(x, y, 1, WHITE_WOOL));
+      }
+    }
+
+    List<SailPiece> still = SailMesh.tessellate(cells, FlowField.still());
+    List<SailPiece> breeze = SailMesh.tessellate(cells, FlowField.uniform(new Vector3d(0, 0, 8)));
+
+    assertEquals(25, still.size());
+    assertEquals(25, breeze.size());
+    assertUnionIsASheet(still);
+    assertTrue(
+        distinctOriginsOnAnyAxis(breeze) > distinctOriginsOnAnyAxis(still),
+        "cloth belly must vary across the sheet instead of sliding as one wall");
+    int rotated = 0;
+    for (SailPiece piece : breeze) {
+      if (!isIdentityRotation(piece)) {
+        rotated++;
+      }
+    }
+    assertTrue(rotated > 1, "multiple plates must tilt with the cloth surface");
+    assertTrue(
+        distinctRotations(breeze) > 1, "neighboring plates must not share one cardinal tilt");
+  }
+
+  private static int distinctRotations(List<SailPiece> pieces) {
+    Set<String> rotations = new HashSet<>();
+    for (SailPiece piece : pieces) {
+      rotations.add(
+          Math.round(piece.rotX() * 1_000_000.0)
+              + ","
+              + Math.round(piece.rotY() * 1_000_000.0)
+              + ","
+              + Math.round(piece.rotZ() * 1_000_000.0)
+              + ","
+              + Math.round(piece.rotW() * 1_000_000.0));
+    }
+    return rotations.size();
+  }
+
   private static boolean geometryDiffers(List<SailPiece> a, List<SailPiece> b) {
     if (a.size() != b.size()) {
       return true;

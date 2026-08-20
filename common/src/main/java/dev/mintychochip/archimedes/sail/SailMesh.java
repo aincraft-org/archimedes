@@ -13,6 +13,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import org.joml.Matrix3d;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
@@ -20,10 +21,10 @@ import org.joml.Vector3dc;
 /**
  * Turns a 3D region of cloth cells into a series of thin BlockDisplay plates.
  *
- * <p>Connected cells form one region. A 1-cell-thick wall stays a sheet along its thinnest axis. A
- * multi-depth region emits one plate per cell at that cell's own depth so the union occupies 3D
- * space. A sampled wind billows plate origins and tilts them; still air leaves the rest pose.
- * Geometry is computed from the region; no item model or resource pack is involved.
+ * <p>Connected cells form one region. Still air keeps a 1-cell-thick wall as a cardinal sheet and a
+ * multi-depth region as stacked plates. Wind cups the in-plane grid into a connected cloth: vertex
+ * belly varies across the sheet and each plate is rotated to the local surface, not one cardinal
+ * tilt. Geometry is computed from the region; no item model or resource pack is involved.
  */
 public final class SailMesh {
   /**
@@ -35,11 +36,8 @@ public final class SailMesh {
   /** Wind speed (m/s) that produces a full belly offset. Matches the plugin default breeze. */
   private static final double BILLOW_REF_SPEED = 8.0;
 
-  /** Maximum plate offset along the wind, in blocks. */
-  private static final double BILLOW_DEPTH = 0.35;
-
-  /** Maximum plate tilt toward the wind, in radians. */
-  private static final double BILLOW_TILT = Math.toRadians(20.0);
+  /** Maximum center belly along the wind, in blocks, at {@link #BILLOW_REF_SPEED}. */
+  private static final double BILLOW_DEPTH = 1.25;
 
   /** Face-adjacent offsets used to group connected cloth into regions. */
   private static final int[][] NEIGHBORS = {
@@ -132,9 +130,9 @@ public final class SailMesh {
       if (!remaining.contains(seedKey)) {
         continue;
       }
-      pieces.addAll(sheet(flood(seed, byKey, remaining)));
+      pieces.addAll(cloth(flood(seed, byKey, remaining), apparentWind));
     }
-    return List.copyOf(billow(pieces, apparentWind));
+    return List.copyOf(pieces);
   }
 
   private static Map<CellKey, SailCell> index(Collection<SailCell> cells) {
@@ -171,7 +169,7 @@ public final class SailMesh {
     return region;
   }
 
-  private static List<SailPiece> sheet(List<SailCell> region) {
+  private static List<SailPiece> cloth(List<SailCell> region, Vector3dc apparentWind) {
     int minX = Integer.MAX_VALUE;
     int minY = Integer.MAX_VALUE;
     int minZ = Integer.MAX_VALUE;
@@ -188,16 +186,194 @@ public final class SailMesh {
     }
     int axis =
         thinAxis(maxX - minX + 1, maxY - minY + 1, maxZ - minZ + 1, region.get(0).appearance());
-    List<SailPiece> pieces = new ArrayList<>(region.size());
-    for (SailCell cell : region) {
-      pieces.add(plate(cell, axis, thinOrigin(cell, axis)));
+    if (apparentWind.length() < 1e-9) {
+      List<SailPiece> pieces = new ArrayList<>(region.size());
+      for (SailCell cell : region) {
+        pieces.add(plate(cell, axis, thinOrigin(cell, axis)));
+      }
+      return pieces;
     }
-    return pieces;
+    return cup(region, axis, apparentWind);
   }
 
   private static double thinOrigin(SailCell cell, int axis) {
     int coord = axis == 0 ? cell.x() : axis == 1 ? cell.y() : cell.z();
     return coord + 0.5 - PLATE_THICKNESS * 0.5;
+  }
+
+  private static List<SailPiece> cup(List<SailCell> region, int axis, Vector3dc apparentWind) {
+    Map<PlaneKey, SailCell> plane = new LinkedHashMap<>();
+    Map<PlaneKey, Double> restThin = new LinkedHashMap<>();
+    int minU = Integer.MAX_VALUE;
+    int minV = Integer.MAX_VALUE;
+    int maxU = Integer.MIN_VALUE;
+    int maxV = Integer.MIN_VALUE;
+    for (SailCell cell : region) {
+      int u = planeU(axis, cell);
+      int v = planeV(axis, cell);
+      PlaneKey key = new PlaneKey(u, v);
+      plane.putIfAbsent(key, cell);
+      restThin.merge(key, thinOrigin(cell, axis) + PLATE_THICKNESS * 0.5, Math::min);
+      minU = Math.min(minU, u);
+      minV = Math.min(minV, v);
+      maxU = Math.max(maxU, u);
+      maxV = Math.max(maxV, v);
+    }
+    int spanU = maxU - minU + 1;
+    int spanV = maxV - minV + 1;
+    double speed = apparentWind.length();
+    double strength = Math.min(speed / BILLOW_REF_SPEED, 1.0) * BILLOW_DEPTH;
+    Vector3d windDir = new Vector3d(apparentWind).div(speed);
+    double fallbackThin = 0;
+    for (double thin : restThin.values()) {
+      fallbackThin += thin;
+    }
+    fallbackThin /= restThin.size();
+    Vector3d[][] verts = new Vector3d[spanU + 1][spanV + 1];
+    for (int i = 0; i <= spanU; i++) {
+      for (int j = 0; j <= spanV; j++) {
+        int u = minU + i;
+        int v = minV + j;
+        double thin = vertexThin(u, v, restThin, fallbackThin);
+        double uNorm = spanU == 0 ? 0.5 : i / (double) spanU;
+        double vNorm = spanV == 0 ? 0.5 : j / (double) spanV;
+        double fromMast = Math.abs(uNorm - 0.5) * 2.0;
+        double hoist = Math.sin(Math.PI * vNorm);
+        double cup = (0.15 + 0.85 * fromMast * fromMast) * (0.15 + 0.85 * hoist);
+        Vector3d rest = unproject(axis, u, v, thin);
+        verts[i][j] =
+            new Vector3d(
+                rest.x + windDir.x * strength * cup,
+                rest.y + windDir.y * strength * cup,
+                rest.z + windDir.z * strength * cup);
+      }
+    }
+    Vector3d restNormal = restNormal(axis);
+    List<SailPiece> pieces = new ArrayList<>(plane.size());
+    for (SailCell cell : plane.values()) {
+      int i = planeU(axis, cell) - minU;
+      int j = planeV(axis, cell) - minV;
+      pieces.add(
+          plateFromQuad(
+              verts[i][j],
+              verts[i + 1][j],
+              verts[i][j + 1],
+              restNormal,
+              cell.appearance()));
+    }
+    return pieces;
+  }
+
+  private static double vertexThin(
+      int u, int v, Map<PlaneKey, Double> restThin, double fallback) {
+    double sum = 0;
+    int n = 0;
+    for (int du = -1; du <= 0; du++) {
+      for (int dv = -1; dv <= 0; dv++) {
+        Double thin = restThin.get(new PlaneKey(u + du, v + dv));
+        if (thin != null) {
+          sum += thin;
+          n++;
+        }
+      }
+    }
+    if (n == 0) {
+      return fallback;
+    }
+    return sum / n;
+  }
+
+  private static SailPiece plateFromQuad(
+      Vector3d v00, Vector3d v10, Vector3d v01, Vector3dc restNormal, String appearance) {
+    Vector3d eU = new Vector3d(v10).sub(v00);
+    Vector3d eV = new Vector3d(v01).sub(v00);
+    Vector3d normal = new Vector3d(eU).cross(eV);
+    if (normal.lengthSquared() < 1e-12) {
+      normal.set(restNormal);
+    } else {
+      normal.normalize();
+      if (normal.dot(restNormal) < 0) {
+        normal.negate();
+      }
+    }
+    Vector3d xAxis = tangentAxis(eU, normal);
+    Vector3d yAxis = new Vector3d(normal).cross(xAxis).normalize();
+    if (yAxis.dot(eV) < 0) {
+      yAxis.negate();
+      normal.negate();
+    }
+    double sx = Math.max(eU.length(), PLATE_THICKNESS);
+    double sy = Math.max(Math.abs(yAxis.dot(eV)), PLATE_THICKNESS);
+    Quaterniond rot = rotationFromAxes(xAxis, yAxis, normal);
+    double half = PLATE_THICKNESS * 0.5;
+    Vector3d origin = new Vector3d(v00).sub(normal.x * half, normal.y * half, normal.z * half);
+    return new SailPiece(
+        origin.x,
+        origin.y,
+        origin.z,
+        sx,
+        sy,
+        PLATE_THICKNESS,
+        rot.x,
+        rot.y,
+        rot.z,
+        rot.w,
+        appearance);
+  }
+
+  private static Vector3d tangentAxis(Vector3d edge, Vector3dc normal) {
+    Vector3d axis = new Vector3d(edge);
+    double along = axis.dot(normal);
+    axis.sub(normal.x() * along, normal.y() * along, normal.z() * along);
+    if (axis.lengthSquared() < 1e-12) {
+      axis.set(1, 0, 0);
+      if (Math.abs(axis.dot(normal)) > 0.9) {
+        axis.set(0, 1, 0);
+      }
+      along = axis.dot(normal);
+      axis.sub(normal.x() * along, normal.y() * along, normal.z() * along);
+    }
+    return axis.normalize();
+  }
+
+  private static Quaterniond rotationFromAxes(Vector3dc x, Vector3dc y, Vector3dc z) {
+    Matrix3d matrix =
+        new Matrix3d(x.x(), y.x(), z.x(), x.y(), y.y(), z.y(), x.z(), y.z(), z.z());
+    return new Quaterniond().setFromUnnormalized(matrix).normalize();
+  }
+
+  private static int planeU(int axis, SailCell cell) {
+    if (axis == 0) {
+      return cell.y();
+    }
+    return cell.x();
+  }
+
+  private static int planeV(int axis, SailCell cell) {
+    if (axis == 2) {
+      return cell.y();
+    }
+    return cell.z();
+  }
+
+  private static Vector3d unproject(int axis, double u, double v, double thin) {
+    if (axis == 0) {
+      return new Vector3d(thin, u, v);
+    }
+    if (axis == 1) {
+      return new Vector3d(u, thin, v);
+    }
+    return new Vector3d(u, v, thin);
+  }
+
+  private static Vector3d restNormal(int axis) {
+    if (axis == 0) {
+      return new Vector3d(1, 0, 0);
+    }
+    if (axis == 1) {
+      return new Vector3d(0, 1, 0);
+    }
+    return new Vector3d(0, 0, 1);
   }
 
   private static Vector3d centroid(Collection<SailCell> cells) {
@@ -215,63 +391,6 @@ public final class SailMesh {
       return new Vector3d();
     }
     return new Vector3d(x / n, y / n, z / n);
-  }
-
-  private static List<SailPiece> billow(List<SailPiece> pieces, Vector3dc apparentWind) {
-    double speed = apparentWind.length();
-    if (speed < 1e-9) {
-      return pieces;
-    }
-    double strength = Math.min(speed / BILLOW_REF_SPEED, 1.0);
-    double nx = apparentWind.x() / speed;
-    double ny = apparentWind.y() / speed;
-    double nz = apparentWind.z() / speed;
-    double dx = nx * strength * BILLOW_DEPTH;
-    double dy = ny * strength * BILLOW_DEPTH;
-    double dz = nz * strength * BILLOW_DEPTH;
-    Vector3d windDir = new Vector3d(nx, ny, nz);
-    List<SailPiece> billowed = new ArrayList<>(pieces.size());
-    for (SailPiece piece : pieces) {
-      Quaterniond rot = tilt(piece, windDir, strength);
-      billowed.add(
-          new SailPiece(
-              piece.originX() + dx,
-              piece.originY() + dy,
-              piece.originZ() + dz,
-              piece.scaleX(),
-              piece.scaleY(),
-              piece.scaleZ(),
-              rot.x,
-              rot.y,
-              rot.z,
-              rot.w,
-              piece.appearance()));
-    }
-    return billowed;
-  }
-
-  private static Quaterniond tilt(SailPiece piece, Vector3dc windDir, double strength) {
-    Vector3d normal = plateNormal(piece);
-    Vector3d axis = new Vector3d(normal).cross(windDir);
-    if (axis.lengthSquared() < 1e-12) {
-      return new Quaterniond(piece.rotX(), piece.rotY(), piece.rotZ(), piece.rotW());
-    }
-    axis.normalize();
-    Quaterniond extra = new Quaterniond().fromAxisAngleRad(axis, strength * BILLOW_TILT);
-    return extra.mul(new Quaterniond(piece.rotX(), piece.rotY(), piece.rotZ(), piece.rotW()));
-  }
-
-  private static Vector3d plateNormal(SailPiece piece) {
-    double ax = Math.abs(piece.scaleX() - PLATE_THICKNESS);
-    double ay = Math.abs(piece.scaleY() - PLATE_THICKNESS);
-    double az = Math.abs(piece.scaleZ() - PLATE_THICKNESS);
-    if (ax <= ay && ax <= az) {
-      return new Vector3d(1, 0, 0);
-    }
-    if (ay <= az) {
-      return new Vector3d(0, 1, 0);
-    }
-    return new Vector3d(0, 0, 1);
   }
 
   private static SailPiece plate(SailCell cell, int axis, double originThin) {
@@ -385,4 +504,12 @@ public final class SailMesh {
    * @param z cell z
    */
   private record CellKey(int x, int y, int z) {}
+
+  /**
+   * In-plane grid key for a cloth region.
+   *
+   * @param u first in-plane axis
+   * @param v second in-plane axis
+   */
+  private record PlaneKey(int u, int v) {}
 }
