@@ -1,8 +1,10 @@
 package dev.mintychochip.archimedes.bukkit;
 
+import dev.mintychochip.archimedes.model.BlockPos;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipTransform;
 import dev.mintychochip.archimedes.model.Vehicle;
+import dev.mintychochip.archimedes.render.DisplayViewerSet;
 import dev.mintychochip.archimedes.render.RenderSurface;
 import dev.mintychochip.archimedes.render.SailTransform;
 import dev.mintychochip.archimedes.render.ShipRenderer;
@@ -13,11 +15,13 @@ import dev.mintychochip.archimedes.ship.ShipRendererLike;
 import dev.mintychochip.archimedes.ship.ShipRuntimeException;
 import dev.mintychochip.phys.FlowField;
 import java.util.ArrayList;
-import java.util.Objects;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
@@ -146,6 +150,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
                 d.setBlock(data);
                 d.setPersistent(false);
                 d.setTeleportDuration(ShipRenderer.TELEPORT_DURATION_TICKS);
+                d.setVisibleByDefault(false);
                 d.getPersistentDataContainer()
                     .set(shipKey, PersistentDataType.STRING, ship.id().toString());
                 d.getPersistentDataContainer().set(blockKey, PersistentDataType.STRING, key(block));
@@ -157,6 +162,55 @@ public final class BukkitShipRenderer implements ShipRendererLike {
       displays.add(spawnSail(ship, pieces.get(i), i));
     }
     spawnCannonControls(ship);
+    cullViewers(ship);
+  }
+
+  /**
+   * Shows each hull and sail display only to viewers with line of sight to that cell.
+   *
+   * @param ship ship whose displays are culled
+   */
+  public void cullViewers(Vehicle ship) {
+    Set<BlockPos> occupied = new HashSet<>();
+    for (ShipBlock block : ship.blocks()) {
+      occupied.add(ShipTransform.cell(ship, block.pos()));
+    }
+    Map<BlockDisplay, BlockPos> cells = displayWorldCells(ship);
+    for (RenderSurface.Viewer viewer : surface.viewers()) {
+      Set<BlockPos> visible =
+          DisplayViewerSet.visibleTo(
+              occupied, surface::worldSolid, viewer.eyeX(), viewer.eyeY(), viewer.eyeZ(), occupied);
+      for (Map.Entry<BlockDisplay, BlockPos> entry : cells.entrySet()) {
+        if (visible.contains(entry.getValue())) {
+          surface.showTo(viewer.id(), entry.getKey());
+        } else {
+          surface.hideFrom(viewer.id(), entry.getKey());
+        }
+      }
+    }
+  }
+
+  private Map<BlockDisplay, BlockPos> displayWorldCells(Vehicle ship) {
+    Map<BlockDisplay, BlockPos> cells = new IdentityHashMap<>();
+    for (Map.Entry<BlockDisplay, ShipBlock> entry : pairDisplays(ship).entrySet()) {
+      cells.put(entry.getKey(), ShipTransform.cell(ship, entry.getValue().pos()));
+    }
+    Map<String, BlockDisplay> sails = pairSails(ship);
+    List<SailPiece> pieces = plates(ship);
+    for (int i = 0; i < pieces.size(); i++) {
+      BlockDisplay display = sails.get(Integer.toString(i));
+      if (display == null) {
+        continue;
+      }
+      SailPiece piece = pieces.get(i);
+      cells.put(
+          display,
+          new BlockPos(
+              (int) Math.floor(ship.origin().x() + ship.pose().x() + piece.originX()),
+              (int) Math.floor(ship.origin().y() + ship.pose().y() + piece.originY()),
+              (int) Math.floor(ship.origin().z() + ship.pose().z() + piece.originZ())));
+    }
+    return cells;
   }
 
   private void spawnCannonControls(Vehicle ship) {
@@ -194,7 +248,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
   }
 
   private BlockDisplay spawnSail(Vehicle ship, SailPiece piece, int index) {
-    BlockData data = surface.blockData(piece.appearance());
+    BlockData data = surface.blockData(SailMesh.worldData(piece.appearance()));
     String sailIndex = Integer.toString(index);
     return surface.spawnBlockDisplay(
         SailTransform.location(surface, ship, piece),
@@ -202,6 +256,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
           d.setBlock(data);
           d.setPersistent(false);
           d.setTeleportDuration(ShipRenderer.TELEPORT_DURATION_TICKS);
+          d.setVisibleByDefault(false);
           d.getPersistentDataContainer()
               .set(shipKey, PersistentDataType.STRING, ship.id().toString());
           d.getPersistentDataContainer().set(sailKey, PersistentDataType.STRING, sailIndex);
@@ -300,6 +355,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
           surface.teleport(interaction, controlLocation(ship, mount.control()));
         }
       }
+      cullViewers(ship);
     } catch (ShipRuntimeException failure) {
       throw failure;
     } catch (RuntimeException failure) {
@@ -362,7 +418,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
         surface.spawnBlockDisplay(
             location,
             d -> {
-              d.setBlock(surface.blockData(appearance));
+              d.setBlock(surface.blockData(SailMesh.worldData(appearance)));
               d.setPersistent(false);
               d.setTeleportDuration(ShipRenderer.TELEPORT_DURATION_TICKS);
               d.getPersistentDataContainer()

@@ -126,6 +126,53 @@ public interface RenderSurface {
   default void removeAllTagged(NamespacedKey key) {}
 
   /**
+   * A player eye that may receive display spawn packets.
+   *
+   * @param id player id
+   * @param eyeX eye x
+   * @param eyeY eye y
+   * @param eyeZ eye z
+   */
+  record Viewer(UUID id, double eyeX, double eyeY, double eyeZ) {}
+
+  /**
+   * Returns nearby player eyes that should receive display packets.
+   *
+   * @return viewers
+   */
+  default Collection<Viewer> viewers() {
+    return List.of();
+  }
+
+  /**
+   * Shows {@code entity} to the viewer.
+   *
+   * @param viewerId player id
+   * @param entity display
+   */
+  default void showTo(UUID viewerId, Entity entity) {}
+
+  /**
+   * Hides {@code entity} from the viewer.
+   *
+   * @param viewerId player id
+   * @param entity display
+   */
+  default void hideFrom(UUID viewerId, Entity entity) {}
+
+  /**
+   * Returns whether the world cell is a solid occluder.
+   *
+   * @param x world x
+   * @param y world y
+   * @param z world z
+   * @return {@code true} when solid
+   */
+  default boolean worldSolid(int x, int y, int z) {
+    return false;
+  }
+
+  /**
    * Wraps a Bukkit world.
    *
    * @param world the Bukkit world
@@ -265,6 +312,59 @@ public interface RenderSurface {
         }
         if (failure != null) {
           throw failure;
+        }
+      }
+
+      @Override
+      public Collection<Viewer> viewers() {
+        List<Viewer> eyes = new ArrayList<>();
+        for (org.bukkit.entity.Player player : world.getPlayers()) {
+          org.bukkit.Location eye = player.getEyeLocation();
+          eyes.add(new Viewer(player.getUniqueId(), eye.getX(), eye.getY(), eye.getZ()));
+        }
+        return eyes;
+      }
+
+      @Override
+      public void showTo(UUID viewerId, Entity entity) {
+        org.bukkit.entity.Player player = player(viewerId);
+        org.bukkit.plugin.Plugin plugin = plugin();
+        if (player != null && plugin != null) {
+          player.showEntity(plugin, entity);
+        }
+      }
+
+      @Override
+      public void hideFrom(UUID viewerId, Entity entity) {
+        org.bukkit.entity.Player player = player(viewerId);
+        org.bukkit.plugin.Plugin plugin = plugin();
+        if (player != null && plugin != null) {
+          player.hideEntity(plugin, entity);
+        }
+      }
+
+      private org.bukkit.entity.Player player(UUID viewerId) {
+        for (org.bukkit.entity.Player player : world.getPlayers()) {
+          if (player.getUniqueId().equals(viewerId)) {
+            return player;
+          }
+        }
+        return null;
+      }
+
+      @Override
+      public boolean worldSolid(int x, int y, int z) {
+        if (!world.isChunkLoaded(x >> 4, z >> 4)) {
+          return false;
+        }
+        return world.getBlockAt(x, y, z).getType().isSolid();
+      }
+
+      private org.bukkit.plugin.Plugin plugin() {
+        try {
+          return org.bukkit.plugin.java.JavaPlugin.getProvidingPlugin(RenderSurface.class);
+        } catch (IllegalArgumentException ignored) {
+          return null;
         }
       }
 

@@ -28,6 +28,33 @@ public final class VoxelLos {
       double eyeY,
       double eyeZ,
       BlockPos target) {
+    return hasLineOfSight(
+        occupied,
+        (x, y, z) -> worldSolids.contains(new BlockPos(x, y, z)),
+        eyeX,
+        eyeY,
+        eyeZ,
+        target);
+  }
+
+  /**
+   * Returns whether the ray from the eye to the target is free of ship occupancy and extra solids.
+   *
+   * @param occupied ship cells
+   * @param extra additional solid probe (world blocks)
+   * @param eyeX eye x
+   * @param eyeY eye y
+   * @param eyeZ eye z
+   * @param target display cell
+   * @return {@code true} when the target is unoccluded
+   */
+  public static boolean hasLineOfSight(
+      Set<BlockPos> occupied,
+      VoxelSolid extra,
+      double eyeX,
+      double eyeY,
+      double eyeZ,
+      BlockPos target) {
     int x = floor(eyeX);
     int y = floor(eyeY);
     int z = floor(eyeZ);
@@ -51,7 +78,7 @@ public final class VoxelLos {
     double tDeltaZ = tDelta(dz);
     boolean first = true;
     for (int i = 0; i < 512; i++) {
-      if (!first && occludes(occupied, worldSolids, x, y, z, target)) {
+      if (!first && occludes(occupied, extra, x, y, z, target)) {
         return false;
       }
       if (x == target.x() && y == target.y() && z == target.z()) {
@@ -90,12 +117,11 @@ public final class VoxelLos {
   }
 
   private static boolean occludes(
-      Set<BlockPos> occupied, Set<BlockPos> worldSolids, int x, int y, int z, BlockPos target) {
+      Set<BlockPos> occupied, VoxelSolid extra, int x, int y, int z, BlockPos target) {
     if (x == target.x() && y == target.y() && z == target.z()) {
       return false;
     }
-    BlockPos cell = new BlockPos(x, y, z);
-    return occupied.contains(cell) || worldSolids.contains(cell);
+    return occupied.contains(new BlockPos(x, y, z)) || extra.isSolid(x, y, z);
   }
 
   private static int step(double delta) {

@@ -86,6 +86,30 @@ class BukkitShipRendererTest {
   }
 
   @Test
+  void displaysAreHiddenByDefaultAndShownOnlyWithLos() {
+    VisibilitySurface surface = new VisibilitySurface();
+    UUID west = UUID.randomUUID();
+    UUID east = UUID.randomUUID();
+    surface.viewers.add(new RenderSurface.Viewer(west, -0.5, 0.5, 0.5));
+    surface.viewers.add(new RenderSurface.Viewer(east, 3.5, 0.5, 0.5));
+    Vehicle ship =
+        new Vehicle(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(WORLD, 0, 0, 0),
+            List.of(
+                new ShipBlock(new BlockPos(1, 0, 0), "minecraft:stone"),
+                new ShipBlock(new BlockPos(2, 0, 0), "minecraft:stone")));
+    new BukkitShipRenderer(surface, new NamespacedKey(NAMESPACE, KEY)).render(ship, ignored -> {});
+    assertEquals(false, surface.fakes.get(0).visibleByDefault);
+    assertEquals(false, surface.fakes.get(1).visibleByDefault);
+    assertTrue(surface.shown.contains(west + ":1,0,0"));
+    assertTrue(surface.hidden.contains(west + ":2,0,0"));
+    assertTrue(surface.shown.contains(east + ":2,0,0"));
+    assertTrue(surface.hidden.contains(east + ":1,0,0"));
+  }
+
+  @Test
   void clothRagdollIsABlockDisplayThatReceivesOrientation() {
     RecordingSurface surface = new RecordingSurface();
     BukkitShipRenderer renderer =
@@ -233,9 +257,9 @@ class BukkitShipRendererTest {
     return null;
   }
 
-  private static final class RecordingSurface implements RenderSurface {
-    private final List<BlockDisplay> spawned = new ArrayList<>();
-    private final List<FakeRagdoll> fakes = new ArrayList<>();
+  private static class RecordingSurface implements RenderSurface {
+    final List<BlockDisplay> spawned = new ArrayList<>();
+    final List<FakeRagdoll> fakes = new ArrayList<>();
 
     @Override
     public BlockDisplay spawnBlockDisplay(
@@ -261,9 +285,13 @@ class BukkitShipRendererTest {
     @Override
     public Collection<BlockDisplay> tagged(NamespacedKey key, String shipId) {
       List<BlockDisplay> found = new ArrayList<>();
+      String want = key.getNamespace() + ":" + key.getKey();
       for (int i = 0; i < spawned.size(); i++) {
-        if (shipId.equals(fakes.get(i).tags.get(key))) {
-          found.add(spawned.get(i));
+        for (Map.Entry<NamespacedKey, String> tag : fakes.get(i).tags.entrySet()) {
+          String have = tag.getKey().getNamespace() + ":" + tag.getKey().getKey();
+          if (want.equals(have) && shipId.equals(tag.getValue())) {
+            found.add(spawned.get(i));
+          }
         }
       }
       return found;
@@ -299,6 +327,7 @@ class BukkitShipRendererTest {
   private static final class FakeRagdoll {
     Location location;
     Transformation transformation;
+    boolean visibleByDefault = true;
     final Map<NamespacedKey, String> tags = new HashMap<>();
 
     BlockDisplay proxy() {
@@ -308,6 +337,9 @@ class BukkitShipRendererTest {
               new Class<?>[] {BlockDisplay.class},
               (target, method, args) -> {
                 switch (method.getName()) {
+                  case "setVisibleByDefault":
+                    visibleByDefault = (Boolean) args[0];
+                    return null;
                   case "setBlock":
                   case "setPersistent":
                   case "setTeleportDuration":
@@ -332,7 +364,16 @@ class BukkitShipRendererTest {
                             return null;
                           }
                           if ("get".equals(containerMethod.getName())) {
-                            return tags.get(containerArgs[0]);
+                            NamespacedKey wanted = (NamespacedKey) containerArgs[0];
+                            String want = wanted.getNamespace() + ":" + wanted.getKey();
+                            for (Map.Entry<NamespacedKey, String> tag : tags.entrySet()) {
+                              String have =
+                                  tag.getKey().getNamespace() + ":" + tag.getKey().getKey();
+                              if (want.equals(have)) {
+                                return tag.getValue();
+                              }
+                            }
+                            return null;
                           }
                           return defaultValue(containerMethod.getReturnType());
                         });
@@ -340,6 +381,48 @@ class BukkitShipRendererTest {
                     return defaultValue(method.getReturnType());
                 }
               });
+    }
+  }
+
+  private static final class VisibilitySurface extends RecordingSurface {
+    final List<RenderSurface.Viewer> viewers = new ArrayList<>();
+    final java.util.Set<String> shown = new java.util.HashSet<>();
+    final java.util.Set<String> hidden = new java.util.HashSet<>();
+
+    @Override
+    public Collection<RenderSurface.Viewer> viewers() {
+      return viewers;
+    }
+
+    @Override
+    public void showTo(UUID viewerId, org.bukkit.entity.Entity entity) {
+      record(shown, viewerId, entity);
+    }
+
+    @Override
+    public void hideFrom(UUID viewerId, org.bukkit.entity.Entity entity) {
+      record(hidden, viewerId, entity);
+    }
+
+    private void record(
+        java.util.Set<String> sink, UUID viewerId, org.bukkit.entity.Entity entity) {
+      int index = -1;
+      for (int i = 0; i < spawned.size(); i++) {
+        if (spawned.get(i) == entity) {
+          index = i;
+          break;
+        }
+      }
+      if (index < 0) {
+        return;
+      }
+      String cell = null;
+      for (Map.Entry<NamespacedKey, String> tag : fakes.get(index).tags.entrySet()) {
+        if (tag.getKey().getKey().endsWith("-block")) {
+          cell = tag.getValue();
+        }
+      }
+      sink.add(viewerId + ":" + cell);
     }
   }
 

@@ -65,12 +65,13 @@ public final class ShipRenderer {
               d -> {
                 d.setBlock(data);
                 d.setTeleportDuration(TELEPORT_DURATION_TICKS);
+                d.setVisibleByDefault(false);
               });
       display.setPersistent(false);
       displays.add(display);
     }
     for (SailPiece piece : SailMesh.tessellate(SailMesh.cellsOf(ship.intactBlocks()), wind)) {
-      BlockData data = surface.blockData(piece.appearance());
+      BlockData data = surface.blockData(SailMesh.worldData(piece.appearance()));
       BlockDisplay display =
           surface.spawnBlockDisplay(
               SailTransform.location(surface, ship, piece),
@@ -78,6 +79,7 @@ public final class ShipRenderer {
                 d.setBlock(data);
                 d.setTransformation(SailTransform.transformation(piece));
                 d.setTeleportDuration(TELEPORT_DURATION_TICKS);
+                d.setVisibleByDefault(false);
               });
       display.setPersistent(false);
       displays.add(display);

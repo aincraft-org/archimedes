@@ -2,6 +2,7 @@ package dev.mintychochip.archimedes;
 
 import dev.mintychochip.archimedes.bukkit.BukkitCollisionObserverListener;
 import dev.mintychochip.archimedes.bukkit.BukkitCollisionVolumeManager;
+import dev.mintychochip.archimedes.bukkit.BukkitDisplayCullListener;
 import dev.mintychochip.archimedes.bukkit.BukkitScannerWorld;
 import dev.mintychochip.archimedes.bukkit.BukkitShipEntityCarrier;
 import dev.mintychochip.archimedes.bukkit.BukkitShipRenderer;
@@ -87,6 +88,7 @@ public final class ArchimedesPlugin extends JavaPlugin {
       RenderSurface surface = RenderSurface.of(world);
       FlowField wind = FlowField.uniform(new org.joml.Vector3d(0, 0, 8));
       BukkitShipRenderer renderer = new BukkitShipRenderer(surface, shipKey, wind);
+      BukkitDisplayCullListener displayCull = new BukkitDisplayCullListener(allShips, renderer);
       collisions = new BukkitCollisionVolumeManager(world, collisionOwnerKey);
       BukkitCollisionObserverListener collisionObservers =
           new BukkitCollisionObserverListener(allShips, collisions);
@@ -132,6 +134,7 @@ public final class ArchimedesPlugin extends JavaPlugin {
               getServer().getPluginManager().registerEvents(tracker, this);
               getServer().getPluginManager().registerEvents(cannonListener, this);
               getServer().getPluginManager().registerEvents(collisionObservers, this);
+              getServer().getPluginManager().registerEvents(displayCull, this);
             });
       } finally {
         if (service == null) {

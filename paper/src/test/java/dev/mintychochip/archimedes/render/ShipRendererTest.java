@@ -50,6 +50,7 @@ class ShipRendererTest {
   private static final class FakeDisplay {
     BlockData block;
     boolean persistent = true;
+    boolean visibleByDefault = true;
     Location location;
     Transformation transformation;
     int teleportDuration;
@@ -88,6 +89,9 @@ class ShipRendererTest {
                     return null;
                   case "setPersistent":
                     persistent = (Boolean) args[0];
+                    return null;
+                  case "setVisibleByDefault":
+                    visibleByDefault = (Boolean) args[0];
                     return null;
                   case "isPersistent":
                     return persistent;
@@ -266,7 +270,13 @@ class ShipRendererTest {
               World.class.getClassLoader(),
               new Class<?>[] {World.class},
               (proxy, method, args) -> {
-                if (method.getName().equals("getEntitiesByClass")) return displays;
+                if (method.getName().equals("getEntities")
+                    || method.getName().equals("getEntitiesByClass")) {
+                  return displays;
+                }
+                if (method.getName().equals("getPlayers")) {
+                  return List.of();
+                }
                 return defaultFor(method.getReturnType());
               });
     }
@@ -480,6 +490,24 @@ class ShipRendererTest {
   }
 
   @Test
+  void taggedWoolUsesMaterialKeyForBlockData() {
+    SpySurface surface = new SpySurface();
+    surface.dataById.put(WHITE_WOOL, markerData(WHITE_WOOL));
+    Vehicle ship =
+        new Vehicle(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new ShipOrigin(WORLD, 100, 200, 300),
+            List.of(new ShipBlock(new BlockPos(0, 1, 1), WHITE_WOOL + "[facing=east]")),
+            new ShipPose(0.0),
+            true);
+    new ShipRenderer().render(ship, surface);
+    List<FakeDisplay> sails = transformed(surface);
+    assertEquals(1, sails.size());
+    assertEquals(surface.dataById.get(WHITE_WOOL), sails.get(0).block);
+  }
+
+  @Test
   void sailPiecesMoveWithRepositionAndVanishOnRemove() {
     SpySurface surface = new SpySurface();
     surface.dataById.put(STONE, markerData(STONE));
@@ -568,6 +596,8 @@ class ShipRendererTest {
       assertFalse(fake.invoked.contains("setTransformationMatrix"));
       assertTrue(fake.invoked.contains("setTeleportDuration"));
       assertTrue(fake.teleportDuration >= 1, "client must interpolate visual teleports");
+      assertTrue(fake.invoked.contains("setVisibleByDefault"));
+      assertEquals(false, fake.visibleByDefault);
     }
   }
 

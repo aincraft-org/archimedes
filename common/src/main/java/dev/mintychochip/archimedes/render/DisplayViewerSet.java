@@ -35,4 +35,31 @@ public final class DisplayViewerSet {
     }
     return Set.copyOf(visible);
   }
+
+  /**
+   * Returns candidates visible from the eye, using a live world-solid probe.
+   *
+   * @param occupied ship cells
+   * @param extra world solid probe
+   * @param eyeX eye x
+   * @param eyeY eye y
+   * @param eyeZ eye z
+   * @param candidates display cells
+   * @return visible cells
+   */
+  public static Set<BlockPos> visibleTo(
+      Set<BlockPos> occupied,
+      VoxelSolid extra,
+      double eyeX,
+      double eyeY,
+      double eyeZ,
+      Collection<BlockPos> candidates) {
+    Set<BlockPos> visible = new HashSet<>();
+    for (BlockPos cell : candidates) {
+      if (VoxelLos.hasLineOfSight(occupied, extra, eyeX, eyeY, eyeZ, cell)) {
+        visible.add(cell);
+      }
+    }
+    return Set.copyOf(visible);
+  }
 }
