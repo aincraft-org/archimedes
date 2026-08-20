@@ -176,10 +176,16 @@ public final class BukkitShipRenderer implements ShipRendererLike {
       occupied.add(ShipTransform.cell(ship, block.pos()));
     }
     Map<BlockDisplay, BlockPos> cells = displayWorldCells(ship);
+    Set<BlockPos> candidates = new HashSet<>(cells.values());
     for (RenderSurface.Viewer viewer : surface.viewers()) {
       Set<BlockPos> visible =
           DisplayViewerSet.visibleTo(
-              occupied, surface::worldSolid, viewer.eyeX(), viewer.eyeY(), viewer.eyeZ(), occupied);
+              occupied,
+              surface::worldSolid,
+              viewer.eyeX(),
+              viewer.eyeY(),
+              viewer.eyeZ(),
+              candidates);
       for (Map.Entry<BlockDisplay, BlockPos> entry : cells.entrySet()) {
         if (visible.contains(entry.getValue())) {
           surface.showTo(viewer.id(), entry.getKey());

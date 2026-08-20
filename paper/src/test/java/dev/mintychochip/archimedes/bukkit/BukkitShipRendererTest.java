@@ -1,6 +1,7 @@
 package dev.mintychochip.archimedes.bukkit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -9,21 +10,28 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.mintychochip.archimedes.model.BlockPos;
 import dev.mintychochip.archimedes.model.ShipBlock;
 import dev.mintychochip.archimedes.model.ShipOrigin;
+import dev.mintychochip.archimedes.model.ShipTransform;
 import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.render.RenderSurface;
+import dev.mintychochip.archimedes.sail.SailMesh;
+import dev.mintychochip.archimedes.sail.SailPiece;
 import dev.mintychochip.archimedes.ship.ShipRuntimeException;
+import dev.mintychochip.phys.FlowField;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.BlockDisplay;
 import org.bukkit.util.Transformation;
+import org.joml.Vector3d;
 import org.junit.jupiter.api.Test;
 
 class BukkitShipRendererTest {
@@ -107,6 +115,57 @@ class BukkitShipRendererTest {
     assertTrue(surface.hidden.contains(west + ":2,0,0"));
     assertTrue(surface.shown.contains(east + ":2,0,0"));
     assertTrue(surface.hidden.contains(east + ":1,0,0"));
+  }
+
+  @Test
+  void billowedSailPlateWithClearLosIsShown() {
+    VisibilitySurface surface = new VisibilitySurface();
+    UUID viewer = UUID.randomUUID();
+    surface.viewers.add(new RenderSurface.Viewer(viewer, 2.5, 2.5, 4.0));
+    FlowField wind = FlowField.uniform(new Vector3d(0, 0, 8));
+    List<ShipBlock> blocks = new ArrayList<>();
+    for (int x = 0; x < 5; x++) {
+      for (int y = 0; y < 5; y++) {
+        blocks.add(new ShipBlock(new BlockPos(x, y, 0), "minecraft:white_wool"));
+      }
+    }
+    Vehicle ship =
+        new Vehicle(UUID.randomUUID(), UUID.randomUUID(), new ShipOrigin(WORLD, 0, 0, 0), blocks);
+    List<SailPiece> pieces = SailMesh.tessellate(SailMesh.cellsOf(ship.intactBlocks()), wind);
+    Set<BlockPos> occupied = new HashSet<>();
+    for (ShipBlock block : ship.blocks()) {
+      occupied.add(ShipTransform.cell(ship, block.pos()));
+    }
+    boolean offOccupied = false;
+    for (int i = 0; i < pieces.size(); i++) {
+      SailPiece piece = pieces.get(i);
+      BlockPos cell =
+          new BlockPos(
+              (int) Math.floor(ship.origin().x() + ship.pose().x() + piece.originX()),
+              (int) Math.floor(ship.origin().y() + ship.pose().y() + piece.originY()),
+              (int) Math.floor(ship.origin().z() + ship.pose().z() + piece.originZ()));
+      if (!occupied.contains(cell)) {
+        offOccupied = true;
+        break;
+      }
+    }
+    assertTrue(offOccupied, "wind must shift a plate origin off occupied cells");
+    new BukkitShipRenderer(surface, new NamespacedKey(NAMESPACE, KEY), wind)
+        .render(ship, ignored -> {});
+    for (int i = 0; i < pieces.size(); i++) {
+      SailPiece piece = pieces.get(i);
+      BlockPos cell =
+          new BlockPos(
+              (int) Math.floor(ship.origin().x() + ship.pose().x() + piece.originX()),
+              (int) Math.floor(ship.origin().y() + ship.pose().y() + piece.originY()),
+              (int) Math.floor(ship.origin().z() + ship.pose().z() + piece.originZ()));
+      if (!occupied.contains(cell)) {
+        assertTrue(
+            surface.shown.contains(viewer + ":sail:" + i),
+            "billowed plate " + i + " cell=" + cell.x() + "," + cell.y() + "," + cell.z());
+        assertFalse(surface.hidden.contains(viewer + ":sail:" + i));
+      }
+    }
   }
 
   @Test
@@ -417,12 +476,20 @@ class BukkitShipRendererTest {
         return;
       }
       String cell = null;
+      String sail = null;
       for (Map.Entry<NamespacedKey, String> tag : fakes.get(index).tags.entrySet()) {
         if (tag.getKey().getKey().endsWith("-block")) {
           cell = tag.getValue();
         }
+        if (tag.getKey().getKey().endsWith("-sail")) {
+          sail = tag.getValue();
+        }
       }
-      sink.add(viewerId + ":" + cell);
+      if (sail != null) {
+        sink.add(viewerId + ":sail:" + sail);
+      } else {
+        sink.add(viewerId + ":" + cell);
+      }
     }
   }
 
