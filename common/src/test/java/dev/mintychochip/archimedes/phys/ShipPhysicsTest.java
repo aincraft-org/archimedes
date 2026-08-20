@@ -28,6 +28,7 @@ import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class ShipPhysicsTest {
   private static final String OAK_PLANKS = "minecraft:oak_planks";
   private static final String WHITE_WOOL = "minecraft:white_wool";

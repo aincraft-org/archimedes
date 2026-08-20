@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 class ShipTabCompleterTest {
   private static final String SHIP_COMMAND = "ship";
+  private static final String SAIL = "sail";
   private static final Command COMMAND =
       new Command(SHIP_COMMAND) {
         @Override
@@ -58,7 +59,7 @@ class ShipTabCompleterTest {
     assertEquals(
         List.of("small"),
         new ShipTabCompleter()
-            .onTabComplete(SENDER, COMMAND, SHIP_COMMAND, new String[] {"sail", "s"}));
+            .onTabComplete(SENDER, COMMAND, SHIP_COMMAND, new String[] {SAIL, "s"}));
   }
 
   @Test
@@ -66,10 +67,10 @@ class ShipTabCompleterTest {
     assertEquals(
         List.of("mesh"),
         new ShipTabCompleter()
-            .onTabComplete(SENDER, COMMAND, SHIP_COMMAND, new String[] {"sail", "mes"}));
+            .onTabComplete(SENDER, COMMAND, SHIP_COMMAND, new String[] {SAIL, "mes"}));
     assertEquals(
         List.of("mesh"),
         new ShipTabCompleter()
-            .onTabComplete(SENDER, COMMAND, SHIP_COMMAND, new String[] {"sail", "large", "m"}));
+            .onTabComplete(SENDER, COMMAND, SHIP_COMMAND, new String[] {SAIL, "large", "m"}));
   }
 }
