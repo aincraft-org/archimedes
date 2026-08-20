@@ -47,6 +47,9 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
   /** Persistent key identifying the relative block represented by an entity. */
   private final NamespacedKey blockKey;
 
+  /** Samples nearby entities as streamed observers. */
+  private final BukkitCollisionObserverSampler sampler;
+
   /** Collision volumes indexed by ship and relative block position. */
   private final Map<UUID, Map<BlockPos, CollisionVolume>> volumes = new HashMap<>();
 
@@ -66,9 +69,22 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
    * @param ownerKey persistent key identifying plugin-owned entities
    */
   public BukkitCollisionVolumeManager(World world, NamespacedKey ownerKey) {
+    this(world, ownerKey, new NamespacedKey(ownerKey.getNamespace(), "ship-id"));
+  }
+
+  /**
+   * Creates a manager with explicit render identity so ship-owned displays are not observers.
+   *
+   * @param world Bukkit world containing collision entities
+   * @param ownerKey persistent key identifying plugin-owned entities
+   * @param renderShipKey persistent key identifying render displays
+   */
+  public BukkitCollisionVolumeManager(
+      World world, NamespacedKey ownerKey, NamespacedKey renderShipKey) {
     this.world = world;
     this.ownerKey = ownerKey;
     this.blockKey = new NamespacedKey(ownerKey.getNamespace(), ownerKey.getKey() + "-block");
+    this.sampler = new BukkitCollisionObserverSampler(world, ownerKey, renderShipKey);
   }
 
   /**
@@ -86,7 +102,25 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
     volumes.put(ship.id(), new HashMap<>());
     if (mode(ship.id()) == CollisionMode.FULL) {
       spawnCells(ship, CollisionHull.exposedBlocks(ship), true);
+    } else {
+      reconcileObservers(ship);
     }
+  }
+
+  /**
+   * Resamples nearby entities and updates streamed volumes.
+   *
+   * @param ship ship whose observers are refreshed
+   */
+  public void reconcileObservers(Vehicle ship) {
+    if (mode(ship.id()) != CollisionMode.STREAMED) {
+      return;
+    }
+    ExposedCellIndex index = indices.get(ship.id());
+    if (index == null) {
+      return;
+    }
+    observe(ship, sampler.sample(ship, index));
   }
 
   /**
@@ -324,6 +358,7 @@ public final class BukkitCollisionVolumeManager implements CollisionVolumeManage
         previous.put(volume, oldAnchor);
         volume.move(anchor.x(), anchor.y(), anchor.z());
       }
+      reconcileObservers(ship);
     } catch (ShipRuntimeException failure) {
       rollbackMoved(previous, failure);
       throw failure;
