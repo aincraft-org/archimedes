@@ -28,7 +28,7 @@ public final class SailTransform {
   }
 
   /**
-   * Builds the affine plate transform (identity translation, piece scale and rotation).
+   * Builds the affine plate transform (identity translation, left rotation, scale, right rotation).
    *
    * @param piece plate geometry
    * @return Paper display transformation
@@ -39,6 +39,10 @@ public final class SailTransform {
         new Quaternionf(
             (float) piece.rotX(), (float) piece.rotY(), (float) piece.rotZ(), (float) piece.rotW()),
         new Vector3f((float) piece.scaleX(), (float) piece.scaleY(), (float) piece.scaleZ()),
-        new Quaternionf());
+        new Quaternionf(
+            (float) piece.rightX(),
+            (float) piece.rightY(),
+            (float) piece.rightZ(),
+            (float) piece.rightW()));
   }
 }

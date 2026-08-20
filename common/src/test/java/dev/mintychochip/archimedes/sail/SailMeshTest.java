@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import org.joml.Quaterniond;
 import org.joml.Vector3d;
 import org.junit.jupiter.api.Test;
 
@@ -130,6 +129,64 @@ class SailMeshTest {
     assertTrue(rotated > 1, "multiple plates must tilt with the cloth surface");
     assertTrue(
         distinctRotations(breeze) > 1, "neighboring plates must not share one cardinal tilt");
+    assertEquals(
+        20,
+        SailMesh.unsharedClothEdges(still),
+        "still-air 5x5 sheet has only the outer 20 boundary edges unmatched");
+    assertEquals(
+        20,
+        SailMesh.unsharedClothEdges(breeze),
+        "cupped cloth is one sheet: every interior edge is shared");
+  }
+
+  @Test
+  void twoNeighborPlatesShareTheJoiningClothEdge() {
+    List<SailCell> cells =
+        List.of(new SailCell(0, 0, 1, WHITE_WOOL), new SailCell(1, 0, 1, WHITE_WOOL));
+    List<SailPiece> pieces = SailMesh.tessellate(cells, FlowField.uniform(new Vector3d(0, 0, 8)));
+    assertEquals(2, pieces.size());
+    SailPiece left = pieces.get(0);
+    SailPiece right = pieces.get(1);
+    if (left.originX() > right.originX()) {
+      SailPiece swap = left;
+      left = right;
+      right = swap;
+    }
+    Vector3d leftTop = SailMesh.localToWorld(left, 1, 1, 0);
+    Vector3d leftBot = SailMesh.localToWorld(left, 1, 0, 0);
+    Vector3d rightTop = SailMesh.localToWorld(right, 0, 1, 0);
+    Vector3d rightBot = SailMesh.localToWorld(right, 0, 0, 0);
+    assertEquals(leftBot.x, rightBot.x, 1e-9, leftBot + " vs " + rightBot);
+    assertEquals(leftBot.y, rightBot.y, 1e-9, leftBot + " vs " + rightBot);
+    assertEquals(leftBot.z, rightBot.z, 1e-9, leftBot + " vs " + rightBot);
+    assertEquals(leftTop.x, rightTop.x, 1e-9, leftTop + " vs " + rightTop);
+    assertEquals(leftTop.y, rightTop.y, 1e-9, leftTop + " vs " + rightTop);
+    assertEquals(leftTop.z, rightTop.z, 1e-9, leftTop + " vs " + rightTop);
+  }
+
+  @Test
+  void twoStackedPlatesShareTheJoiningClothEdge() {
+    List<SailCell> cells =
+        List.of(new SailCell(0, 0, 1, WHITE_WOOL), new SailCell(0, 1, 1, WHITE_WOOL));
+    List<SailPiece> pieces = SailMesh.tessellate(cells, FlowField.uniform(new Vector3d(0, 0, 8)));
+    assertEquals(2, pieces.size());
+    SailPiece bottom = pieces.get(0);
+    SailPiece top = pieces.get(1);
+    if (bottom.originY() > top.originY()) {
+      SailPiece swap = bottom;
+      bottom = top;
+      top = swap;
+    }
+    Vector3d b0 = SailMesh.localToWorld(bottom, 0, 1, 0);
+    Vector3d b1 = SailMesh.localToWorld(bottom, 1, 1, 0);
+    Vector3d t0 = SailMesh.localToWorld(top, 0, 0, 0);
+    Vector3d t1 = SailMesh.localToWorld(top, 1, 0, 0);
+    assertEquals(b0.x, t0.x, 1e-9, b0 + " vs " + t0);
+    assertEquals(b0.y, t0.y, 1e-9, b0 + " vs " + t0);
+    assertEquals(b0.z, t0.z, 1e-9, b0 + " vs " + t0);
+    assertEquals(b1.x, t1.x, 1e-9, b1 + " vs " + t1);
+    assertEquals(b1.y, t1.y, 1e-9, b1 + " vs " + t1);
+    assertEquals(b1.z, t1.z, 1e-9, b1 + " vs " + t1);
   }
 
   @Test
@@ -144,10 +201,9 @@ class SailMeshTest {
     List<SailPiece> breeze = SailMesh.tessellate(cells, FlowField.uniform(new Vector3d(0, 0, 8)));
 
     for (SailPiece piece : breeze) {
-      Quaterniond rot =
-          new Quaterniond(piece.rotX(), piece.rotY(), piece.rotZ(), piece.rotW());
-      Vector3d thin = rot.transform(new Vector3d(0, 0, 1));
-      assertEquals(1.0, rot.lengthSquared(), 1e-6);
+      Vector3d origin = SailMesh.localToWorld(piece, 0, 0, 0);
+      Vector3d thin = SailMesh.localToWorld(piece, 0, 0, 1).sub(origin);
+      thin.normalize();
       assertTrue(
           thin.z > 0.25,
           "thin axis must face the windward side, not a scrambled basis: " + thin);
@@ -167,10 +223,9 @@ class SailMeshTest {
       if (piece.originX() > minX + 0.25) {
         continue;
       }
-      Vector3d localX =
-          new Quaterniond(piece.rotX(), piece.rotY(), piece.rotZ(), piece.rotW())
-              .transform(new Vector3d(1, 0, 0));
-      if (localX.z < 0) {
+      Vector3d alongU =
+          SailMesh.localToWorld(piece, 1, 0, 0).sub(SailMesh.localToWorld(piece, 0, 0, 0));
+      if (alongU.z < 0) {
         sloped++;
       }
     }

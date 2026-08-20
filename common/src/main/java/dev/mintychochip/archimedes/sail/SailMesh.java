@@ -110,6 +110,72 @@ public final class SailMesh {
   }
 
   /**
+   * Maps a local cube point {@code (lx,ly,lz)} in {@code [0,1]} through the plate's Paper
+   * transform: {@code origin + R_left * scale * R_right * local}.
+   *
+   * @param piece plate
+   * @param lx local x
+   * @param ly local y
+   * @param lz local z
+   * @return ship-local world point
+   */
+  public static Vector3d localToWorld(SailPiece piece, double lx, double ly, double lz) {
+    Objects.requireNonNull(piece, "piece");
+    Quaterniond right =
+        new Quaterniond(piece.rightX(), piece.rightY(), piece.rightZ(), piece.rightW());
+    Quaterniond left = new Quaterniond(piece.rotX(), piece.rotY(), piece.rotZ(), piece.rotW());
+    Vector3d local = right.transform(new Vector3d(lx, ly, lz));
+    local.set(local.x * piece.scaleX(), local.y * piece.scaleY(), local.z * piece.scaleZ());
+    left.transform(local);
+    return local.add(piece.originX(), piece.originY(), piece.originZ());
+  }
+
+  /**
+   * Counts cloth-face edges (local z=0 rectangle) that are not shared with another plate.
+   *
+   * <p>A watertight w×h sheet has only the outer boundary unmatched: {@code 2*(w+h)} edges.
+   *
+   * @param pieces tessellated plates
+   * @return number of edges that appear on exactly one plate
+   */
+  public static int unsharedClothEdges(List<SailPiece> pieces) {
+    Objects.requireNonNull(pieces, "pieces");
+    Map<String, Integer> counts = new LinkedHashMap<>();
+    for (SailPiece piece : pieces) {
+      Vector3d v00 = localToWorld(piece, 0, 0, 0);
+      Vector3d v10 = localToWorld(piece, 1, 0, 0);
+      Vector3d v01 = localToWorld(piece, 0, 1, 0);
+      Vector3d v11 = localToWorld(piece, 1, 1, 0);
+      tally(counts, v00, v10);
+      tally(counts, v10, v11);
+      tally(counts, v11, v01);
+      tally(counts, v01, v00);
+    }
+    int unshared = 0;
+    for (int count : counts.values()) {
+      if (count == 1) {
+        unshared++;
+      }
+    }
+    return unshared;
+  }
+
+  private static void tally(Map<String, Integer> counts, Vector3d a, Vector3d b) {
+    String ka = pointKey(a);
+    String kb = pointKey(b);
+    String key = ka.compareTo(kb) < 0 ? ka + "|" + kb : kb + "|" + ka;
+    counts.merge(key, 1, Integer::sum);
+  }
+
+  private static String pointKey(Vector3d point) {
+    return Math.round(point.x * 1_000_000.0)
+        + ","
+        + Math.round(point.y * 1_000_000.0)
+        + ","
+        + Math.round(point.z * 1_000_000.0);
+  }
+
+  /**
    * Tessellates cloth cells and billows plates along the given apparent-wind vector.
    *
    * @param cells integer cells plus captured appearances
@@ -229,39 +295,72 @@ public final class SailMesh {
       fallbackThin += thin;
     }
     fallbackThin /= restThin.size();
+    double[][] target = new double[spanU + 1][spanV + 1];
+    for (int i = 0; i <= spanU; i++) {
+      for (int j = 0; j <= spanV; j++) {
+        double uNorm = spanU == 0 ? 0.5 : i / (double) spanU;
+        double vNorm = spanV == 0 ? 0.5 : j / (double) spanV;
+        double fromMast = Math.abs(uNorm - 0.5) * 2.0;
+        double hoist = Math.sin(Math.PI * vNorm);
+        target[i][j] = (0.15 + 0.85 * fromMast * fromMast) * (0.15 + 0.85 * hoist);
+      }
+    }
+    double[][] cup = projectParallelograms(target);
     Vector3d[][] verts = new Vector3d[spanU + 1][spanV + 1];
     for (int i = 0; i <= spanU; i++) {
       for (int j = 0; j <= spanV; j++) {
         int u = minU + i;
         int v = minV + j;
         double thin = vertexThin(u, v, restThin, fallbackThin);
-        double uNorm = spanU == 0 ? 0.5 : i / (double) spanU;
-        double vNorm = spanV == 0 ? 0.5 : j / (double) spanV;
-        double fromMast = Math.abs(uNorm - 0.5) * 2.0;
-        double hoist = Math.sin(Math.PI * vNorm);
-        double cup = (0.15 + 0.85 * fromMast * fromMast) * (0.15 + 0.85 * hoist);
         Vector3d rest = unproject(axis, u, v, thin);
+        double belly = strength * cup[i][j];
         verts[i][j] =
             new Vector3d(
-                rest.x + windDir.x * strength * cup,
-                rest.y + windDir.y * strength * cup,
-                rest.z + windDir.z * strength * cup);
+                rest.x + windDir.x * belly,
+                rest.y + windDir.y * belly,
+                rest.z + windDir.z * belly);
       }
     }
-    Vector3d restNormal = restNormal(axis);
     List<SailPiece> pieces = new ArrayList<>(plane.size());
     for (SailCell cell : plane.values()) {
       int i = planeU(axis, cell) - minU;
       int j = planeV(axis, cell) - minV;
       pieces.add(
-          plateFromQuad(
-              verts[i][j],
-              verts[i + 1][j],
-              verts[i][j + 1],
-              restNormal,
-              cell.appearance()));
+          affinePlate(verts[i][j], verts[i + 1][j], verts[i][j + 1], cell.appearance()));
     }
     return pieces;
+  }
+
+  /**
+   * Projects a vertex displacement field onto {@code f(u)+g(v)} so every quad is a parallelogram
+   * and shared edges can coincide.
+   */
+  private static double[][] projectParallelograms(double[][] target) {
+    int nu = target.length;
+    int nv = target[0].length;
+    double[] alongU = new double[nu];
+    double[] alongV = new double[nv];
+    for (int i = 0; i < nu; i++) {
+      double sum = 0;
+      for (int j = 0; j < nv; j++) {
+        sum += target[i][j];
+      }
+      alongU[i] = sum / nv;
+    }
+    for (int j = 0; j < nv; j++) {
+      double sum = 0;
+      for (int i = 0; i < nu; i++) {
+        sum += target[i][j] - alongU[i];
+      }
+      alongV[j] = sum / nu;
+    }
+    double[][] projected = new double[nu][nv];
+    for (int i = 0; i < nu; i++) {
+      for (int j = 0; j < nv; j++) {
+        projected[i][j] = alongU[i] + alongV[j];
+      }
+    }
+    return projected;
   }
 
   private static double vertexThin(
@@ -283,61 +382,128 @@ public final class SailMesh {
     return sum / n;
   }
 
-  private static SailPiece plateFromQuad(
-      Vector3d v00, Vector3d v10, Vector3d v01, Vector3dc restNormal, String appearance) {
+  private static SailPiece affinePlate(
+      Vector3d v00, Vector3d v10, Vector3d v01, String appearance) {
     Vector3d eU = new Vector3d(v10).sub(v00);
     Vector3d eV = new Vector3d(v01).sub(v00);
     Vector3d normal = new Vector3d(eU).cross(eV);
-    if (normal.lengthSquared() < 1e-12) {
-      normal.set(restNormal);
+    if (normal.lengthSquared() < 1e-16) {
+      normal.set(0, 0, 1);
     } else {
       normal.normalize();
-      if (normal.dot(restNormal) < 0) {
-        normal.negate();
+    }
+    Vector3d xHat = new Vector3d(eU);
+    if (xHat.lengthSquared() < 1e-16) {
+      xHat.set(1, 0, 0);
+      if (Math.abs(xHat.dot(normal)) > 0.9) {
+        xHat.set(0, 1, 0);
       }
     }
-    Vector3d xAxis = tangentAxis(eU, normal);
-    Vector3d yAxis = new Vector3d(normal).cross(xAxis).normalize();
-    if (yAxis.dot(eV) < 0) {
-      yAxis.negate();
-      normal.negate();
-    }
-    double sx = Math.max(eU.length(), PLATE_THICKNESS);
-    double sy = Math.max(Math.abs(yAxis.dot(eV)), PLATE_THICKNESS);
-    Quaterniond rot = rotationFromAxes(xAxis, yAxis, normal);
-    double half = PLATE_THICKNESS * 0.5;
-    Vector3d origin = new Vector3d(v00).sub(normal.x * half, normal.y * half, normal.z * half);
+    xHat.normalize();
+    Vector3d yHat = new Vector3d(normal).cross(xHat).normalize();
+    Svd2 svd = svd2(eU.length(), eV.dot(xHat), eV.dot(yHat));
+    Matrix3d frame = new Matrix3d(xHat, yHat, normal);
+    Matrix3d uEmbed =
+        new Matrix3d(
+            new Vector3d(svd.u00, svd.u10, 0),
+            new Vector3d(svd.u01, svd.u11, 0),
+            new Vector3d(0, 0, 1));
+    Matrix3d vEmbedT =
+        new Matrix3d(
+            new Vector3d(svd.v00, svd.v01, 0),
+            new Vector3d(svd.v10, svd.v11, 0),
+            new Vector3d(0, 0, 1));
+    Quaterniond left = new Quaterniond().setFromUnnormalized(frame.mul(uEmbed)).normalize();
+    Quaterniond right = new Quaterniond().setFromUnnormalized(vEmbedT).normalize();
     return new SailPiece(
-        origin.x,
-        origin.y,
-        origin.z,
-        sx,
-        sy,
+        v00.x,
+        v00.y,
+        v00.z,
+        svd.s0,
+        svd.s1,
         PLATE_THICKNESS,
-        rot.x,
-        rot.y,
-        rot.z,
-        rot.w,
+        left.x,
+        left.y,
+        left.z,
+        left.w,
+        right.x,
+        right.y,
+        right.z,
+        right.w,
         appearance);
   }
 
-  private static Vector3d tangentAxis(Vector3d edge, Vector3dc normal) {
-    Vector3d axis = new Vector3d(edge);
-    double along = axis.dot(normal);
-    axis.sub(normal.x() * along, normal.y() * along, normal.z() * along);
-    if (axis.lengthSquared() < 1e-12) {
-      axis.set(1, 0, 0);
-      if (Math.abs(axis.dot(normal)) > 0.9) {
-        axis.set(0, 1, 0);
-      }
-      along = axis.dot(normal);
-      axis.sub(normal.x() * along, normal.y() * along, normal.z() * along);
+  /**
+   * SVD of the 2×2 {@code [[a, b], [0, c]]} parallelogram map as rotations and positive scales.
+   */
+  private static Svd2 svd2(double a, double b, double c) {
+    double ata00 = a * a;
+    double ata01 = a * b;
+    double ata11 = b * b + c * c;
+    double trace = ata00 + ata11;
+    double disc = Math.sqrt(Math.max(0.0, trace * trace - 4.0 * ata00 * c * c));
+    double l0 = 0.5 * (trace + disc);
+    double l1 = 0.5 * (trace - disc);
+    double v00;
+    double v10;
+    if (Math.abs(ata01) > 1e-12) {
+      v00 = l0 - ata11;
+      v10 = ata01;
+    } else if (ata00 >= ata11) {
+      v00 = 1.0;
+      v10 = 0.0;
+    } else {
+      v00 = 0.0;
+      v10 = 1.0;
     }
-    return axis.normalize();
-  }
-
-  private static Quaterniond rotationFromAxes(Vector3dc x, Vector3dc y, Vector3dc z) {
-    return new Quaterniond().setFromUnnormalized(new Matrix3d(x, y, z)).normalize();
+    double vLen = Math.hypot(v00, v10);
+    v00 /= vLen;
+    v10 /= vLen;
+    double v01 = -v10;
+    double v11 = v00;
+    double s0 = Math.sqrt(Math.max(l0, 0.0));
+    double s1 = Math.sqrt(Math.max(l1, 0.0));
+    double u00;
+    double u10;
+    double u01;
+    double u11;
+    if (s0 > 1e-12) {
+      u00 = (a * v00 + b * v10) / s0;
+      u10 = (c * v10) / s0;
+    } else {
+      u00 = 1.0;
+      u10 = 0.0;
+    }
+    if (s1 > 1e-12) {
+      u01 = (a * v01 + b * v11) / s1;
+      u11 = (c * v11) / s1;
+    } else {
+      u01 = -u10;
+      u11 = u00;
+    }
+    double uLen0 = Math.hypot(u00, u10);
+    u00 /= uLen0;
+    u10 /= uLen0;
+    double uLen1 = Math.hypot(u01, u11);
+    u01 /= uLen1;
+    u11 /= uLen1;
+    if (u00 * u11 - u01 * u10 < 0) {
+      u01 = -u01;
+      u11 = -u11;
+      v01 = -v01;
+      v11 = -v11;
+    }
+    return new Svd2(
+        u00,
+        u01,
+        u10,
+        u11,
+        v00,
+        v01,
+        v10,
+        v11,
+        Math.max(s0, PLATE_THICKNESS),
+        Math.max(s1, PLATE_THICKNESS));
   }
 
   private static int planeU(int axis, SailCell cell) {
@@ -362,16 +528,6 @@ public final class SailMesh {
       return new Vector3d(u, thin, v);
     }
     return new Vector3d(u, v, thin);
-  }
-
-  private static Vector3d restNormal(int axis) {
-    if (axis == 0) {
-      return new Vector3d(1, 0, 0);
-    }
-    if (axis == 1) {
-      return new Vector3d(0, 1, 0);
-    }
-    return new Vector3d(0, 0, 1);
   }
 
   private static Vector3d centroid(Collection<SailCell> cells) {
@@ -510,4 +666,30 @@ public final class SailMesh {
    * @param v second in-plane axis
    */
   private record PlaneKey(int u, int v) {}
+
+  /**
+   * 2×2 SVD of a parallelogram map.
+   *
+   * @param u00 left rotation 00
+   * @param u01 left rotation 01
+   * @param u10 left rotation 10
+   * @param u11 left rotation 11
+   * @param v00 right rotation 00
+   * @param v01 right rotation 01
+   * @param v10 right rotation 10
+   * @param v11 right rotation 11
+   * @param s0 first singular value
+   * @param s1 second singular value
+   */
+  private record Svd2(
+      double u00,
+      double u01,
+      double u10,
+      double u11,
+      double v00,
+      double v01,
+      double v10,
+      double v11,
+      double s0,
+      double s1) {}
 }
