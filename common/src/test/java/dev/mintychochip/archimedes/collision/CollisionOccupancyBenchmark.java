@@ -10,59 +10,147 @@ import dev.mintychochip.archimedes.model.ShipPose;
 import dev.mintychochip.archimedes.model.Vehicle;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
-/** Occupancy A/B numbers for the streamed hull. Timing is reported, not asserted. */
+/**
+ * A vs B speed and memory. A keeps every exposed cell live. B keeps the rider neighborhood.
+ *
+ * <p>{@code tickMove} is the per-tick work that scales with live cubes (Bukkit teleport). {@code
+ * tickReconcile} is occupancy bookkeeping: A re-applies the full cell set, B re-queries edge
+ * distance.
+ */
 class CollisionOccupancyBenchmark {
   private static final UUID WORLD = UUID.randomUUID();
   private static final ShipPose ZERO = new ShipPose(0, 0, 0);
+  private static final int WARMUP = 200;
+  private static final int SAMPLES = 1000;
 
   @Test
-  void reportsOccupancyAgainstFullSpawn() {
+  void reportsSpeedAndMemoryAgainstFullSpawn() {
+    print(measure(20, 5, 8, 9.2, 5.0, 3.2));
+    print(measure(40, 10, 16, 19.2, 10.0, 7.2));
     Row small = measure(20, 5, 8, 9.2, 5.0, 3.2);
-    Row large = measure(40, 10, 16, 19.2, 10.0, 7.2);
+    assertTrue(small.bLive < small.aLive);
+    assertEquals(0, CollisionStreamer.of(boxHull(20, 5, 8)).liveCount());
+  }
+
+  private static void print(Row row) {
     System.out.printf(
-        "COLLISION_BENCH hull=20x5x8 A=%d B1=%d B2=%d empty=%d observe1=%.3fms observe2=%.3fms%n",
-        small.a, small.bOne, small.bTwo, small.empty, small.observeOneMs, small.observeTwoMs);
-    System.out.printf(
-        "COLLISION_BENCH hull=40x10x16 A=%d B1=%d B2=%d empty=%d observe1=%.3fms observe2=%.3fms%n",
-        large.a, large.bOne, large.bTwo, large.empty, large.observeOneMs, large.observeTwoMs);
-    assertTrue(small.bOne < small.a);
-    assertTrue(small.bTwo < small.a);
-    assertTrue(small.bTwo > small.bOne);
-    assertEquals(0, small.empty);
-    assertTrue(large.bOne < large.a);
-    assertEquals(0, large.empty);
+        "COLLISION_BENCH hull=%s live A=%d B=%d | fill A=%.3fms B=%.3fms | tickReconcile A=%.3fms B=%.3fms | tickMove A=%.3fms B=%.3fms | heap A=%dB B=%dB%n",
+        row.hull,
+        row.aLive,
+        row.bLive,
+        row.aFillNs / 1e6,
+        row.bFillNs / 1e6,
+        row.aReconcileNs / 1e6,
+        row.bReconcileNs / 1e6,
+        row.aMoveNs / 1e6,
+        row.bMoveNs / 1e6,
+        row.aHeap,
+        row.bHeap);
   }
 
   private static Row measure(int dx, int dy, int dz, double px, double py, double pz) {
     Vehicle hull = boxHull(dx, dy, dz);
-    CollisionStreamer streamer = CollisionStreamer.of(hull);
-    int a = streamer.exposed();
-    UUID one = UUID.randomUUID();
-    UUID two = UUID.randomUUID();
-    CollisionObserver mid = playerAt(one, px, py, pz);
-    CollisionObserver bow = playerAt(one, 0.2, py, pz);
-    CollisionObserver stern = playerAt(two, dx - 1.8, py, pz);
-    long start = System.nanoTime();
-    for (int i = 0; i < 1000; i++) {
-      streamer.observe(List.of(mid), ZERO);
-    }
-    double observeOneMs = (System.nanoTime() - start) / 1_000_000.0 / 1000.0;
-    int bOne = streamer.liveCount();
-    start = System.nanoTime();
-    for (int i = 0; i < 1000; i++) {
-      streamer.observe(List.of(bow, stern), ZERO);
-    }
-    double observeTwoMs = (System.nanoTime() - start) / 1_000_000.0 / 1000.0;
-    int bTwo = streamer.liveCount();
-    streamer.observe(List.of(), ZERO);
-    return new Row(a, bOne, bTwo, streamer.liveCount(), observeOneMs, observeTwoMs);
+    CollisionObserver rider = riderAt(px, py, pz);
+    CollisionObserver whole = covering(hull);
+    CollisionStreamer warm = CollisionStreamer.of(hull);
+    warm.observe(List.of(whole), ZERO);
+    warm.observe(List.of(rider), ZERO);
+
+    CollisionStreamer a = CollisionStreamer.of(hull);
+    long aFill = time(() -> a.observe(List.of(whole), ZERO));
+    int aLive = a.liveCount();
+    long aReconcile = timeMany(SAMPLES, () -> a.observe(List.of(whole), ZERO));
+    long aMove = timeMany(SAMPLES, () -> touch(a.live()));
+    long aHeap = heapDelta(() -> occupy(hull, whole));
+
+    CollisionStreamer b = CollisionStreamer.of(hull);
+    long bFill = time(() -> b.observe(List.of(rider), ZERO));
+    int bLive = b.liveCount();
+    long bReconcile = timeMany(SAMPLES, () -> b.observe(List.of(rider), ZERO));
+    long bMove = timeMany(SAMPLES, () -> touch(b.live()));
+    long bHeap = heapDelta(() -> occupy(hull, rider));
+
+    return new Row(
+        dx + "x" + dy + "x" + dz,
+        aLive,
+        bLive,
+        aFill,
+        bFill,
+        aReconcile,
+        bReconcile,
+        aMove,
+        bMove,
+        aHeap,
+        bHeap);
   }
 
-  private static CollisionObserver playerAt(UUID id, double x, double y, double z) {
-    return new CollisionObserver(id, true, new CollisionBox(x, y, z, x + 0.6, y + 1.8, z + 0.6));
+  private static CollisionObserver riderAt(double x, double y, double z) {
+    return new CollisionObserver(
+        UUID.randomUUID(), true, new CollisionBox(x, y, z, x + 0.6, y + 1.8, z + 0.6));
+  }
+
+  private static CollisionObserver covering(Vehicle hull) {
+    CollisionBox bounds = ExposedCellIndex.build(hull).bounds(0, 0, 0);
+    CollisionBox cover = bounds.expanded(1024);
+    return new CollisionObserver(UUID.randomUUID(), true, cover);
+  }
+
+  private static CollisionStreamer occupy(Vehicle hull, CollisionObserver observer) {
+    CollisionStreamer streamer = CollisionStreamer.of(hull);
+    streamer.observe(List.of(observer), ZERO);
+    return streamer;
+  }
+
+  private static int touch(Set<BlockPos> cells) {
+    int sum = 0;
+    for (BlockPos cell : cells) {
+      sum += cell.x() + cell.y() + cell.z();
+    }
+    return sum;
+  }
+
+  private static long time(Runnable action) {
+    action.run();
+    long start = System.nanoTime();
+    action.run();
+    return System.nanoTime() - start;
+  }
+
+  private static long timeMany(int samples, Runnable action) {
+    for (int i = 0; i < WARMUP; i++) {
+      action.run();
+    }
+    long start = System.nanoTime();
+    for (int i = 0; i < samples; i++) {
+      action.run();
+    }
+    return (System.nanoTime() - start) / samples;
+  }
+
+  private static long heapDelta(java.util.function.Supplier<Object> retain) {
+    gc();
+    long before = used();
+    Object held = retain.get();
+    gc();
+    long after = used();
+    if (held == null) {
+      throw new IllegalStateException("benchmark retain");
+    }
+    return Math.max(0L, after - before);
+  }
+
+  private static void gc() {
+    Runtime.getRuntime().gc();
+    Runtime.getRuntime().gc();
+  }
+
+  private static long used() {
+    Runtime runtime = Runtime.getRuntime();
+    return runtime.totalMemory() - runtime.freeMemory();
   }
 
   private static Vehicle boxHull(int dx, int dy, int dz) {
@@ -84,5 +172,15 @@ class CollisionOccupancyBenchmark {
   }
 
   private record Row(
-      int a, int bOne, int bTwo, int empty, double observeOneMs, double observeTwoMs) {}
+      String hull,
+      int aLive,
+      int bLive,
+      long aFillNs,
+      long bFillNs,
+      long aReconcileNs,
+      long bReconcileNs,
+      long aMoveNs,
+      long bMoveNs,
+      long aHeap,
+      long bHeap) {}
 }
