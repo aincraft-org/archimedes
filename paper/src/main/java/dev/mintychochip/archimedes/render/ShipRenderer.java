@@ -5,8 +5,10 @@ import dev.mintychochip.archimedes.model.ShipTransform;
 import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.sail.SailMesh;
 import dev.mintychochip.archimedes.sail.SailPiece;
+import dev.mintychochip.phys.FlowField;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.bukkit.Location;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.BlockDisplay;
@@ -21,6 +23,21 @@ public final class ShipRenderer {
    * does not lag a full step behind the collision hull.
    */
   public static final int TELEPORT_DURATION_TICKS = 1;
+
+  /** Wind sampled when tessellating sail plates. */
+  private final FlowField wind;
+
+  /** Still-air renderer. */
+  public ShipRenderer() {
+    this(FlowField.still());
+  }
+
+  /**
+   * @param wind flow field sampled for cloth billow
+   */
+  public ShipRenderer(FlowField wind) {
+    this.wind = Objects.requireNonNull(wind, "wind");
+  }
 
   /**
    * Renders hull blocks as untransformed displays and cloth as tessellated plates.
@@ -52,7 +69,7 @@ public final class ShipRenderer {
       display.setPersistent(false);
       displays.add(display);
     }
-    for (SailPiece piece : SailMesh.tessellate(SailMesh.cellsOf(ship.intactBlocks()))) {
+    for (SailPiece piece : SailMesh.tessellate(SailMesh.cellsOf(ship.intactBlocks()), wind)) {
       BlockData data = surface.blockData(piece.appearance());
       BlockDisplay display =
           surface.spawnBlockDisplay(

@@ -1,6 +1,7 @@
 package dev.mintychochip.archimedes.sail;
 
 import dev.mintychochip.archimedes.model.ShipBlock;
+import dev.mintychochip.phys.FlowField;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -12,13 +13,17 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import org.joml.Quaterniond;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 /**
  * Turns a 3D region of cloth cells into a series of thin BlockDisplay plates.
  *
  * <p>Connected cells form one region. A 1-cell-thick wall stays a sheet along its thinnest axis. A
  * multi-depth region emits one plate per cell at that cell's own depth so the union occupies 3D
- * space. Geometry is computed from the region; no item model or resource pack is involved.
+ * space. A sampled wind billows plate origins and tilts them; still air leaves the rest pose.
+ * Geometry is computed from the region; no item model or resource pack is involved.
  */
 public final class SailMesh {
   /**
@@ -26,6 +31,15 @@ public final class SailMesh {
    * two in-plane axes and is this thick on the remaining axis.
    */
   public static final double PLATE_THICKNESS = 1.0 / 16.0;
+
+  /** Wind speed (m/s) that produces a full belly offset. Matches the plugin default breeze. */
+  private static final double BILLOW_REF_SPEED = 8.0;
+
+  /** Maximum plate offset along the wind, in blocks. */
+  private static final double BILLOW_DEPTH = 0.35;
+
+  /** Maximum plate tilt toward the wind, in radians. */
+  private static final double BILLOW_TILT = Math.toRadians(20.0);
 
   /** Face-adjacent offsets used to group connected cloth into regions. */
   private static final int[][] NEIGHBORS = {
@@ -72,13 +86,41 @@ public final class SailMesh {
   }
 
   /**
-   * Tessellates cloth cells into thin plates covering each connected region.
+   * Tessellates cloth cells into thin plates covering each connected region in still air.
    *
    * @param cells integer cells plus captured appearances
    * @return immutable piece list in deterministic region / cell order
    */
   public static List<SailPiece> tessellate(Collection<SailCell> cells) {
+    return tessellate(cells, FlowField.still());
+  }
+
+  /**
+   * Tessellates cloth cells and billows plates from the wind sampled at the cloth centroid.
+   *
+   * @param cells integer cells plus captured appearances
+   * @param wind flow field sampled for apparent-wind billow
+   * @return immutable piece list in deterministic region / cell order
+   */
+  public static List<SailPiece> tessellate(Collection<SailCell> cells, FlowField wind) {
     Objects.requireNonNull(cells, "cells");
+    Objects.requireNonNull(wind, "wind");
+    if (cells.isEmpty()) {
+      return List.of();
+    }
+    return tessellate(cells, wind.velocity(centroid(cells)));
+  }
+
+  /**
+   * Tessellates cloth cells and billows plates along the given apparent-wind vector.
+   *
+   * @param cells integer cells plus captured appearances
+   * @param apparentWind wind relative to the cloth ({@code v_wind − v_ship})
+   * @return immutable piece list in deterministic region / cell order
+   */
+  public static List<SailPiece> tessellate(Collection<SailCell> cells, Vector3dc apparentWind) {
+    Objects.requireNonNull(cells, "cells");
+    Objects.requireNonNull(apparentWind, "apparentWind");
     if (cells.isEmpty()) {
       return List.of();
     }
@@ -92,7 +134,7 @@ public final class SailMesh {
       }
       pieces.addAll(sheet(flood(seed, byKey, remaining)));
     }
-    return List.copyOf(pieces);
+    return List.copyOf(billow(pieces, apparentWind));
   }
 
   private static Map<CellKey, SailCell> index(Collection<SailCell> cells) {
@@ -156,6 +198,80 @@ public final class SailMesh {
   private static double thinOrigin(SailCell cell, int axis) {
     int coord = axis == 0 ? cell.x() : axis == 1 ? cell.y() : cell.z();
     return coord + 0.5 - PLATE_THICKNESS * 0.5;
+  }
+
+  private static Vector3d centroid(Collection<SailCell> cells) {
+    double x = 0;
+    double y = 0;
+    double z = 0;
+    int n = 0;
+    for (SailCell cell : cells) {
+      x += cell.x() + 0.5;
+      y += cell.y() + 0.5;
+      z += cell.z() + 0.5;
+      n++;
+    }
+    if (n == 0) {
+      return new Vector3d();
+    }
+    return new Vector3d(x / n, y / n, z / n);
+  }
+
+  private static List<SailPiece> billow(List<SailPiece> pieces, Vector3dc apparentWind) {
+    double speed = apparentWind.length();
+    if (speed < 1e-9) {
+      return pieces;
+    }
+    double strength = Math.min(speed / BILLOW_REF_SPEED, 1.0);
+    double nx = apparentWind.x() / speed;
+    double ny = apparentWind.y() / speed;
+    double nz = apparentWind.z() / speed;
+    double dx = nx * strength * BILLOW_DEPTH;
+    double dy = ny * strength * BILLOW_DEPTH;
+    double dz = nz * strength * BILLOW_DEPTH;
+    Vector3d windDir = new Vector3d(nx, ny, nz);
+    List<SailPiece> billowed = new ArrayList<>(pieces.size());
+    for (SailPiece piece : pieces) {
+      Quaterniond rot = tilt(piece, windDir, strength);
+      billowed.add(
+          new SailPiece(
+              piece.originX() + dx,
+              piece.originY() + dy,
+              piece.originZ() + dz,
+              piece.scaleX(),
+              piece.scaleY(),
+              piece.scaleZ(),
+              rot.x,
+              rot.y,
+              rot.z,
+              rot.w,
+              piece.appearance()));
+    }
+    return billowed;
+  }
+
+  private static Quaterniond tilt(SailPiece piece, Vector3dc windDir, double strength) {
+    Vector3d normal = plateNormal(piece);
+    Vector3d axis = new Vector3d(normal).cross(windDir);
+    if (axis.lengthSquared() < 1e-12) {
+      return new Quaterniond(piece.rotX(), piece.rotY(), piece.rotZ(), piece.rotW());
+    }
+    axis.normalize();
+    Quaterniond extra = new Quaterniond().fromAxisAngleRad(axis, strength * BILLOW_TILT);
+    return extra.mul(new Quaterniond(piece.rotX(), piece.rotY(), piece.rotZ(), piece.rotW()));
+  }
+
+  private static Vector3d plateNormal(SailPiece piece) {
+    double ax = Math.abs(piece.scaleX() - PLATE_THICKNESS);
+    double ay = Math.abs(piece.scaleY() - PLATE_THICKNESS);
+    double az = Math.abs(piece.scaleZ() - PLATE_THICKNESS);
+    if (ax <= ay && ax <= az) {
+      return new Vector3d(1, 0, 0);
+    }
+    if (ay <= az) {
+      return new Vector3d(0, 1, 0);
+    }
+    return new Vector3d(0, 0, 1);
   }
 
   private static SailPiece plate(SailCell cell, int axis, double originThin) {

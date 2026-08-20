@@ -14,6 +14,7 @@ import dev.mintychochip.archimedes.model.ShipPose;
 import dev.mintychochip.archimedes.model.ShipTransform;
 import dev.mintychochip.archimedes.model.Vehicle;
 import dev.mintychochip.archimedes.ship.ShipRuntimeException;
+import dev.mintychochip.phys.FlowField;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -27,6 +28,7 @@ import org.bukkit.World;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.BlockDisplay;
 import org.bukkit.util.Transformation;
+import org.joml.Vector3d;
 import org.junit.jupiter.api.Test;
 
 /** Behavior tests for the block-display ship renderer. */
@@ -508,6 +510,37 @@ class ShipRendererTest {
     assertTrue(surface.tagged(shipKey, ship.id().toString()).isEmpty());
     assertEquals(0, transformed(surface).size());
     assertEquals(0, surface.spawned.size());
+  }
+
+  @Test
+  void sailPlatesBillowWithTheSampledWind() {
+    SpySurface stillSurface = new SpySurface();
+    stillSurface.dataById.put(STONE, markerData(STONE));
+    stillSurface.dataById.put(WHITE_WOOL, markerData(WHITE_WOOL));
+    SpySurface breezeSurface = new SpySurface();
+    breezeSurface.dataById.put(STONE, markerData(STONE));
+    breezeSurface.dataById.put(WHITE_WOOL, markerData(WHITE_WOOL));
+    NamespacedKey shipKey = new NamespacedKey(NAMESPACE, "test");
+    new dev.mintychochip.archimedes.bukkit.BukkitShipRenderer(
+            stillSurface, shipKey, FlowField.still())
+        .render(stoneAndWoolWall(), ignored -> {});
+    new dev.mintychochip.archimedes.bukkit.BukkitShipRenderer(
+            breezeSurface, shipKey, FlowField.uniform(new Vector3d(0, 0, 8)))
+        .render(stoneAndWoolWall(), ignored -> {});
+
+    List<FakeDisplay> still = transformed(stillSurface);
+    List<FakeDisplay> breeze = transformed(breezeSurface);
+    assertEquals(still.size(), breeze.size());
+    boolean moved = false;
+    for (int i = 0; i < still.size(); i++) {
+      if (Math.abs(still.get(i).location.getX() - breeze.get(i).location.getX()) > 1e-4
+          || Math.abs(still.get(i).location.getY() - breeze.get(i).location.getY()) > 1e-4
+          || Math.abs(still.get(i).location.getZ() - breeze.get(i).location.getZ()) > 1e-4) {
+        moved = true;
+        break;
+      }
+    }
+    assertTrue(moved, "renderer must pass wind into tessellation so plates billow");
   }
 
   @Test

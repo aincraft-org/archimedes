@@ -11,7 +11,9 @@ import dev.mintychochip.archimedes.sail.SailPiece;
 import dev.mintychochip.archimedes.ship.ShipHolder;
 import dev.mintychochip.archimedes.ship.ShipRendererLike;
 import dev.mintychochip.archimedes.ship.ShipRuntimeException;
+import dev.mintychochip.phys.FlowField;
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -53,17 +55,32 @@ public final class BukkitShipRenderer implements ShipRendererLike {
   /** Torn cloth ragdoll displays keyed by debris id. */
   private final Map<UUID, Ragdoll> ragdolls = new HashMap<>();
 
+  /** Wind sampled when tessellating sail plates. */
+  private final FlowField wind;
+
   /**
-   * Creates the renderer for a surface and namespace key.
+   * Creates the renderer for a surface and namespace key with still air.
    *
    * @param surface the rendering surface
    * @param shipKey the ship identifier tag key
    */
   public BukkitShipRenderer(RenderSurface surface, NamespacedKey shipKey) {
+    this(surface, shipKey, FlowField.still());
+  }
+
+  /**
+   * Creates the renderer for a surface, namespace key, and wind used to billow sail plates.
+   *
+   * @param surface the rendering surface
+   * @param shipKey the ship identifier tag key
+   * @param wind flow field sampled for cloth billow
+   */
+  public BukkitShipRenderer(RenderSurface surface, NamespacedKey shipKey, FlowField wind) {
     this.surface = surface;
     this.shipKey = shipKey;
     this.blockKey = new NamespacedKey(shipKey.getNamespace(), shipKey.getKey() + "-block");
     this.sailKey = new NamespacedKey(shipKey.getNamespace(), shipKey.getKey() + "-sail");
+    this.wind = Objects.requireNonNull(wind, "wind");
   }
 
   /**
@@ -116,10 +133,14 @@ public final class BukkitShipRenderer implements ShipRendererLike {
               });
       displays.add(display);
     }
-    List<SailPiece> pieces = SailMesh.tessellate(SailMesh.cellsOf(ship.intactBlocks()));
+    List<SailPiece> pieces = plates(ship);
     for (int i = 0; i < pieces.size(); i++) {
       displays.add(spawnSail(ship, pieces.get(i), i));
     }
+  }
+
+  private List<SailPiece> plates(Vehicle ship) {
+    return SailMesh.tessellate(SailMesh.cellsOf(ship.intactBlocks()), wind);
   }
 
   private BlockDisplay spawnSail(Vehicle ship, SailPiece piece, int index) {
@@ -202,11 +223,13 @@ public final class BukkitShipRenderer implements ShipRendererLike {
         surface.teleport(entry.getKey(), location(ship, entry.getValue()));
       }
       Map<String, BlockDisplay> sails = pairSails(ship);
-      List<SailPiece> pieces = SailMesh.tessellate(SailMesh.cellsOf(ship.intactBlocks()));
+      List<SailPiece> pieces = plates(ship);
       for (int i = 0; i < pieces.size(); i++) {
         BlockDisplay display = sails.get(Integer.toString(i));
         if (display != null) {
-          surface.teleport(display, SailTransform.location(surface, ship, pieces.get(i)));
+          SailPiece piece = pieces.get(i);
+          surface.teleport(display, SailTransform.location(surface, ship, piece));
+          display.setTransformation(SailTransform.transformation(piece));
         }
       }
     } catch (ShipRuntimeException failure) {
@@ -277,7 +300,7 @@ public final class BukkitShipRenderer implements ShipRendererLike {
     for (BlockDisplay sail : pairSails(ship).values()) {
       sail.remove();
     }
-    List<SailPiece> pieces = SailMesh.tessellate(SailMesh.cellsOf(ship.intactBlocks()));
+    List<SailPiece> pieces = plates(ship);
     for (int i = 0; i < pieces.size(); i++) {
       spawnSail(ship, pieces.get(i), i);
     }

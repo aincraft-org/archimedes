@@ -4,10 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import dev.mintychochip.phys.FlowField;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.joml.Vector3d;
 import org.junit.jupiter.api.Test;
 
 /** Behavior tests for the Paper-free cloth region → BlockDisplay plate transform. */
@@ -79,6 +81,48 @@ class SailMeshTest {
   @Test
   void emptyRegionEmitsNoPieces() {
     assertTrue(SailMesh.tessellate(List.of()).isEmpty());
+  }
+
+  @Test
+  void twoWindsProduceDifferentPlateGeometry() {
+    List<SailCell> cells = new ArrayList<>();
+    for (int x = 0; x < 3; x++) {
+      for (int y = 0; y < 2; y++) {
+        cells.add(new SailCell(x, y, 1, WHITE_WOOL));
+      }
+    }
+
+    List<SailPiece> still = SailMesh.tessellate(cells, FlowField.still());
+    List<SailPiece> south = SailMesh.tessellate(cells, FlowField.uniform(new Vector3d(0, 0, 8)));
+    List<SailPiece> east = SailMesh.tessellate(cells, FlowField.uniform(new Vector3d(8, 0, 0)));
+
+    assertEquals(still.size(), south.size());
+    assertTrue(geometryDiffers(still, south), "breeze must move plates off the still-air sheet");
+    assertTrue(geometryDiffers(south, east), "distinct wind directions must billow differently");
+    assertEquals(SailMesh.tessellate(cells), still);
+  }
+
+  private static boolean geometryDiffers(List<SailPiece> a, List<SailPiece> b) {
+    if (a.size() != b.size()) {
+      return true;
+    }
+    for (int i = 0; i < a.size(); i++) {
+      SailPiece left = a.get(i);
+      SailPiece right = b.get(i);
+      if (Math.abs(left.originX() - right.originX()) > EPS
+          || Math.abs(left.originY() - right.originY()) > EPS
+          || Math.abs(left.originZ() - right.originZ()) > EPS
+          || Math.abs(left.scaleX() - right.scaleX()) > EPS
+          || Math.abs(left.scaleY() - right.scaleY()) > EPS
+          || Math.abs(left.scaleZ() - right.scaleZ()) > EPS
+          || Math.abs(left.rotX() - right.rotX()) > EPS
+          || Math.abs(left.rotY() - right.rotY()) > EPS
+          || Math.abs(left.rotZ() - right.rotZ()) > EPS
+          || Math.abs(left.rotW() - right.rotW()) > EPS) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Test

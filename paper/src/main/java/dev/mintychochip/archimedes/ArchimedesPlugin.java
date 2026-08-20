@@ -75,7 +75,8 @@ public final class ArchimedesPlugin extends JavaPlugin {
       BukkitShipRiderTracker tracker =
           new BukkitShipRiderTracker(world, allShips, collisionOwnerKey, shipKey);
       RenderSurface surface = RenderSurface.of(world);
-      BukkitShipRenderer renderer = new BukkitShipRenderer(surface, shipKey);
+      FlowField wind = FlowField.uniform(new org.joml.Vector3d(0, 0, 8));
+      BukkitShipRenderer renderer = new BukkitShipRenderer(surface, shipKey, wind);
       BukkitCollisionVolumeManager collisions =
           new BukkitCollisionVolumeManager(world, collisionOwnerKey);
       BukkitShipEntityCarrier carrier =
@@ -93,7 +94,7 @@ public final class ArchimedesPlugin extends JavaPlugin {
               runtime,
               ship -> playerRiders(tracker, ship),
               DensityField.uniform(1.2),
-              FlowField.uniform(new org.joml.Vector3d(0, 0, 8)));
+              wind);
       service =
           new ShipServiceImpl(
               storeAdapter,
