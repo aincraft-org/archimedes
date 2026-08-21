@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 class SailMeshTest {
   private static final String WHITE_WOOL = "minecraft:white_wool";
   private static final String RED_WOOL = "minecraft:red_wool";
+  private static final String VS = " vs ";
   private static final double EPS = 1e-9;
 
   @Test
@@ -164,12 +165,12 @@ class SailMeshTest {
     Vector3d leftBot = SailMesh.localToWorld(left, 1, 0, 0);
     Vector3d rightTop = SailMesh.localToWorld(right, 0, 1, 0);
     Vector3d rightBot = SailMesh.localToWorld(right, 0, 0, 0);
-    assertEquals(leftBot.x, rightBot.x, 1e-9, leftBot + " vs " + rightBot);
-    assertEquals(leftBot.y, rightBot.y, 1e-9, leftBot + " vs " + rightBot);
-    assertEquals(leftBot.z, rightBot.z, 1e-9, leftBot + " vs " + rightBot);
-    assertEquals(leftTop.x, rightTop.x, 1e-9, leftTop + " vs " + rightTop);
-    assertEquals(leftTop.y, rightTop.y, 1e-9, leftTop + " vs " + rightTop);
-    assertEquals(leftTop.z, rightTop.z, 1e-9, leftTop + " vs " + rightTop);
+    assertEquals(leftBot.x, rightBot.x, 1e-9, leftBot + VS + rightBot);
+    assertEquals(leftBot.y, rightBot.y, 1e-9, leftBot + VS + rightBot);
+    assertEquals(leftBot.z, rightBot.z, 1e-9, leftBot + VS + rightBot);
+    assertEquals(leftTop.x, rightTop.x, 1e-9, leftTop + VS + rightTop);
+    assertEquals(leftTop.y, rightTop.y, 1e-9, leftTop + VS + rightTop);
+    assertEquals(leftTop.z, rightTop.z, 1e-9, leftTop + VS + rightTop);
   }
 
   @Test
@@ -189,12 +190,12 @@ class SailMeshTest {
     Vector3d b1 = SailMesh.localToWorld(bottom, 1, 1, 0);
     Vector3d t0 = SailMesh.localToWorld(top, 0, 0, 0);
     Vector3d t1 = SailMesh.localToWorld(top, 1, 0, 0);
-    assertEquals(b0.x, t0.x, 1e-9, b0 + " vs " + t0);
-    assertEquals(b0.y, t0.y, 1e-9, b0 + " vs " + t0);
-    assertEquals(b0.z, t0.z, 1e-9, b0 + " vs " + t0);
-    assertEquals(b1.x, t1.x, 1e-9, b1 + " vs " + t1);
-    assertEquals(b1.y, t1.y, 1e-9, b1 + " vs " + t1);
-    assertEquals(b1.z, t1.z, 1e-9, b1 + " vs " + t1);
+    assertEquals(b0.x, t0.x, 1e-9, b0 + VS + t0);
+    assertEquals(b0.y, t0.y, 1e-9, b0 + VS + t0);
+    assertEquals(b0.z, t0.z, 1e-9, b0 + VS + t0);
+    assertEquals(b1.x, t1.x, 1e-9, b1 + VS + t1);
+    assertEquals(b1.y, t1.y, 1e-9, b1 + VS + t1);
+    assertEquals(b1.z, t1.z, 1e-9, b1 + VS + t1);
   }
 
   @Test
@@ -213,8 +214,7 @@ class SailMeshTest {
       Vector3d thin = SailMesh.localToWorld(piece, 0, 0, 1).sub(origin);
       thin.normalize();
       assertTrue(
-          thin.z > 0.25,
-          "thin axis must face the windward side, not a scrambled basis: " + thin);
+          thin.z > 0.25, "thin axis must face the windward side, not a scrambled basis: " + thin);
       assertTrue(
           piece.scaleX() < 2.0 && piece.scaleY() < 2.0,
           "connected cloth plates must stay about one cell, got "

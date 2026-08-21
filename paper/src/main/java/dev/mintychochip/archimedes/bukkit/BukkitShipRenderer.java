@@ -101,7 +101,11 @@ public final class BukkitShipRenderer implements ShipRendererLike {
     return blockKey;
   }
 
-  /** Returns the identity key used by cannon interaction hitboxes. */
+  /**
+   * Returns the identity key used by cannon interaction hitboxes.
+   *
+   * @return cannon control identity key
+   */
   public NamespacedKey cannonControlKey() {
     return cannonControlKey;
   }

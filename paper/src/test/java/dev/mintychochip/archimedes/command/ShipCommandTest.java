@@ -771,8 +771,8 @@ class ShipCommandTest {
     }
 
     @Override
-    public void setMode(Vehicle ship, CollisionMode mode) {
-      this.mode = mode;
+    public void setMode(Vehicle ship, CollisionMode nextMode) {
+      this.mode = nextMode;
       this.last = ship;
     }
 

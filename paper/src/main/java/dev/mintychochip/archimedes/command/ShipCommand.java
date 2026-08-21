@@ -19,6 +19,9 @@ import org.jetbrains.annotations.NotNull;
 
 /** Executor for ship management commands. */
 public final class ShipCommand implements org.bukkit.command.CommandExecutor {
+  /** Shown when inspect, disassemble, kill, or collision cannot find a hull. */
+  private static final String NO_SHIP_NEARBY = "No ship nearby.";
+
   /** Vehicle service. */
   private final ShipService service;
 
@@ -157,7 +160,7 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
   private boolean inspect(Player player) {
     Vehicle ship = nearby(player);
     if (ship == null) {
-      player.sendMessage(ChatColor.RED + "No ship nearby.");
+      player.sendMessage(ChatColor.RED + NO_SHIP_NEARBY);
       return true;
     }
     ShipInspection report = physics.inspect(ship);
@@ -207,7 +210,7 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
     }
     Vehicle ship = nearby(player);
     if (ship == null) {
-      player.sendMessage(ChatColor.RED + "No ship nearby.");
+      player.sendMessage(ChatColor.RED + NO_SHIP_NEARBY);
       return true;
     }
     collisions.setMode(ship, mode);
@@ -230,7 +233,7 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
   private boolean disassemble(Player player) {
     Vehicle ship = nearby(player);
     if (ship == null) {
-      player.sendMessage(ChatColor.RED + "No ship nearby.");
+      player.sendMessage(ChatColor.RED + NO_SHIP_NEARBY);
       return true;
     }
     if (!service.disassemble(ship.id(), player.getUniqueId(), player.isOp())) {
@@ -247,7 +250,7 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
     }
     Vehicle ship = nearby(player);
     if (ship == null) {
-      player.sendMessage(ChatColor.RED + "No ship nearby.");
+      player.sendMessage(ChatColor.RED + NO_SHIP_NEARBY);
       return true;
     }
     if (!service.kill(ship.id(), player.getUniqueId(), player.isOp())) {

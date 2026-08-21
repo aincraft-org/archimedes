@@ -331,17 +331,14 @@ public final class SailMesh {
         double belly = strength * cup[i][j];
         verts[i][j] =
             new Vector3d(
-                rest.x + windDir.x * belly,
-                rest.y + windDir.y * belly,
-                rest.z + windDir.z * belly);
+                rest.x + windDir.x * belly, rest.y + windDir.y * belly, rest.z + windDir.z * belly);
       }
     }
     List<SailPiece> pieces = new ArrayList<>(plane.size());
     for (SailCell cell : plane.values()) {
       int i = planeU(axis, cell) - minU;
       int j = planeV(axis, cell) - minV;
-      pieces.add(
-          affinePlate(verts[i][j], verts[i + 1][j], verts[i][j + 1], cell.appearance()));
+      pieces.add(affinePlate(verts[i][j], verts[i + 1][j], verts[i][j + 1], cell.appearance()));
     }
     return pieces;
   }
@@ -349,6 +346,9 @@ public final class SailMesh {
   /**
    * Projects a vertex displacement field onto {@code f(u)+g(v)} so every quad is a parallelogram
    * and shared edges can coincide.
+   *
+   * @param target vertex belly samples
+   * @return parallelogram-compatible samples
    */
   private static double[][] projectParallelograms(double[][] target) {
     int nu = target.length;
@@ -378,8 +378,7 @@ public final class SailMesh {
     return projected;
   }
 
-  private static double vertexThin(
-      int u, int v, Map<PlaneKey, Double> restThin, double fallback) {
+  private static double vertexThin(int u, int v, Map<PlaneKey, Double> restThin, double fallback) {
     double sum = 0;
     int n = 0;
     for (int du = -1; du <= 0; du++) {
@@ -450,6 +449,11 @@ public final class SailMesh {
 
   /**
    * SVD of the 2×2 {@code [[a, b], [0, c]]} parallelogram map as rotations and positive scales.
+   *
+   * @param a first column x
+   * @param b second column x
+   * @param c second column y
+   * @return left rotation, scales, and right rotation
    */
   private static Svd2 svd2(double a, double b, double c) {
     double ata00 = a * a;

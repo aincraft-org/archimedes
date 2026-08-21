@@ -10,14 +10,7 @@ public final class ShipTabCompleter implements org.bukkit.command.TabCompleter {
   /** Known ship subcommands. */
   private static final List<String> SUBCOMMANDS =
       List.of(
-          "assemble",
-          "inspect",
-          "disassemble",
-          "kill",
-          "buoyancy",
-          "sink",
-          "sail",
-          "collision");
+          "assemble", "inspect", "disassemble", "kill", "buoyancy", "sink", "sail", "collision");
 
   /** Kill argument names. */
   private static final List<String> KILL_ARGS = List.of("all");
