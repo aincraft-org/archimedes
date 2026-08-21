@@ -1,6 +1,7 @@
 package dev.mintychochip.phys;
 
 import java.util.Objects;
+import org.joml.Matrix3d;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 
@@ -87,14 +88,30 @@ public final class Aabb implements Shape, Bounds {
   }
 
   /**
-   * Translates this local box by a transform's position.
+   * Returns the world-space axis-aligned bounds of this box under {@code transform}.
    *
-   * @param transform transform supplying the world-space translation
-   * @return translated bounds; orientation does not affect an axis-aligned box
+   * <p>The local center is rotated then translated. World half-extents are the axis-aligned extents
+   * of the rotated box, {@code worldHalf_i = Σ_j |R_ij| * localHalf_j}.
+   *
+   * @param transform world-space pose of this local box
+   * @return axis-aligned bounds enclosing the transformed box
    */
   @Override
   public Bounds bounds(Transform transform) {
-    Vector3d c = new Vector3d(transform.position()).add(center, new Vector3d());
-    return new Aabb(c, halfExtents);
+    Vector3d worldCenter = transform.orientation().transform(center, new Vector3d());
+    worldCenter.add(transform.position());
+    Matrix3d r = new Matrix3d().rotation(transform.orientation());
+    Vector3d worldHalf =
+        new Vector3d(
+            Math.abs(r.m00()) * halfExtents.x()
+                + Math.abs(r.m01()) * halfExtents.y()
+                + Math.abs(r.m02()) * halfExtents.z(),
+            Math.abs(r.m10()) * halfExtents.x()
+                + Math.abs(r.m11()) * halfExtents.y()
+                + Math.abs(r.m12()) * halfExtents.z(),
+            Math.abs(r.m20()) * halfExtents.x()
+                + Math.abs(r.m21()) * halfExtents.y()
+                + Math.abs(r.m22()) * halfExtents.z());
+    return new Aabb(worldCenter, worldHalf);
   }
 }

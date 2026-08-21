@@ -20,6 +20,30 @@ class AabbBodyImplTest {
   }
 
   @Test
+  void composeRotatesLocalOffsetThenAddsParentTranslation() {
+    Transform parent =
+        new Transform(new Vector3d(10, 0, 0), new Quaterniond().rotateY(Math.PI / 2));
+    Transform local = new Transform(new Vector3d(1, 0, 0), new Quaterniond());
+    Transform world = parent.compose(local);
+    assertEquals(10.0, world.position().x(), 1e-9);
+    assertEquals(0.0, world.position().y(), 1e-9);
+    assertEquals(-1.0, world.position().z(), 1e-9);
+  }
+
+  @Test
+  void boundsGrowsToWorldAabbOfRotatedBox() {
+    Aabb box = new Aabb(new Vector3d(), new Vector3d(1, 0.5, 0.5));
+    Transform yaw = new Transform(new Vector3d(), new Quaterniond().rotateY(Math.PI / 2));
+    Bounds world = box.bounds(yaw);
+    assertEquals(-0.5, world.min().x(), 1e-9);
+    assertEquals(-0.5, world.min().y(), 1e-9);
+    assertEquals(-1.0, world.min().z(), 1e-9);
+    assertEquals(0.5, world.max().x(), 1e-9);
+    assertEquals(0.5, world.max().y(), 1e-9);
+    assertEquals(1.0, world.max().z(), 1e-9);
+  }
+
+  @Test
   void bodyStoresState() {
     Transform t = new Transform(new Vector3d(), new Quaterniond());
     BodyImpl body = new BodyImpl(t, 2, List.of(), List.of());
