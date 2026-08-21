@@ -13,8 +13,10 @@ import org.joml.Vector3d;
  * center of mass; the origin is reconstructed as {@code com − R comLocal}. Angular acceleration
  * uses Euler's equation {@code I ω̇ = τ − ω × (Iω)}. The integrated orientation is renormalized
  * before it is stored; JOML's first-order {@code integrate} can leave {@code |q|} outside {@link
- * Quaternions#requireNormalized}'s {@code 1e-9} band. Gravity is not implicit; callers must attach
- * a gravity force when they want it.
+ * Quaternions#requireNormalized}'s {@code 1e-9} band. After integration, overlapping bodies are
+ * separated. Terrain pitch uses {@link Collisions#detectWorld} resolved by the caller so a
+ * half-space obstacle map cannot freeze ship ticks. Gravity is not implicit; callers must attach a
+ * gravity force when they want it.
  */
 public final class PhysicsEngine implements Physics {
   /**

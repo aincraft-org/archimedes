@@ -14,6 +14,12 @@ public final class Collisions {
   /** Extra margin around the union of all body bounds used as the octree root. */
   private static final double ROOT_PAD = 1.0;
 
+  /**
+   * Per-axis cap on world-voxel cells visited for one collider. Integer conversion saturates at
+   * {@link Integer#MAX_VALUE}, so an exploded AABB must not wrap the cell loop.
+   */
+  private static final int MAX_WORLD_CELLS_PER_AXIS = 8;
+
   private Collisions() {}
 
   /**
@@ -66,9 +72,74 @@ public final class Collisions {
   }
 
   /**
+   * Finds contacts between active bodies and solid world voxels overlapping their collider AABBs.
+   *
+   * <p>Colliders whose center is already inside a solid voxel are skipped so a fully buried hull is
+   * left to path clearance instead of generating a contact storm.
+   *
+   * @param world occupancy and fluid field
+   * @param bodies candidates
+   * @return the deepest contact per collider against overlapping solid voxels
+   */
+  public static List<Contact> detectWorld(World world, Collection<Body> bodies) {
+    Objects.requireNonNull(world);
+    Objects.requireNonNull(bodies);
+    List<Contact> contacts = new ArrayList<>();
+    Vector3d voxelHalf = new Vector3d(0.5, 0.5, 0.5);
+    for (Body body : bodies) {
+      if (!body.active() || body.colliders().isEmpty()) {
+        continue;
+      }
+      for (Collider collider : body.colliders()) {
+        Bounds box = colliderBounds(body, collider);
+        Vector3d colliderCenter =
+            new Vector3d(box.min()).add(box.max(), new Vector3d()).mul(0.5);
+        if (world.isObstacle(colliderCenter) && !world.fluidField().isFluid(colliderCenter)) {
+          continue;
+        }
+        int minX = (int) Math.floor(box.min().x());
+        int maxX = (int) Math.floor(box.max().x() - 1e-9);
+        int minY = (int) Math.floor(box.min().y());
+        int maxY = (int) Math.floor(box.max().y() - 1e-9);
+        int minZ = (int) Math.floor(box.min().z());
+        int maxZ = (int) Math.floor(box.max().z() - 1e-9);
+        if (maxX < minX
+            || maxY < minY
+            || maxZ < minZ
+            || (long) maxX - minX >= MAX_WORLD_CELLS_PER_AXIS
+            || (long) maxY - minY >= MAX_WORLD_CELLS_PER_AXIS
+            || (long) maxZ - minZ >= MAX_WORLD_CELLS_PER_AXIS) {
+          continue;
+        }
+        Contact best = null;
+        for (int x = minX; x <= maxX; x++) {
+          for (int y = minY; y <= maxY; y++) {
+            for (int z = minZ; z <= maxZ; z++) {
+              Vector3d p = new Vector3d(x + 0.5, y + 0.5, z + 0.5);
+              if (!world.isObstacle(p) || world.fluidField().isFluid(p)) {
+                continue;
+              }
+              Contact contact = aabbContact(body, null, box, new Aabb(p, voxelHalf));
+              if (contact != null
+                  && (best == null || contact.penetration() > best.penetration())) {
+                best = contact;
+              }
+            }
+          }
+        }
+        if (best != null) {
+          contacts.add(best);
+        }
+      }
+    }
+    return contacts;
+  }
+
+  /**
    * Separates overlapping bodies along the contact normal and kills closing speed.
    *
-   * @param contacts contacts from {@link #detect(Collection)}
+   * @param contacts contacts from {@link #detect(Collection)} or {@link #detectWorld(World,
+   *     Collection)}
    */
   public static void resolve(List<Contact> contacts) {
     Objects.requireNonNull(contacts);
@@ -79,7 +150,7 @@ public final class Collisions {
 
   private static void separate(Contact contact) {
     double wa = contact.a().active() ? contact.a().inverseMass() : 0;
-    double wb = contact.b().active() ? contact.b().inverseMass() : 0;
+    double wb = infinite(contact.b()) ? 0 : contact.b().inverseMass();
     double sum = wa + wb;
     if (sum == 0) {
       return;
@@ -88,7 +159,7 @@ public final class Collisions {
     if (contact.a().active()) {
       shift(contact.a(), normal, -contact.penetration() * (wa / sum));
     }
-    if (contact.b().active()) {
+    if (!infinite(contact.b())) {
       shift(contact.b(), normal, contact.penetration() * (wb / sum));
     }
     applyVelocityImpulse(contact, normal);
@@ -98,7 +169,7 @@ public final class Collisions {
     Vector3d ra = radius(contact.a(), contact.point());
     Vector3d relative = new Vector3d(pointVelocity(contact.a(), ra)).negate();
     Vector3d rb = new Vector3d();
-    if (contact.b().active()) {
+    if (!infinite(contact.b())) {
       rb = radius(contact.b(), contact.point());
       relative.add(pointVelocity(contact.b(), rb));
     }
@@ -107,7 +178,7 @@ public final class Collisions {
       return;
     }
     double ka = effectiveInvMass(contact.a(), ra, normal);
-    double kb = contact.b().active() ? effectiveInvMass(contact.b(), rb, normal) : 0;
+    double kb = infinite(contact.b()) ? 0 : effectiveInvMass(contact.b(), rb, normal);
     double denom = ka + kb;
     if (denom == 0) {
       return;
@@ -115,6 +186,10 @@ public final class Collisions {
     Vector3d impulse = new Vector3d(normal).mul(closing / denom);
     applyImpulse(contact.a(), ra, impulse, 1.0);
     applyImpulse(contact.b(), rb, impulse, -1.0);
+  }
+
+  private static boolean infinite(Body body) {
+    return body == null || !body.active();
   }
 
   private static Vector3d radius(Body body, Vector3dc point) {
@@ -135,7 +210,7 @@ public final class Collisions {
   }
 
   private static void applyImpulse(Body body, Vector3dc radius, Vector3dc impulse, double sign) {
-    if (!body.active()) {
+    if (body == null || !body.active()) {
       return;
     }
     body.setLinearVelocity(new Vector3d(body.linearVelocity()).fma(sign, impulse));
@@ -183,14 +258,22 @@ public final class Collisions {
     Vector3d centerB = center(bb);
     if (ox <= oy && ox <= oz) {
       double sign = centerB.x() >= centerA.x() ? 1 : -1;
-      return new Contact(a, b, point, new Vector3d(sign, 0, 0), ox);
+      return contact(a, b, point, new Vector3d(sign, 0, 0), ox);
     }
     if (oy <= oz) {
       double sign = centerB.y() >= centerA.y() ? 1 : -1;
-      return new Contact(a, b, point, new Vector3d(0, sign, 0), oy);
+      return contact(a, b, point, new Vector3d(0, sign, 0), oy);
     }
     double sign = centerB.z() >= centerA.z() ? 1 : -1;
-    return new Contact(a, b, point, new Vector3d(0, 0, sign), oz);
+    return contact(a, b, point, new Vector3d(0, 0, sign), oz);
+  }
+
+  private static Contact contact(
+      Body a, Body b, Vector3dc point, Vector3dc normal, double penetration) {
+    if (b == null) {
+      return Contact.world(a, point, normal, penetration);
+    }
+    return new Contact(a, b, point, normal, penetration);
   }
 
   private static Bounds worldBounds(Body body) {
