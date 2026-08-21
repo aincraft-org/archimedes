@@ -40,6 +40,14 @@ public final class WaterlineResolver {
   }
 
   /**
+   * Displaced fluid mass and mass-weighted wet-cell centroid.
+   *
+   * @param mass displaced mass in the same units as {@link World#fluidField()} density
+   * @param centroid world-space center of buoyancy; unused when {@code mass} is 0
+   */
+  public record Displacement(double mass, Vector3d centroid) {}
+
+  /**
    * Sums fluid density of each collider times the fraction of that cell below the free surface.
    *
    * <p>The free surface is the top of the highest water block ({@code surface + 1}). A deck that
@@ -53,7 +61,22 @@ public final class WaterlineResolver {
    * @return displaced mass in the same units as {@link World#fluidField()} density
    */
   public static double displacedMass(Body body, World world) {
+    return displacement(body, world).mass();
+  }
+
+  /**
+   * Displaced fluid mass and mass-weighted wet-cell centroid for {@code body}.
+   *
+   * <p>Each wet collider contributes at the center of its submerged slab {@code (midX, minY +
+   * wetHeight/2, midZ)}, weighted by wet fraction times sampled density.
+   *
+   * @param body body whose colliders are sampled
+   * @param world world supplying fluid
+   * @return displaced mass and centroid; centroid is unused when mass is 0
+   */
+  public static Displacement displacement(Body body, World world) {
     double mass = 0;
+    Vector3d moment = new Vector3d();
     for (Collider c : body.colliders()) {
       Bounds b = c.shape().bounds(transform(body, c));
       int surface = waterSurface(world, b);
@@ -70,12 +93,20 @@ public final class WaterlineResolver {
         continue;
       }
       double fraction = Math.min(1.0, wetHeight / height);
-      Vector3d wet =
-          new Vector3d(
-              (b.min().x() + b.max().x()) / 2.0, surface + 0.5, (b.min().z() + b.max().z()) / 2.0);
-      mass += fraction * world.fluidField().density(wet);
+      double midX = (b.min().x() + b.max().x()) / 2.0;
+      double midZ = (b.min().z() + b.max().z()) / 2.0;
+      Vector3d wet = new Vector3d(midX, surface + 0.5, midZ);
+      double dm = fraction * world.fluidField().density(wet);
+      if (dm <= 0) {
+        continue;
+      }
+      mass += dm;
+      moment.fma(dm, new Vector3d(midX, b.min().y() + wetHeight / 2.0, midZ));
     }
-    return mass;
+    if (mass == 0) {
+      return new Displacement(0, new Vector3d());
+    }
+    return new Displacement(mass, moment.div(mass));
   }
 
   /**
@@ -95,7 +126,7 @@ public final class WaterlineResolver {
 
   /**
    * @param world fluid map
-   * @param bounds collider world bounds
+   * @param b collider world bounds
    * @return highest water-block Y in the collider's column, or {@link #NO_WATER}
    */
   private static int waterSurface(World world, Bounds b) {
@@ -192,16 +223,14 @@ public final class WaterlineResolver {
   }
 
   /**
-   * Builds a collider transform by combining the body's world position with local collider pose.
+   * Builds a collider transform by composing the body's world pose with the local collider pose.
    *
    * @param body body supplying the world transform
    * @param c collider supplying the local transform
    * @return world-space collider transform
    */
   private static Transform transform(Body body, Collider c) {
-    return new Transform(
-        body.transform().position().add(c.localTransform().position(), new Vector3d()),
-        c.localTransform().orientation());
+    return body.transform().compose(c.localTransform());
   }
 
   /**

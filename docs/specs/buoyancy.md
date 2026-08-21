@@ -1,7 +1,7 @@
 # Buoyancy — Living Spec
 
 > Status: active
-> Last updated: 2026-08-17
+> Last updated: 2026-08-21
 > Owners: jlo
 
 Give assembled ships rigid-body vertical buoyancy by attaching gravity and waterline lift to the generic physics engine. No horizontal movement, steering, or rotation.
@@ -67,6 +67,7 @@ Success looks like: a heavier hull sits deeper, a player stepping on board dips 
 
 - Positive manual sink remains unbounded below the waterline and does not alter velocity. The command and service require `blocks >= 1`; `BuoyancyImpl` also rejects non-positive values defensively.
 - Rider mass is runtime-only (tracked players). Jumping off un-rides and lightens the hull; landing adds the load again, which is the visible step-on bob.
+- Generic `Collisions.detectWorld` can depenetrate hull AABBs against `isObstacle` with pitch torque. `PhysicsEngine.step` does not invoke it; committed ship pose is still translation-only and path-checked. Visible tilt remains out of scope for the ship client.
 
 ## Next
 

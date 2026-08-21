@@ -124,7 +124,7 @@ class CatalogAndFieldInventoryTest {
   }
 
   @Test
-  void waterlineAndEnvelopeBuoyancyApplyZeroTorque() {
+  void centeredWaterlineAndEnvelopeBuoyancyApplyZeroTorque() {
     BodyImpl body =
         new BodyImpl(
             new Transform(new Vector3d(), new Quaterniond()),

@@ -61,15 +61,14 @@ public final class MediumThrustForce implements Force {
     Objects.requireNonNull(body);
     Objects.requireNonNull(world);
     DensityField field = medium != null ? medium : DensityField.liquid(world.fluidField());
-    Vector3d worldPoint = body.transform().orientation().transform(localPoint, new Vector3d());
-    worldPoint.add(body.transform().position());
+    Vector3d worldPoint = MassProperties.worldPoint(body, localPoint);
     double density = field.density(worldPoint);
     Vector3d force =
         body.transform()
             .orientation()
             .transform(localAxis, new Vector3d())
             .mul(coefficient * density);
-    Vector3d radius = new Vector3d(worldPoint).sub(body.transform().position());
+    Vector3d radius = MassProperties.radiusAboutCom(body, localPoint);
     return new Result(force, radius.cross(force, new Vector3d()));
   }
 

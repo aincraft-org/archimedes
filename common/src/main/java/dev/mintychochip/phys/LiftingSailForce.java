@@ -12,9 +12,16 @@ import org.joml.Vector3dc;
  * + 0.1 C_L²}. {@link FluidField#isFluid} is never read.
  */
 public final class LiftingSailForce implements Force {
+  /** Lift slope {@code dC_L/dα} in the linear range. */
   private static final double LIFT_SLOPE = 2.0;
+
+  /** Absolute cap on {@code C_L}. */
   private static final double MAX_CL = 1.2;
+
+  /** Parasite drag coefficient. */
   private static final double CD0 = 0.08;
+
+  /** Induced-drag factor in {@code C_D = C_{D0} + k C_L²}. */
   private static final double INDUCED = 0.1;
 
   /** Center of pressure in the body frame. */
@@ -84,8 +91,8 @@ public final class LiftingSailForce implements Force {
   public Result apply(Body body, World world) {
     Objects.requireNonNull(body);
     Objects.requireNonNull(world);
-    Vector3d radius = body.transform().orientation().transform(localPoint, new Vector3d());
-    Vector3d point = new Vector3d(radius).add(body.transform().position());
+    Vector3d radius = MassProperties.radiusAboutCom(body, localPoint);
+    Vector3d point = MassProperties.worldPoint(body, localPoint);
     Vector3d apparent =
         new Vector3d(wind.velocity(point))
             .sub(body.linearVelocity())

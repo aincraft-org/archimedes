@@ -30,7 +30,7 @@ public final class FluidBuoyancyForce implements Force {
    *
    * @param body body whose collider volumes are sampled
    * @param world world supplying gravity and, when needed, liquid density
-   * @return upward buoyancy force proportional to displaced fluid mass
+   * @return buoyancy {@code F = −m g} at the displaced-mass centroid about the center of mass
    */
   @Override
   public Result apply(Body body, World world) {
@@ -38,9 +38,20 @@ public final class FluidBuoyancyForce implements Force {
     Objects.requireNonNull(world);
     DensityField field = medium != null ? medium : DensityField.liquid(world.fluidField());
     double displacedMass = 0;
+    Vector3d moment = new Vector3d();
     for (Collider collider : body.colliders()) {
-      displacedMass += DensitySampling.displacedMass(body, collider, field);
+      DensitySampling.Displacement d = DensitySampling.displacement(body, collider, field);
+      displacedMass += d.mass();
+      if (d.mass() > 0) {
+        moment.fma(d.mass(), d.centroid());
+      }
     }
-    return new Result(new Vector3d(world.gravity()).mul(-displacedMass), new Vector3d());
+    Vector3d force = new Vector3d(world.gravity()).mul(-displacedMass);
+    if (displacedMass == 0) {
+      return new Result(force, new Vector3d());
+    }
+    Vector3d centroid = moment.div(displacedMass);
+    Vector3d r = centroid.sub(MassProperties.worldCenterOfMass(body), new Vector3d());
+    return new Result(force, r.cross(force, new Vector3d()));
   }
 }

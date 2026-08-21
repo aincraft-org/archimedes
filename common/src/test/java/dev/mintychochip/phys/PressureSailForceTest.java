@@ -162,4 +162,28 @@ class PressureSailForceTest {
         IllegalArgumentException.class,
         () -> new PressureSailForce(new Vector3d(), new Vector3d(1, 0, 0), 0, air, wind));
   }
+
+  @Test
+  void sailAtCenterOfMassProducesZeroTorque() {
+    Collider cell =
+        new ColliderImpl(
+            new Aabb(new Vector3d(), new Vector3d(0.5, 0.5, 0.5)),
+            new Material(1),
+            new Transform(new Vector3d(2, 0, 0), new Quaterniond()));
+    BodyImpl body =
+        new BodyImpl(new Transform(new Vector3d(), new Quaterniond()), 1, List.of(cell), List.of());
+    PressureSailForce sail =
+        new PressureSailForce(
+            new Vector3d(2, 0, 0),
+            new Vector3d(0, 0, 1),
+            2,
+            DensityField.uniform(1.2),
+            FlowField.uniform(new Vector3d(0, 0, 10)));
+    assertEquals(
+        0.0,
+        sail.apply(body, PhysFixtures.world(0.1, new Vector3d(), PhysFixtures.vacuum()))
+            .torque()
+            .length(),
+        1e-9);
+  }
 }

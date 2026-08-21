@@ -1,6 +1,7 @@
 package dev.mintychochip.phys;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import org.joml.Quaterniond;
@@ -56,5 +57,30 @@ class FluidBuoyancyForceTest {
     Force.Result result = new FluidBuoyancyForce().apply(body, world);
 
     assertEquals(5000.0, result.force().y(), 1.0);
+  }
+
+  @Test
+  void offsetDisplacedVolumeProducesRestoringTorqueAboutCom() {
+    Collider plus =
+        new ColliderImpl(
+            new Aabb(new Vector3d(), new Vector3d(0.5, 0.5, 0.5)),
+            new Material(1),
+            new Transform(new Vector3d(0, 0, 2), new Quaterniond()));
+    Collider minus =
+        new ColliderImpl(
+            new Aabb(new Vector3d(), new Vector3d(0.5, 0.5, 0.5)),
+            new Material(1),
+            new Transform(new Vector3d(0, 0, -2), new Quaterniond()));
+    BodyImpl body =
+        new BodyImpl(
+            new Transform(new Vector3d(), new Quaterniond()), 2, List.of(plus, minus), List.of());
+    DensityField onlyPlusZ = p -> p.z() > 0 ? 1000.0 : 0.0;
+    World world = PhysFixtures.world(0.1, new Vector3d(0, -10, 0), PhysFixtures.vacuum());
+    Force.Result result = new FluidBuoyancyForce(onlyPlusZ).apply(body, world);
+    // F = -ρV g = (0, +10000, 0) approximately (V=1, ρ=1000, g_y=-10)
+    assertTrue(result.force().y() > 0);
+    assertEquals(0.0, result.torque().y(), 1e-6);
+    assertTrue(Math.abs(result.torque().x()) > 1e-6, "pitch torque from offset CoB");
+    assertEquals(0.0, result.torque().z(), 1.0);
   }
 }

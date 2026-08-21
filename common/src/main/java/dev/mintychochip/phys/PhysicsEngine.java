@@ -9,11 +9,14 @@ import org.joml.Vector3d;
  * Stateless semi-implicit Euler integrator for active rigid bodies.
  *
  * <p>Each step sums the body's explicit forces and torques, updates linear and angular velocity,
- * then advances position and orientation by the world's timestep. Angular acceleration uses Euler's
- * equation {@code I ω̇ = τ − ω × (Iω)}. The integrated orientation is renormalized before it is
- * stored; JOML's first-order {@code integrate} can leave {@code |q|} outside {@link
- * Quaternions#requireNormalized}'s {@code 1e-9} band. Gravity is not implicit; callers must attach
- * a gravity force when they want it.
+ * then advances position and orientation by the world's timestep. Linear motion is of the world
+ * center of mass; the origin is reconstructed as {@code com − R comLocal}. Angular acceleration
+ * uses Euler's equation {@code I ω̇ = τ − ω × (Iω)}. The integrated orientation is renormalized
+ * before it is stored; JOML's first-order {@code integrate} can leave {@code |q|} outside {@link
+ * Quaternions#requireNormalized}'s {@code 1e-9} band. After integration, overlapping bodies are
+ * separated. Terrain pitch uses {@link Collisions#detectWorld} resolved by the caller so a
+ * half-space obstacle map cannot freeze ship ticks. Gravity is not implicit; callers must attach a
+ * gravity force when they want it.
  */
 public final class PhysicsEngine implements Physics {
   /**
@@ -51,10 +54,14 @@ public final class PhysicsEngine implements Physics {
       Vector3d newOmega = omega.add(angularAcc.mul(dt, new Vector3d()), new Vector3d());
       body.setAngularVelocity(newOmega);
 
+      Vector3d comLocal = new Vector3d(body.centerOfMassLocal());
       Vector3d p = new Vector3d(body.transform().position());
       Quaterniond q = new Quaterniond(body.transform().orientation());
+      Vector3d com = q.transform(comLocal, new Vector3d()).add(p);
       Quaterniond newQ = q.integrate(dt, newOmega.x(), newOmega.y(), newOmega.z()).normalize();
-      body.setTransform(new Transform(p.add(newV.mul(dt, new Vector3d()), new Vector3d()), newQ));
+      Vector3d newCom = com.add(newV.mul(dt, new Vector3d()), new Vector3d());
+      Vector3d newP = newCom.sub(newQ.transform(comLocal, new Vector3d()));
+      body.setTransform(new Transform(newP, newQ));
     }
     Collisions.resolve(Collisions.detect(bodies));
   }

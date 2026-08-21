@@ -81,8 +81,8 @@ public final class PressureSailForce implements Force {
   public Result apply(Body body, World world) {
     Objects.requireNonNull(body);
     Objects.requireNonNull(world);
-    Vector3d radius = body.transform().orientation().transform(localPoint, new Vector3d());
-    Vector3d point = new Vector3d(radius).add(body.transform().position());
+    Vector3d radius = MassProperties.radiusAboutCom(body, localPoint);
+    Vector3d point = MassProperties.worldPoint(body, localPoint);
     Vector3d apparent =
         new Vector3d(wind.velocity(point))
             .sub(body.linearVelocity())

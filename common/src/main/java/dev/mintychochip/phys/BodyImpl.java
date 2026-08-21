@@ -22,6 +22,9 @@ public final class BodyImpl implements Body {
   /** Constant mass. */
   private final double mass;
 
+  /** Body-frame mass centroid of AABB colliders, or the origin. */
+  private final Vector3d centerOfMassLocal;
+
   /** Whether the body participates in integration. */
   private boolean active = true;
 
@@ -53,7 +56,8 @@ public final class BodyImpl implements Body {
     this.mass = mass;
     this.colliders = List.copyOf(colliders);
     this.forces = List.copyOf(forces);
-    this.bodyInertia = inertiaFromColliders(this.colliders, mass);
+    this.centerOfMassLocal = centerOfMassFromColliders(this.colliders);
+    this.bodyInertia = inertiaFromColliders(this.colliders, mass, this.centerOfMassLocal);
     this.bodyInverseInertia = invertInertia(this.bodyInertia, mass);
   }
 
@@ -114,8 +118,8 @@ public final class BodyImpl implements Body {
   }
 
   /**
-   * Returns world-frame inertia. AABB colliders produce an anisotropic tensor about the body
-   * origin; no colliders fall back to {@code m I}.
+   * Returns world-frame inertia. AABB colliders produce an anisotropic tensor about the center of
+   * mass; no colliders fall back to {@code m I}.
    *
    * @return inertia tensor
    */
@@ -132,6 +136,15 @@ public final class BodyImpl implements Body {
     return rotateTensor(bodyInverseInertia);
   }
 
+  /**
+   * Returns the body-frame center of mass.
+   *
+   * @return mass centroid of colliders, or the origin when there are none
+   */
+  public Vector3dc centerOfMassLocal() {
+    return new Vector3d(centerOfMassLocal);
+  }
+
   private Matrix3d rotateTensor(Matrix3dc body) {
     Quaterniondc q = transform.orientation();
     Matrix3d rotation = new Matrix3d().rotation(q);
@@ -141,7 +154,28 @@ public final class BodyImpl implements Body {
     return world;
   }
 
-  private static Matrix3d inertiaFromColliders(List<Collider> colliders, double bodyMass) {
+  private static Vector3d centerOfMassFromColliders(List<Collider> colliders) {
+    Vector3d weighted = new Vector3d();
+    double colliderMass = 0;
+    for (Collider collider : colliders) {
+      if (!(collider.shape() instanceof Aabb box)) {
+        continue;
+      }
+      double m = aabbMass(box, collider.material());
+      if (m <= 0) {
+        continue;
+      }
+      colliderMass += m;
+      weighted.fma(m, colliderCentroid(collider, box));
+    }
+    if (colliderMass <= 0) {
+      return new Vector3d();
+    }
+    return weighted.div(colliderMass);
+  }
+
+  private static Matrix3d inertiaFromColliders(
+      List<Collider> colliders, double bodyMass, Vector3dc com) {
     Matrix3d inertia = new Matrix3d().zero();
     double colliderMass = 0;
     for (Collider collider : colliders) {
@@ -149,18 +183,16 @@ public final class BodyImpl implements Body {
         continue;
       }
       Vector3dc h = box.halfExtents();
-      double volume = 8 * h.x() * h.y() * h.z();
-      double m = collider.material().density() * volume;
-      if (m <= 0 || !Double.isFinite(m)) {
+      double m = aabbMass(box, collider.material());
+      if (m <= 0) {
         continue;
       }
       colliderMass += m;
       double ixx = m / 3.0 * (h.y() * h.y() + h.z() * h.z());
       double iyy = m / 3.0 * (h.x() * h.x() + h.z() * h.z());
       double izz = m / 3.0 * (h.x() * h.x() + h.y() * h.y());
-      Vector3d r = new Vector3d(box.center());
-      collider.localTransform().orientation().transform(r);
-      r.add(collider.localTransform().position());
+      Vector3d r = colliderCentroid(collider, box);
+      r.sub(com);
       // I += I_cm + m ((r·r) 1 - r rᵀ)
       double r2 = r.lengthSquared();
       inertia.m00 += ixx + m * (r2 - r.x() * r.x());
@@ -178,6 +210,23 @@ public final class BodyImpl implements Body {
     }
     inertia.scale(bodyMass / colliderMass);
     return inertia;
+  }
+
+  private static double aabbMass(Aabb box, Material material) {
+    Vector3dc h = box.halfExtents();
+    double volume = 8 * h.x() * h.y() * h.z();
+    double m = material.density() * volume;
+    if (m <= 0 || !Double.isFinite(m)) {
+      return 0;
+    }
+    return m;
+  }
+
+  private static Vector3d colliderCentroid(Collider collider, Aabb box) {
+    Vector3d r = new Vector3d(box.center());
+    collider.localTransform().orientation().transform(r);
+    r.add(collider.localTransform().position());
+    return r;
   }
 
   private static Matrix3d invertInertia(Matrix3d inertia, double bodyMass) {

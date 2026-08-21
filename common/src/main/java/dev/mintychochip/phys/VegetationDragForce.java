@@ -53,10 +53,8 @@ public final class VegetationDragForce implements Force {
       return clamp(world.vegetation(body.transform().position()));
     }
     double sum = 0;
-    Vector3d center = new Vector3d();
     for (Collider collider : colliders) {
-      body.transform().position().add(collider.localTransform().position(), center);
-      sum += world.vegetation(center);
+      sum += world.vegetation(body.transform().compose(collider.localTransform()).position());
     }
     return clamp(sum / colliders.size());
   }

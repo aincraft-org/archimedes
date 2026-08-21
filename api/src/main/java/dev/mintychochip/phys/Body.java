@@ -77,6 +77,13 @@ public interface Body {
   Matrix3dc inverseInertia();
 
   /**
+   * Returns the body-frame center of mass.
+   *
+   * @return mass centroid of colliders, or the origin when there are none
+   */
+  Vector3dc centerOfMassLocal();
+
+  /**
    * Returns the body's fixed, unmodifiable collider collection.
    *
    * @return colliders

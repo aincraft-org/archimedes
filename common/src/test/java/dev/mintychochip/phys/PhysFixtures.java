@@ -1,5 +1,6 @@
 package dev.mintychochip.phys;
 
+import java.util.function.Predicate;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
@@ -20,6 +21,28 @@ final class PhysFixtures {
 
       public double timeStep() {
         return dt;
+      }
+    };
+  }
+
+  static World world(
+      double dt, Vector3dc gravity, FluidField fluids, Predicate<Vector3dc> obstacle) {
+    Vector3d g = new Vector3d(gravity);
+    return new World() {
+      public Vector3dc gravity() {
+        return g;
+      }
+
+      public FluidField fluidField() {
+        return fluids;
+      }
+
+      public double timeStep() {
+        return dt;
+      }
+
+      public boolean isObstacle(Vector3dc point) {
+        return obstacle.test(point);
       }
     };
   }

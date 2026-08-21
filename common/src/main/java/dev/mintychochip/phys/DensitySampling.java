@@ -5,28 +5,43 @@ import org.joml.Vector3dc;
 
 /** Volume-grid density samples shared by hydrostatic buoyancy and density-scaled drag. */
 final class DensitySampling {
+  /**
+   * Displaced fluid mass and mass-weighted sample centroid of one collider.
+   *
+   * @param mass displaced mass
+   * @param centroid world-space center of buoyancy; unused when {@code mass} is 0
+   */
+  record Displacement(double mass, Vector3d centroid) {}
+
   /** Prevents instantiation. */
   private DensitySampling() {}
 
   /**
    * Displaced fluid mass of one collider under {@code field}.
    *
-   * @param body body providing the world translation
+   * @param body body providing the world pose
    * @param collider collider whose volume is sampled
    * @param field density sampler
    * @return finite non-negative mass
    */
   static double displacedMass(Body body, Collider collider, DensityField field) {
+    return displacement(body, collider, field).mass();
+  }
+
+  /**
+   * Displaced fluid mass and mass-weighted sample centroid of one collider under {@code field}.
+   *
+   * @param body body providing the world pose
+   * @param collider collider whose volume is sampled
+   * @param field density sampler
+   * @return displaced mass and centroid; centroid is unused when mass is 0
+   */
+  static Displacement displacement(Body body, Collider collider, DensityField field) {
     double volume = collider.shape().volume();
     if (volume <= 0) {
-      return 0;
+      return new Displacement(0, new Vector3d());
     }
-    Vector3d worldCenter =
-        body.transform().position().add(collider.localTransform().position(), new Vector3d());
-    Bounds bounds =
-        collider
-            .shape()
-            .bounds(new Transform(worldCenter, collider.localTransform().orientation()));
+    Bounds bounds = collider.shape().bounds(body.transform().compose(collider.localTransform()));
     Vector3dc min = bounds.min();
     Vector3dc max = bounds.max();
     double sx = max.x() - min.x();
@@ -37,6 +52,7 @@ final class DensitySampling {
     int nz = sampleCount(sz);
     double cellVolume = volume / (nx * ny * nz);
     double mass = 0;
+    Vector3d moment = new Vector3d();
     for (int ix = 0; ix < nx; ix++) {
       for (int iy = 0; iy < ny; iy++) {
         for (int iz = 0; iz < nz; iz++) {
@@ -45,11 +61,18 @@ final class DensitySampling {
                   min.x() + (ix + 0.5) * (sx / nx),
                   min.y() + (iy + 0.5) * (sy / ny),
                   min.z() + (iz + 0.5) * (sz / nz));
-          mass += field.density(sample) * cellVolume;
+          double dm = field.density(sample) * cellVolume;
+          mass += dm;
+          if (dm > 0) {
+            moment.fma(dm, sample);
+          }
         }
       }
     }
-    return mass;
+    if (mass == 0) {
+      return new Displacement(0, new Vector3d());
+    }
+    return new Displacement(mass, moment.div(mass));
   }
 
   /**
