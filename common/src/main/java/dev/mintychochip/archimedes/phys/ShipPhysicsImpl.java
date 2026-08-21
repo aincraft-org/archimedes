@@ -13,6 +13,7 @@ import dev.mintychochip.phys.DensityField;
 import dev.mintychochip.phys.FlowField;
 import dev.mintychochip.phys.Force;
 import dev.mintychochip.phys.GravityForce;
+import dev.mintychochip.phys.MassProperties;
 import dev.mintychochip.phys.MediumThrustForce;
 import dev.mintychochip.phys.Physics;
 import dev.mintychochip.phys.PressureSailForce;
@@ -597,6 +598,7 @@ public final class ShipPhysicsImpl implements ShipPhysics {
     double newY = old.y();
     for (int i = 0; i < steps; i++) {
       physics.step(world, List.of(body));
+      discardSpin(body);
       newY = clamp(ship, old.y(), body);
       if (!withSails) {
         body.setLinearVelocity(new Vector3d(body.linearVelocity()).mul(config.damping()));
@@ -649,6 +651,21 @@ public final class ShipPhysicsImpl implements ShipPhysics {
               body.transform().orientation()));
     }
     return clampedY;
+  }
+
+  /**
+   * Drops spin and reconstructs the origin from the world CoM at identity orientation.
+   *
+   * <p>{@link ShipPose} does not store heading. Leaving a non-identity {@code R} would walk the
+   * origin around the CoM and commit that orbit as translation.
+   *
+   * @param body body whose pose is reduced to a brick translation
+   */
+  private static void discardSpin(Body body) {
+    Vector3d origin =
+        MassProperties.worldCenterOfMass(body).sub(body.centerOfMassLocal(), new Vector3d());
+    body.setTransform(new Transform(origin, new Quaterniond()));
+    body.setAngularVelocity(new Vector3d());
   }
 
   /**
