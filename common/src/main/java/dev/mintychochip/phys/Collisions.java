@@ -91,26 +91,57 @@ public final class Collisions {
     if (contact.b().active()) {
       shift(contact.b(), normal, contact.penetration() * (wb / sum));
     }
-    Vector3d relative =
-        new Vector3d(contact.b().linearVelocity()).sub(contact.a().linearVelocity());
+    applyVelocityImpulse(contact, normal);
+  }
+
+  private static void applyVelocityImpulse(Contact contact, Vector3dc normal) {
+    Vector3d ra = radius(contact.a(), contact.point());
+    Vector3d relative = new Vector3d(pointVelocity(contact.a(), ra)).negate();
+    Vector3d rb = new Vector3d();
+    if (contact.b().active()) {
+      rb = radius(contact.b(), contact.point());
+      relative.add(pointVelocity(contact.b(), rb));
+    }
     double closing = relative.dot(normal);
     if (closing >= 0) {
       return;
     }
-    if (contact.a().active()) {
-      contact
-          .a()
-          .setLinearVelocity(
-              new Vector3d(contact.a().linearVelocity())
-                  .add(normal.mul(closing * (wa / sum), new Vector3d())));
+    double ka = effectiveInvMass(contact.a(), ra, normal);
+    double kb = contact.b().active() ? effectiveInvMass(contact.b(), rb, normal) : 0;
+    double denom = ka + kb;
+    if (denom == 0) {
+      return;
     }
-    if (contact.b().active()) {
-      contact
-          .b()
-          .setLinearVelocity(
-              new Vector3d(contact.b().linearVelocity())
-                  .sub(normal.mul(closing * (wb / sum), new Vector3d())));
+    Vector3d impulse = new Vector3d(normal).mul(closing / denom);
+    applyImpulse(contact.a(), ra, impulse, 1.0);
+    applyImpulse(contact.b(), rb, impulse, -1.0);
+  }
+
+  private static Vector3d radius(Body body, Vector3dc point) {
+    return new Vector3d(point).sub(MassProperties.worldCenterOfMass(body));
+  }
+
+  private static Vector3d pointVelocity(Body body, Vector3dc radius) {
+    Vector3d tangential = new Vector3d(body.angularVelocity()).cross(radius, new Vector3d());
+    return new Vector3d(body.linearVelocity()).add(tangential);
+  }
+
+  private static double effectiveInvMass(Body body, Vector3dc radius, Vector3dc normal) {
+    if (!body.active()) {
+      return 0;
     }
+    Vector3d rXn = new Vector3d(radius).cross(normal, new Vector3d());
+    return body.inverseMass() + rXn.dot(body.inverseInertia().transform(rXn, new Vector3d()));
+  }
+
+  private static void applyImpulse(Body body, Vector3dc radius, Vector3dc impulse, double sign) {
+    if (!body.active()) {
+      return;
+    }
+    body.setLinearVelocity(new Vector3d(body.linearVelocity()).fma(sign, impulse));
+    Vector3d angularImpulse = new Vector3d(radius).cross(impulse, new Vector3d()).mul(sign);
+    Vector3d deltaOmega = body.inverseInertia().transform(angularImpulse, new Vector3d());
+    body.setAngularVelocity(new Vector3d(body.angularVelocity()).add(deltaOmega));
   }
 
   private static void shift(Body body, Vector3dc normal, double distance) {
@@ -135,24 +166,31 @@ public final class Collisions {
   }
 
   private static Contact aabbContact(Body a, Body b, Bounds ba, Bounds bb) {
-    double ox = Math.min(ba.max().x(), bb.max().x()) - Math.max(ba.min().x(), bb.min().x());
-    double oy = Math.min(ba.max().y(), bb.max().y()) - Math.max(ba.min().y(), bb.min().y());
-    double oz = Math.min(ba.max().z(), bb.max().z()) - Math.max(ba.min().z(), bb.min().z());
+    double minX = Math.max(ba.min().x(), bb.min().x());
+    double minY = Math.max(ba.min().y(), bb.min().y());
+    double minZ = Math.max(ba.min().z(), bb.min().z());
+    double maxX = Math.min(ba.max().x(), bb.max().x());
+    double maxY = Math.min(ba.max().y(), bb.max().y());
+    double maxZ = Math.min(ba.max().z(), bb.max().z());
+    double ox = maxX - minX;
+    double oy = maxY - minY;
+    double oz = maxZ - minZ;
     if (ox <= 0 || oy <= 0 || oz <= 0) {
       return null;
     }
+    Vector3d point = new Vector3d(minX + maxX, minY + maxY, minZ + maxZ).mul(0.5);
     Vector3d centerA = center(ba);
     Vector3d centerB = center(bb);
     if (ox <= oy && ox <= oz) {
       double sign = centerB.x() >= centerA.x() ? 1 : -1;
-      return new Contact(a, b, new Vector3d(sign, 0, 0), ox);
+      return new Contact(a, b, point, new Vector3d(sign, 0, 0), ox);
     }
     if (oy <= oz) {
       double sign = centerB.y() >= centerA.y() ? 1 : -1;
-      return new Contact(a, b, new Vector3d(0, sign, 0), oy);
+      return new Contact(a, b, point, new Vector3d(0, sign, 0), oy);
     }
     double sign = centerB.z() >= centerA.z() ? 1 : -1;
-    return new Contact(a, b, new Vector3d(0, 0, sign), oz);
+    return new Contact(a, b, point, new Vector3d(0, 0, sign), oz);
   }
 
   private static Bounds worldBounds(Body body) {

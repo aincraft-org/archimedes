@@ -7,7 +7,8 @@ import org.joml.Vector3dc;
  *
  * @param a first body
  * @param b second body
+ * @param point overlap AABB center
  * @param normal unit axis from {@code a} toward {@code b}
  * @param penetration overlap along {@code normal}
  */
-public record Contact(Body a, Body b, Vector3dc normal, double penetration) {}
+public record Contact(Body a, Body b, Vector3dc point, Vector3dc normal, double penetration) {}
