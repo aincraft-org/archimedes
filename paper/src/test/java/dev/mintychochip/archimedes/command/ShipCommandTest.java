@@ -195,7 +195,6 @@ class ShipCommandTest {
     return shipAt(10, 64, 20);
   }
 
-  /** Player proxy carrying permissions, world, and target block. */
   /** World proxy returning the fixed world identifier. */
   private static final World WORLD_PROXY =
       (World)

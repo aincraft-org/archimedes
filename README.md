@@ -21,7 +21,7 @@ Player-facing guides live in [`content/docs/`](content/docs/). Living engineerin
 ./gradlew clean check
 ```
 
-That is the quality gate: tests plus Spotless, Checkstyle, PMD, and SpotBugs. Local builds version as `YYYY.MM.DD-SNAPSHOT`. CI versions as `YYYY.MM.DD.<run>`. Stable GitHub release tags are that full CalVer value with no `v` prefix (for example `2026.08.21.9`). Pass `-PbuildVersion` (or the `releaseVersion` alias) to override; older `archimedes.version` / `ARCHIMEDES_VERSION` overrides are gone.
+That is the quality gate: tests plus Spotless, Checkstyle (Google Checks 13.11.0), PMD, and SpotBugs. Local builds version as `YYYY.MM.DD-SNAPSHOT`. CI versions as `YYYY.MM.DD.<run>`. Stable GitHub release tags are that full CalVer value with no `v` prefix (for example `2026.08.21.9`). Pass `-PbuildVersion` (or the `releaseVersion` alias) to override; older `archimedes.version` / `ARCHIMEDES_VERSION` overrides are gone.
 
 ```bash
 ./gradlew runServer

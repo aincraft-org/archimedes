@@ -15,17 +15,18 @@ java {
 
 checkstyle {
     toolVersion = "13.11.0"
+    maxWarnings = 0
     isIgnoreFailures = false
-    // Custom XML on purpose: google_checks.xml rejects one-letter x/y/z fields
-    // used throughout the ship and physics model.
-    configFile = rootProject.file("config/checkstyle/checkstyle.xml")
+    config =
+        resources.text.fromUri(
+            "https://raw.githubusercontent.com/checkstyle/checkstyle/checkstyle-13.11.0/src/main/resources/google_checks.xml",
+        )
     configDirectory = rootProject.file("config/checkstyle")
+    configProperties["org.checkstyle.google.suppressionfilter.config"] =
+        rootProject.file("config/checkstyle/checkstyle-suppressions.xml").absolutePath
 }
 
 tasks.withType<Checkstyle>().configureEach {
-    if (name.contains("Test")) {
-        configFile = rootProject.file("config/checkstyle/checkstyle-test.xml")
-    }
     reports {
         xml.required.set(true)
         html.required.set(true)

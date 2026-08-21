@@ -31,9 +31,13 @@ public final class PhysicsEngine implements Physics {
     Objects.requireNonNull(world);
     Objects.requireNonNull(bodies);
     double dt = world.timeStep();
-    if (!Double.isFinite(dt) || dt < 0) throw new IllegalArgumentException("bad timestep");
+    if (!Double.isFinite(dt) || dt < 0) {
+      throw new IllegalArgumentException("bad timestep");
+    }
     for (Body body : bodies) {
-      if (!body.active()) continue;
+      if (!body.active()) {
+        continue;
+      }
       Vector3d totalForce = new Vector3d();
       Vector3d totalTorque = new Vector3d();
       for (Force force : body.forces()) {

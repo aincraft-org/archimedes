@@ -245,7 +245,9 @@ class ShipRendererTest {
                     ShipRendererTest.class.getClassLoader(),
                     new Class<?>[] {org.bukkit.persistence.PersistentDataContainer.class},
                     (container, containerMethod, containerArgs) -> {
-                      if ("get".equals(containerMethod.getName())) return "ship-id";
+                      if ("get".equals(containerMethod.getName())) {
+                        return "ship-id";
+                      }
                       return defaultFor(containerMethod.getReturnType());
                     });
               }

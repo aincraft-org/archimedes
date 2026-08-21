@@ -20,14 +20,23 @@ public enum CannonDirection {
     this.dz = dz;
   }
 
+  /**
+   * @return block offset along X
+   */
   public int dx() {
     return dx;
   }
 
+  /**
+   * @return block offset along Y
+   */
   public int dy() {
     return dy;
   }
 
+  /**
+   * @return block offset along Z
+   */
   public int dz() {
     return dz;
   }

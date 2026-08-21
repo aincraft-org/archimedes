@@ -250,7 +250,9 @@ public final class WaterlineResolver {
     for (int y = bottom + 64; y >= bottom - 64; y--) {
       Vector3d p = new Vector3d(x + 0.5, y + 0.5, z + 0.5);
       if (world.fluidField().isFluid(p)) {
-        if (!sealed && highest == NO_WATER) highest = y;
+        if (!sealed && highest == NO_WATER) {
+          highest = y;
+        }
       } else if (world.isObstacle(p)) {
         sealed = true;
       }

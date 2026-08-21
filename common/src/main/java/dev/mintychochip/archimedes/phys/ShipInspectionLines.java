@@ -7,40 +7,40 @@ import java.util.Locale;
 /** Formats a {@link ShipInspection} as player-facing lines. */
 public final class ShipInspectionLines {
   /** Reset formatting. */
-  private static final String RESET = "\u00A7r";
+  private static final String RESET = "§r";
 
   /** X-component color. */
-  private static final String RED = "\u00A7c";
+  private static final String RED = "§c";
 
   /** Y-component color. */
-  private static final String GREEN = "\u00A7a";
+  private static final String GREEN = "§a";
 
   /** Z-component color. */
-  private static final String AQUA = "\u00A7b";
+  private static final String AQUA = "§b";
 
   /** Header color. */
-  private static final String GOLD = "\u00A76";
+  private static final String GOLD = "§6";
 
   /** Sail-name color. */
-  private static final String YELLOW = "\u00A7e";
+  private static final String YELLOW = "§e";
 
   /** Gravity-name color. */
-  private static final String GRAY = "\u00A77";
+  private static final String GRAY = "§7";
 
   /** Net-line color. */
-  private static final String WHITE = "\u00A7f";
+  private static final String WHITE = "§f";
 
   /** Buoyancy-name color. */
-  private static final String BLUE = "\u00A79";
+  private static final String BLUE = "§9";
 
   /** Water-drag-name color. */
-  private static final String DARK_AQUA = "\u00A73";
+  private static final String DARK_AQUA = "§3";
 
   /** Air-drag-name color. */
-  private static final String DARK_GRAY = "\u00A78";
+  private static final String DARK_GRAY = "§8";
 
   /** Vegetation-name color. */
-  private static final String DARK_GREEN = "\u00A72";
+  private static final String DARK_GREEN = "§2";
 
   private ShipInspectionLines() {}
 

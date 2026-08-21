@@ -141,8 +141,12 @@ public final class ShipPhysicsImpl implements ShipPhysics {
    */
   @Override
   public boolean tick(Vehicle ship) {
-    if (!ship.buoyancyEnabled()) return false;
-    if (!chunksLoaded(ship)) return false;
+    if (!ship.buoyancyEnabled()) {
+      return false;
+    }
+    if (!chunksLoaded(ship)) {
+      return false;
+    }
     long started = System.nanoTime();
     boolean moved = integrate(ship, 1, true);
     stepDebris();
@@ -158,10 +162,16 @@ public final class ShipPhysicsImpl implements ShipPhysics {
    */
   @Override
   public boolean rise(Vehicle ship) {
-    if (!ship.buoyancyEnabled()) return true;
-    if (!chunksLoaded(ship)) return false;
+    if (!ship.buoyancyEnabled()) {
+      return true;
+    }
+    if (!chunksLoaded(ship)) {
+      return false;
+    }
     Body probe = body(ship, false);
-    if (WaterlineResolver.submergedVolume(probe, world) == 0) return false;
+    if (WaterlineResolver.submergedVolume(probe, world) == 0) {
+      return false;
+    }
     velocities.put(ship.id(), new Vector3d());
     return integrate(ship, 80, false);
   }
@@ -175,8 +185,12 @@ public final class ShipPhysicsImpl implements ShipPhysics {
    */
   @Override
   public boolean sink(Vehicle ship, int blocks) {
-    if (!ship.buoyancyEnabled() || blocks <= 0) return false;
-    if (!chunksLoaded(ship)) return false;
+    if (!ship.buoyancyEnabled() || blocks <= 0) {
+      return false;
+    }
+    if (!chunksLoaded(ship)) {
+      return false;
+    }
     ShipPose old = ship.pose();
     double targetY = Math.max(-config.maxFall(), old.y() - blocks);
     return moveDirect(ship, old, new ShipPose(old.x(), targetY, old.z()));

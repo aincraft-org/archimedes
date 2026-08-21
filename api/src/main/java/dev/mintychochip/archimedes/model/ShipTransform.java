@@ -74,11 +74,5 @@ public final class ShipTransform {
    * @param y world y coordinate
    * @param z world z coordinate
    */
-  public record VisualPosition(
-      /** World x coordinate. */
-      double x,
-      /** World y coordinate. */
-      double y,
-      /** World z coordinate. */
-      double z) {}
+  public record VisualPosition(double x, double y, double z) {}
 }

@@ -53,7 +53,9 @@ class BukkitCollisionVolumeManagerTest {
             Shulker.class,
             (ignored, method, args) -> {
               String name = method.getName();
-              if (GET_PERSISTENT_DATA_CONTAINER.equals(name)) return data;
+              if (GET_PERSISTENT_DATA_CONTAINER.equals(name)) {
+                return data;
+              }
               if ("addScoreboardTag".equals(name)) {
                 tags.add((String) args[0]);
                 return true;
@@ -62,7 +64,9 @@ class BukkitCollisionVolumeManagerTest {
                 values.put(name, args[0]);
                 return null;
               }
-              if ("remove".equals(name)) return null;
+              if ("remove".equals(name)) {
+                return null;
+              }
               return defaultValue(method.getReturnType());
             });
     World world =
@@ -175,7 +179,9 @@ class BukkitCollisionVolumeManagerTest {
         proxy(
             Shulker.class,
             (ignored, method, args) -> {
-              if (GET_PERSISTENT_DATA_CONTAINER.equals(method.getName())) throw metadata;
+              if (GET_PERSISTENT_DATA_CONTAINER.equals(method.getName())) {
+                throw metadata;
+              }
               return defaultValue(method.getReturnType());
             });
     Shulker second =
@@ -327,12 +333,16 @@ class BukkitCollisionVolumeManagerTest {
             Shulker.class,
             (ignored, method, args) -> {
               String name = method.getName();
-              if (GET_PERSISTENT_DATA_CONTAINER.equals(name)) return data;
+              if (GET_PERSISTENT_DATA_CONTAINER.equals(name)) {
+                return data;
+              }
               if (name.startsWith("set")) {
                 values.put(name, args[0]);
                 return null;
               }
-              if ("remove".equals(name)) return null;
+              if ("remove".equals(name)) {
+                return null;
+              }
               return defaultValue(method.getReturnType());
             });
     World world =
@@ -416,14 +426,18 @@ class BukkitCollisionVolumeManagerTest {
                 attempts.add(1);
                 throw failure;
               }
-              if (GET_LOCATION.equals(method.getName())) return new Location(null, 0, 0, 0);
+              if (GET_LOCATION.equals(method.getName())) {
+                return new Location(null, 0, 0, 0);
+              }
               if (GET_PERSISTENT_DATA_CONTAINER.equals(method.getName())) {
                 return Proxy.newProxyInstance(
                     BukkitCollisionVolumeManagerTest.class.getClassLoader(),
                     new Class<?>[] {org.bukkit.persistence.PersistentDataContainer.class},
                     (container, containerMethod, containerArgs) -> null);
               }
-              if (method.getReturnType() == boolean.class) return true;
+              if (method.getReturnType() == boolean.class) {
+                return true;
+              }
               return null;
             });
   }
@@ -440,11 +454,15 @@ class BukkitCollisionVolumeManagerTest {
               public Object invoke(Object proxy, java.lang.reflect.Method method, Object[] args)
                   throws Throwable {
                 if (SPAWN.equals(method.getName()) && args != null && args.length == 3) {
-                  if (spawned) throw failure;
+                  if (spawned) {
+                    throw failure;
+                  }
                   spawned = true;
                   return first;
                 }
-                if (method.getReturnType() == boolean.class) return false;
+                if (method.getReturnType() == boolean.class) {
+                  return false;
+                }
                 return null;
               }
             });
@@ -454,7 +472,9 @@ class BukkitCollisionVolumeManagerTest {
     return proxy(
         Shulker.class,
         (ignored, method, args) -> {
-          if (GET_LOCATION.equals(method.getName())) return initial;
+          if (GET_LOCATION.equals(method.getName())) {
+            return initial;
+          }
           if ("teleport".equals(method.getName())) {
             teleports.add((Location) args[0]);
             return true;
@@ -465,7 +485,9 @@ class BukkitCollisionVolumeManagerTest {
                 (container, containerMethod, containerArgs) ->
                     defaultValue(containerMethod.getReturnType()));
           }
-          if (method.getReturnType() == boolean.class) return true;
+          if (method.getReturnType() == boolean.class) {
+            return true;
+          }
           return defaultValue(method.getReturnType());
         });
   }
@@ -476,18 +498,26 @@ class BukkitCollisionVolumeManagerTest {
             Shulker.class.getClassLoader(),
             new Class<?>[] {Shulker.class},
             (proxy, method, args) -> {
-              if (method.getName().equals("teleport")) throw failure;
-              if (method.getName().equals("getLocation")) return new Location(null, 0, 0, 0);
+              if (method.getName().equals("teleport")) {
+                throw failure;
+              }
+              if (method.getName().equals("getLocation")) {
+                return new Location(null, 0, 0, 0);
+              }
               if (method.getName().equals("getPersistentDataContainer")) {
                 return Proxy.newProxyInstance(
                     BukkitCollisionVolumeManagerTest.class.getClassLoader(),
                     new Class<?>[] {org.bukkit.persistence.PersistentDataContainer.class},
                     (container, containerMethod, containerArgs) -> {
-                      if ("set".equals(containerMethod.getName())) return null;
+                      if ("set".equals(containerMethod.getName())) {
+                        return null;
+                      }
                       return containerMethod.getReturnType() == boolean.class ? false : null;
                     });
               }
-              if (method.getReturnType() == boolean.class) return true;
+              if (method.getReturnType() == boolean.class) {
+                return true;
+              }
               return null;
             });
   }
@@ -509,7 +539,9 @@ class BukkitCollisionVolumeManagerTest {
                 if (SPAWN.equals(method.getName()) && args != null && args.length == 3) {
                   return shulkers.get(Math.min(index++, shulkers.size() - 1));
                 }
-                if (method.getReturnType() == boolean.class) return false;
+                if (method.getReturnType() == boolean.class) {
+                  return false;
+                }
                 return null;
               }
             });

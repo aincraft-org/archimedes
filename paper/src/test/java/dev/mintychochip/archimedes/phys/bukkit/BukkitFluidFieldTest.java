@@ -19,7 +19,9 @@ class BukkitFluidFieldTest {
                 Block.class.getClassLoader(),
                 new Class<?>[] {Block.class},
                 (proxy, method, args) -> {
-                  if (method.getName().equals("getType")) return Material.WATER;
+                  if (method.getName().equals("getType")) {
+                    return Material.WATER;
+                  }
                   return null;
                 });
     World world =
