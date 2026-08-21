@@ -58,7 +58,9 @@ class ShipMassModelTest {
 
   private record SimpleRiderCount(int count) implements RiderCount {
     public SimpleRiderCount {
-      if (count < 0) throw new IllegalArgumentException("negative riders");
+      if (count < 0) {
+        throw new IllegalArgumentException("negative riders");
+      }
     }
 
     @Override

@@ -5,6 +5,11 @@ import java.util.UUID;
 /** Launches a platform-specific cannon projectile. */
 @FunctionalInterface
 public interface CannonLauncher {
+  /**
+   * Spawns the projectile for a resolved shot.
+   *
+   * @param shot world-space muzzle and direction
+   */
   void launch(Shot shot);
 
   /**

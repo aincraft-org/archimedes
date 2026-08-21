@@ -13,7 +13,8 @@ public record Material(double density) {
    * @throws IllegalArgumentException if density is non-finite or negative
    */
   public Material {
-    if (!Double.isFinite(density) || density < 0)
+    if (!Double.isFinite(density) || density < 0) {
       throw new IllegalArgumentException("density must be finite and non-negative");
+    }
   }
 }

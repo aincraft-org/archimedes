@@ -11,6 +11,11 @@ import org.joml.Vector3d;
 public final class VehicleModelsMain {
   private VehicleModelsMain() {}
 
+  /**
+   * Prints vehicle-model samples.
+   *
+   * @param args unused
+   */
   public static void main(String[] args) {
     watercraft();
     airship();

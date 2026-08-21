@@ -11,6 +11,11 @@ import org.joml.Vector3d;
 public final class PhysicsStepMain {
   private PhysicsStepMain() {}
 
+  /**
+   * Prints a physics-step sample.
+   *
+   * @param args unused
+   */
   public static void main(String[] args) {
     perForce();
     mixed();

@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+<suppressions>
+  <!-- Physics/model coordinates are x/y/z; renaming would break the public API. -->
+  <suppress checks="GoogleNonConstantFieldName"/>
+  <suppress checks="GoogleMethodName"/>
+  <suppress checks="RecordComponentName"/>
+  <suppress checks="LocalVariableName"/>
+  <!-- Domain *Id names and JUnit method names use consecutive capitals. -->
+  <suppress checks="AbbreviationAsWordInName"/>
+  <!-- Accessors document with {@return ...}; Google SummaryJavadoc treats that as empty. -->
+  <suppress checks="SummaryJavadoc"/>
+  <!-- Tests and physics steps declare values before several setup calls. -->
+  <suppress checks="VariableDeclarationUsageDistance"/>
+  <!-- Existing overload layout; moving tessellate/waterline methods is a separate refactor. -->
+  <suppress checks="OverloadMethodsDeclarationOrder"/>
+</suppressions>

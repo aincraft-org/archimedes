@@ -139,19 +139,24 @@ public final class ShipConfigLoader {
       throw new IllegalArgumentException("damping must be a finite number between 0 and 1");
     }
     ConfigurationSection buoyancy = configuration.getConfigurationSection("buoyancy");
-    if (buoyancy == null) buoyancy = configuration.createSection("buoyancy");
+    if (buoyancy == null) {
+      buoyancy = configuration.createSection("buoyancy");
+    }
     Map<String, Double> materialDensities = new HashMap<>();
     ConfigurationSection densities = buoyancy.getConfigurationSection("material-densities");
     if (densities != null) {
       for (String key : densities.getKeys(false)) {
         double value = densities.getDouble(key);
-        if (!Double.isFinite(value) || value <= 0)
+        if (!Double.isFinite(value) || value <= 0) {
           throw new IllegalArgumentException("bad density: " + key);
+        }
         String normalized = key.trim().toLowerCase(Locale.ROOT);
-        if (!isNamespacedMaterialKey(normalized))
+        if (!isNamespacedMaterialKey(normalized)) {
           throw new IllegalArgumentException("invalid material key: " + key);
-        if (materialDensities.containsKey(normalized))
+        }
+        if (materialDensities.containsKey(normalized)) {
           throw new IllegalArgumentException("duplicate material density: " + normalized);
+        }
         materialDensities.put(normalized, value);
       }
     }
@@ -207,14 +212,17 @@ public final class ShipConfigLoader {
   }
 
   private static double positiveFinite(double value, String name) {
-    if (!Double.isFinite(value) || value <= 0)
+    if (!Double.isFinite(value) || value <= 0) {
       throw new IllegalArgumentException(name + " must be positive and finite");
+    }
     return value;
   }
 
   private static boolean isNamespacedMaterialKey(String key) {
     int colon = key.indexOf(':');
-    if (colon <= 0 || colon == key.length() - 1 || colon != key.lastIndexOf(':')) return false;
+    if (colon <= 0 || colon == key.length() - 1 || colon != key.lastIndexOf(':')) {
+      return false;
+    }
     String namespace = key.substring(0, colon);
     String path = key.substring(colon + 1);
     return namespace.matches("[a-z0-9._-]+") && path.matches("[a-z0-9._/-]+");

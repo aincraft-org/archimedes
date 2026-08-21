@@ -24,7 +24,9 @@ public final class ShipMassModel {
    */
   public static double mass(
       Vehicle ship, MaterialKeyResolver resolver, ShipConfig config, int riderCount) {
-    if (riderCount < 0) throw new IllegalArgumentException("negative rider count");
+    if (riderCount < 0) {
+      throw new IllegalArgumentException("negative rider count");
+    }
     double total = riderCount * config.playerMass();
     for (ShipBlock block : ship.intactBlocks()) {
       String key = resolver.key(block);

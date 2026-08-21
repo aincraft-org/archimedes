@@ -155,7 +155,8 @@ class ShipStoreTest {
         file,
         "[{\"id\":\"00000000-0000-0000-0000-000000000001\","
             + "\"owner\":\"00000000-0000-0000-0000-000000000002\","
-            + "\"origin\":{\"world\":\"00000000-0000-0000-0000-000000000003\",\"x\":1,\"y\":2,\"z\":3},"
+            + "\"origin\":{\"world\":\"00000000-0000-0000-0000-000000000003\","
+            + "\"x\":1,\"y\":2,\"z\":3},"
             + "\"blocks\":[{\"pos\":{\"x\":0,\"y\":0,\"z\":0},\"data\":\"minecraft:stone\"}]}]");
     ShipStore store = new ShipStore(tempDir);
     Vehicle restored = store.loadAll().values().iterator().next();

@@ -10,15 +10,7 @@ public final class ShipTabCompleter implements org.bukkit.command.TabCompleter {
   /** Known ship subcommands. */
   private static final List<String> SUBCOMMANDS =
       List.of(
-          "assemble",
-          "inspect",
-          "disassemble",
-          "kill",
-          "buoyancy",
-          "sink",
-          "sail",
-          "turn",
-          "collision");
+          "assemble", "inspect", "disassemble", "kill", "buoyancy", "sink", "sail", "collision");
 
   /** Kill argument names. */
   private static final List<String> KILL_ARGS = List.of("all");
@@ -32,19 +24,11 @@ public final class ShipTabCompleter implements org.bukkit.command.TabCompleter {
   /** Extra sail argument: 3D cloth volume. */
   private static final List<String> SAIL_SHAPES = List.of("mesh");
 
-  /** Cardinal cloth headings for {@code /arch sail}. */
-  private static final List<String> SAIL_FACINGS = List.of("north", "south", "east", "west");
-
-  /** Cardinal headings and relative turns for {@code /arch turn}. */
-  private static final List<String> TURN_FACINGS =
-      List.of("north", "south", "east", "west", "left", "right");
-
   /**
    * Completes the first {@code /arch} argument from the known subcommands.
    *
-   * <p>The first argument is the subcommand list; {@code sail}, {@code turn}, and {@code kill} also
-   * complete later arguments. {@code sail} completes size, {@code mesh}, and facing; later sail
-   * arguments complete remaining shape and facing tokens.
+   * <p>The first argument is the subcommand list; {@code sail}, {@code kill}, and {@code collision}
+   * also complete later arguments. {@code sail} completes size and {@code mesh}.
    *
    * @param sender command sender
    * @param command invoked command
@@ -64,19 +48,11 @@ public final class ShipTabCompleter implements org.bukkit.command.TabCompleter {
     }
     if (args.length == 2 && "sail".equalsIgnoreCase(args[0])) {
       String prefix = args[1].toLowerCase(java.util.Locale.ROOT);
-      return completeSail(prefix, true, true);
+      return SAIL_SIZES.stream().filter(size -> size.startsWith(prefix)).toList();
     }
     if (args.length == 3 && "sail".equalsIgnoreCase(args[0])) {
       String prefix = args[2].toLowerCase(java.util.Locale.ROOT);
-      return completeSail(prefix, false, true);
-    }
-    if (args.length == 4 && "sail".equalsIgnoreCase(args[0])) {
-      String prefix = args[3].toLowerCase(java.util.Locale.ROOT);
-      return completeSail(prefix, false, false);
-    }
-    if (args.length == 2 && "turn".equalsIgnoreCase(args[0])) {
-      String prefix = args[1].toLowerCase(java.util.Locale.ROOT);
-      return TURN_FACINGS.stream().filter(face -> face.startsWith(prefix)).toList();
+      return SAIL_SHAPES.stream().filter(shape -> shape.startsWith(prefix)).toList();
     }
     if (args.length == 2 && "kill".equalsIgnoreCase(args[0])) {
       String prefix = args[1].toLowerCase(java.util.Locale.ROOT);
@@ -87,29 +63,5 @@ public final class ShipTabCompleter implements org.bukkit.command.TabCompleter {
       return COLLISION_MODES.stream().filter(arg -> arg.startsWith(prefix)).toList();
     }
     return List.of();
-  }
-
-  private static List<String> completeSail(String prefix, boolean sizes, boolean shapes) {
-    List<String> matches = new java.util.ArrayList<>();
-    if (sizes) {
-      for (String option : SAIL_SIZES) {
-        if (option.startsWith(prefix)) {
-          matches.add(option);
-        }
-      }
-    }
-    if (shapes) {
-      for (String option : SAIL_SHAPES) {
-        if (option.startsWith(prefix) && !matches.contains(option)) {
-          matches.add(option);
-        }
-      }
-    }
-    for (String option : SAIL_FACINGS) {
-      if (option.startsWith(prefix)) {
-        matches.add(option);
-      }
-    }
-    return matches;
   }
 }

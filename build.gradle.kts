@@ -5,16 +5,27 @@ plugins {
 
 group = "dev.mintychochip"
 
-val releaseVersionPattern =
-    Regex("""\d{2}\.([1-9]|1[0-2])\.([1-9]|[12]\d|3[01])\.[1-9]\d*""")
-val requestedReleaseVersion = (findProperty("releaseVersion") as String?)?.takeIf { it.isNotBlank() }
-if (requestedReleaseVersion != null && !requestedReleaseVersion.matches(releaseVersionPattern)) {
-    throw GradleException(
-        "releaseVersion must match YY.M.D.<positive-run-number> " +
-            "(for example, -PreleaseVersion=26.8.18.1).",
-    )
+val calverDate =
+    java.time.LocalDate.now(java.time.ZoneOffset.UTC)
+        .format(java.time.format.DateTimeFormatter.ofPattern("yyyy.MM.dd"))
+
+val calverPattern = Regex("""\d{4}\.(0[1-9]|1[0-2])\.(0[1-9]|[12]\d|3[01])\.[1-9]\d*""")
+
+fun explicitCalver(propertyName: String): String? {
+    val value = (findProperty(propertyName) as String?)?.takeIf { it.isNotBlank() } ?: return null
+    if (!value.matches(calverPattern)) {
+        throw GradleException(
+            "$propertyName must match YYYY.MM.DD.<positive-run-number> " +
+                "(for example, -P$propertyName=2026.08.21.1).",
+        )
+    }
+    return value
 }
-version = requestedReleaseVersion
-    ?: (findProperty("archimedes.version") as String?)?.takeIf { it.isNotBlank() }
-    ?: System.getenv("ARCHIMEDES_VERSION")?.takeIf { it.isNotBlank() }
-    ?: "0.0.0-SNAPSHOT"
+
+// CI: YYYY.MM.DD.<github_run_number>; local builds: dated -SNAPSHOT.
+// releaseVersion remains an alias for existing release workflows.
+version =
+    explicitCalver("buildVersion")
+        ?: explicitCalver("releaseVersion")
+        ?: providers.environmentVariable("GITHUB_RUN_NUMBER").orNull?.let { "$calverDate.$it" }
+        ?: "$calverDate-SNAPSHOT"

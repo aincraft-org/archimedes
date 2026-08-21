@@ -27,6 +27,16 @@ public final class BukkitCannonInteractionListener implements Listener {
   private final LongSupplier clock;
   private final Logger logger;
 
+  /**
+   * Creates a listener that authorizes clicks through {@code cannons}.
+   *
+   * @param ships loaded hulls
+   * @param cannons firing rules
+   * @param shipKey renderer ship PDC key
+   * @param blockKey renderer block PDC key
+   * @param clock current time in millis
+   * @param logger plugin logger
+   */
   public BukkitCannonInteractionListener(
       ShipService ships,
       CannonService cannons,
@@ -42,6 +52,11 @@ public final class BukkitCannonInteractionListener implements Listener {
     this.logger = Objects.requireNonNull(logger, "logger");
   }
 
+  /**
+   * Forwards a right-click on a tagged cannon control.
+   *
+   * @param event interaction event
+   */
   @EventHandler
   public void onInteract(PlayerInteractEntityEvent event) {
     DisplayTarget target =

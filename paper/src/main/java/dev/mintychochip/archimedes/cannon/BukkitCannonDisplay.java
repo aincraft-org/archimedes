@@ -12,6 +12,14 @@ import org.bukkit.persistence.PersistentDataType;
 public final class BukkitCannonDisplay {
   private BukkitCannonDisplay() {}
 
+  /**
+   * Reads a tagged cannon interaction, if the entity carries ship and block identity.
+   *
+   * @param entity clicked entity
+   * @param shipKey PDC key for the ship id
+   * @param blockKey PDC key for the relative control
+   * @return decoded target, or empty
+   */
   public static Optional<DisplayTarget> read(
       Entity entity, NamespacedKey shipKey, NamespacedKey blockKey) {
     if (!(entity instanceof Interaction display)) {
@@ -40,5 +48,6 @@ public final class BukkitCannonDisplay {
     }
   }
 
+  /** Tagged ship and relative control decoded from an interaction. */
   public record DisplayTarget(UUID shipId, BlockPos relative) {}
 }

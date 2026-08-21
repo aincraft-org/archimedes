@@ -17,6 +17,12 @@ public final class ShipCannons {
 
   private ShipCannons() {}
 
+  /**
+   * Finds every dispenser that has exactly one attached stone-button control.
+   *
+   * @param ship captured hull
+   * @return mounts in a stable order
+   */
   public static List<CannonMount> discover(Vehicle ship) {
     Map<BlockPos, ShipBlock> blocks = new HashMap<>();
     for (ShipBlock block : ship.blocks()) {
@@ -50,6 +56,13 @@ public final class ShipCannons {
     return List.copyOf(mounts);
   }
 
+  /**
+   * Looks up the mount whose control block is {@code control}.
+   *
+   * @param ship captured hull
+   * @param control button position in ship space
+   * @return the matching mount, if any
+   */
   public static Optional<CannonMount> atControl(Vehicle ship, BlockPos control) {
     return discover(ship).stream().filter(mount -> mount.control().equals(control)).findFirst();
   }

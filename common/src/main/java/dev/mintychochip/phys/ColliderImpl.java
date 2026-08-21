@@ -11,6 +11,7 @@ import java.util.Objects;
  */
 public record ColliderImpl(Shape shape, Material material, Transform localTransform)
     implements Collider {
+  /** Rejects a collider with a missing shape, material, or transform. */
   public ColliderImpl {
     Objects.requireNonNull(shape);
     Objects.requireNonNull(material);

@@ -11,4 +11,14 @@
     <Match>
         <Bug pattern="EI_EXPOSE_REP2"/>
     </Match>
+    <!-- Recording fakes in tests store values for later assertions. -->
+    <Match>
+        <Class name="~.*Test\$.*"/>
+        <Bug pattern="URF_UNREAD_FIELD"/>
+    </Match>
+    <!-- Bukkit getNearbyEntities is NotNull in stubs but null at runtime. -->
+    <Match>
+        <Class name="dev.mintychochip.archimedes.bukkit.BukkitCollisionObserverSampler"/>
+        <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE"/>
+    </Match>
 </FindBugsFilter>

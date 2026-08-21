@@ -216,11 +216,6 @@ public final class ArchimedesPlugin extends JavaPlugin {
       }
 
       @Override
-      public boolean turnSail(UUID shipId, UUID requesterId, boolean operator, String facing) {
-        return service.turnSail(shipId, requesterId, operator, facing);
-      }
-
-      @Override
       public Vehicle findOwnedInWorld(UUID playerId, UUID worldId) {
         return service.findOwnedInWorld(playerId, worldId);
       }
@@ -357,7 +352,11 @@ public final class ArchimedesPlugin extends JavaPlugin {
     return players;
   }
 
-  /** Returns the namespaced key used to tag Bukkit entities as part of a ship. */
+  /**
+   * Returns the namespaced key used to tag Bukkit entities as part of a ship.
+   *
+   * @return ship identity key
+   */
   private NamespacedKey shipKey() {
     return new NamespacedKey(this, "ship-id");
   }
@@ -382,7 +381,11 @@ public final class ArchimedesPlugin extends JavaPlugin {
       this.world = org.bukkit.Bukkit.getWorlds().get(0);
     }
 
-    /** Returns the primary Bukkit world used for ship assembly. */
+    /**
+     * Returns the primary Bukkit world used for ship assembly.
+     *
+     * @return bound world
+     */
     org.bukkit.World world() {
       return world;
     }

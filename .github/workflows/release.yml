@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       stable_version:
-        description: "Immutable stable CalVer: YY.M.D.run"
+        description: "Immutable stable CalVer: YYYY.MM.DD.run"
         required: true
         type: string
 
@@ -24,21 +24,21 @@ jobs:
       contents: write
     steps:
       - name: Check out source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Validate Gradle wrapper
-        uses: gradle/actions/wrapper-validation@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
+        uses: gradle/actions/wrapper-validation@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
 
       - name: Set up JDK 25
-        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: temurin
           java-version: "25"
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
 
       - name: Validate stable version and tag
         env:
@@ -51,11 +51,11 @@ jobs:
             echo "Stable releases are immutable. Start a new workflow run instead of rerunning this one." >&2
             exit 1
           fi
-          if [[ ! "${STABLE_VERSION}" =~ ^[0-9]{2}\.(1[0-2]|[1-9])\.(3[01]|[12][0-9]|[1-9])\.[1-9][0-9]*$ ]]; then
+          if [[ ! "${STABLE_VERSION}" =~ ^[0-9]{4}\.(0[1-9]|1[0-2])\.(0[1-9]|[12][0-9]|3[01])\.[1-9][0-9]*$ ]]; then
             echo "Invalid stable version: ${STABLE_VERSION}" >&2
             exit 1
           fi
-          tag="v${STABLE_VERSION}"
+          tag="${STABLE_VERSION}"
           if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" >/dev/null 2>&1; then
             echo "Tag ${tag} already exists; refusing to overwrite it." >&2
             exit 1
@@ -64,7 +64,9 @@ jobs:
       - name: Build stable plugin JAR
         env:
           STABLE_VERSION: ${{ inputs.stable_version }}
-        run: ./gradlew --no-daemon clean test build -PreleaseVersion="${STABLE_VERSION}"
+        run: |
+          ./gradlew --no-daemon -PbuildVersion="${STABLE_VERSION}" clean check
+          ./gradlew --no-daemon -PbuildVersion="${STABLE_VERSION}" assemble
 
       - name: Verify and checksum stable asset
         env:
@@ -93,7 +95,7 @@ jobs:
           SHA-256 checksum file is attached for the plugin JAR.
           NOTES
           sed -i 's/^[[:space:]]*//' "${notes}"
-          gh release create "v${STABLE_VERSION}" \
+          gh release create "${STABLE_VERSION}" \
             "${plugin}" "${plugin}.sha256" \
             --repo "${GITHUB_REPOSITORY}" \
             --target "${GITHUB_SHA}" \

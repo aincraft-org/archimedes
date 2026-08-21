@@ -1,0 +1,7 @@
+{
+  "name": "archimedes",
+  "private": true,
+  "scripts": {
+    "test": "node scripts/verify-docs.mjs --ladder"
+  }
+}

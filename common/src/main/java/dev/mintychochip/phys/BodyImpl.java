@@ -52,7 +52,9 @@ public final class BodyImpl implements Body {
    */
   public BodyImpl(Transform transform, double mass, List<Collider> colliders, List<Force> forces) {
     this.transform = Objects.requireNonNull(transform);
-    if (!Double.isFinite(mass) || mass <= 0) throw new IllegalArgumentException("mass");
+    if (!Double.isFinite(mass) || mass <= 0) {
+      throw new IllegalArgumentException("mass");
+    }
     this.mass = mass;
     this.colliders = List.copyOf(colliders);
     this.forces = List.copyOf(forces);

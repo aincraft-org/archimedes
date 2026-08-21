@@ -14,36 +14,51 @@ java {
 }
 
 checkstyle {
-    toolVersion = "10.26.1"
-    configFile = rootProject.file("config/checkstyle/checkstyle.xml")
+    toolVersion = "13.11.0"
+    maxWarnings = 0
+    isIgnoreFailures = false
+    config =
+        resources.text.fromUri(
+            "https://raw.githubusercontent.com/checkstyle/checkstyle/checkstyle-13.11.0/src/main/resources/google_checks.xml",
+        )
     configDirectory = rootProject.file("config/checkstyle")
+    configProperties["org.checkstyle.google.suppressionfilter.config"] =
+        rootProject.file("config/checkstyle/checkstyle-suppressions.xml").absolutePath
 }
 
 tasks.withType<Checkstyle>().configureEach {
-    if (name.contains("Test")) {
-        configFile = rootProject.file("config/checkstyle/checkstyle-test.xml")
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
     }
 }
 
 pmd {
-    toolVersion = "7.16.0"
+    toolVersion = "7.26.0"
     isConsoleOutput = true
     isIgnoreFailures = false
     ruleSetFiles = files(rootProject.file("config/pmd/pmd-ruleset.xml"))
     ruleSets = emptyList()
 }
 
+tasks.withType<Pmd>().configureEach {
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+}
+
 spotless {
     java {
         target("src/**/*.java")
-        googleJavaFormat("1.27.0")
+        googleJavaFormat("1.36.1")
         endWithNewline()
     }
 }
 
 spotbugs {
-    toolVersion = "4.9.8"
-    ignoreFailures = false
+    toolVersion.set("4.9.7")
+    ignoreFailures.set(false)
 }
 
 tasks.withType<com.github.spotbugs.snom.SpotBugsTask>().configureEach {
@@ -53,9 +68,15 @@ tasks.withType<com.github.spotbugs.snom.SpotBugsTask>().configureEach {
             required = true
         }
         create("xml") {
-            required = false
+            required = true
         }
     }
+}
+
+tasks.named("check") {
+    dependsOn(tasks.withType<Checkstyle>())
+    dependsOn(tasks.withType<Pmd>())
+    dependsOn(tasks.withType<com.github.spotbugs.snom.SpotBugsTask>())
 }
 
 dependencies {

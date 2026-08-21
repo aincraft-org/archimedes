@@ -11,6 +11,11 @@ import org.joml.Vector3d;
 public final class ForceCatalogMain {
   private ForceCatalogMain() {}
 
+  /**
+   * Prints force-catalog samples.
+   *
+   * @param args unused
+   */
   public static void main(String[] args) {
     contact();
     staticHold();

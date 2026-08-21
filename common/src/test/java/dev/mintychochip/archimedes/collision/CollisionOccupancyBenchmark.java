@@ -38,7 +38,9 @@ class CollisionOccupancyBenchmark {
 
   private static void print(Row row) {
     System.out.printf(
-        "COLLISION_BENCH hull=%s live A=%d B=%d | fill A=%.3fms B=%.3fms | tickReconcile A=%.3fms B=%.3fms | tickMove A=%.3fms B=%.3fms | heap A=%dB B=%dB%n",
+        "COLLISION_BENCH hull=%s live A=%d B=%d | fill A=%.3fms B=%.3fms"
+            + " | tickReconcile A=%.3fms B=%.3fms"
+            + " | tickMove A=%.3fms B=%.3fms | heap A=%dB B=%dB%n",
         row.hull,
         row.aLive,
         row.bLive,

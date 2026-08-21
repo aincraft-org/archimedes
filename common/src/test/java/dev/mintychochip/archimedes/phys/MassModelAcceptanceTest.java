@@ -68,8 +68,12 @@ class MassModelAcceptanceTest {
   @Test
   void a2MixedMaterialAggregateMassAndEquilibrium() {
     List<ShipBlock> blocks = new ArrayList<>(15);
-    for (int i = 0; i < 10; i++) blocks.add(new ShipBlock(new BlockPos(0, i, 0), "light"));
-    for (int i = 10; i < 15; i++) blocks.add(new ShipBlock(new BlockPos(0, i, 0), "heavy"));
+    for (int i = 0; i < 10; i++) {
+      blocks.add(new ShipBlock(new BlockPos(0, i, 0), "light"));
+    }
+    for (int i = 10; i < 15; i++) {
+      blocks.add(new ShipBlock(new BlockPos(0, i, 0), "heavy"));
+    }
     Vehicle ship = ship(blocks);
 
     ShipConfig config =

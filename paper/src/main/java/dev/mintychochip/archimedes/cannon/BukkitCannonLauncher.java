@@ -16,6 +16,11 @@ public final class BukkitCannonLauncher implements CannonLauncher {
   public static final float EXPLOSION_YIELD = 1.0F;
   private final World world;
 
+  /**
+   * Creates a launcher in {@code world}.
+   *
+   * @param world Bukkit world that receives the projectile
+   */
   public BukkitCannonLauncher(World world) {
     this.world = Objects.requireNonNull(world, "world");
   }

@@ -11,6 +11,7 @@ import java.util.Objects;
  * @param direction dispenser firing direction
  */
 public record CannonMount(BlockPos dispenser, BlockPos control, CannonDirection direction) {
+  /** Rejects a mount with a missing dispenser, control, or direction. */
   public CannonMount {
     Objects.requireNonNull(dispenser, "dispenser");
     Objects.requireNonNull(control, "control");

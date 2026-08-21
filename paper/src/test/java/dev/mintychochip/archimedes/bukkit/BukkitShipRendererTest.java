@@ -211,12 +211,18 @@ class BukkitShipRendererTest {
                           getClass().getClassLoader(),
                           new Class<?>[] {org.bukkit.persistence.PersistentDataContainer.class},
                           (container, containerMethod, containerArgs) -> {
-                            if ("set".equals(containerMethod.getName())) return null;
-                            if ("get".equals(containerMethod.getName())) return "0,0,0";
+                            if ("set".equals(containerMethod.getName())) {
+                              return null;
+                            }
+                            if ("get".equals(containerMethod.getName())) {
+                              return "0,0,0";
+                            }
                             return defaultValue(containerMethod.getReturnType());
                           });
                     }
-                    if (method.getName().equals("getLocation")) return new Location(null, 0, 0, 0);
+                    if (method.getName().equals("getLocation")) {
+                      return new Location(null, 0, 0, 0);
+                    }
                     return defaultValue(method.getReturnType());
                   });
 
@@ -254,7 +260,9 @@ class BukkitShipRendererTest {
 
       @Override
       public void removeTagged(NamespacedKey key, String shipId) {
-        if (failures.length > 1) throw failures[1];
+        if (failures.length > 1) {
+          throw failures[1];
+        }
       }
 
       @Override
@@ -308,11 +316,21 @@ class BukkitShipRendererTest {
   }
 
   private static Object defaultValue(Class<?> type) {
-    if (type == boolean.class) return false;
-    if (type == int.class) return 0;
-    if (type == long.class) return 0L;
-    if (type == double.class) return 0.0;
-    if (type == float.class) return 0.0f;
+    if (type == boolean.class) {
+      return false;
+    }
+    if (type == int.class) {
+      return 0;
+    }
+    if (type == long.class) {
+      return 0L;
+    }
+    if (type == double.class) {
+      return 0.0;
+    }
+    if (type == float.class) {
+      return 0.0f;
+    }
     return null;
   }
 

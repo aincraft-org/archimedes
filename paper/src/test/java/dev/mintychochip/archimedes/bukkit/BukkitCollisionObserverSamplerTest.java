@@ -124,9 +124,15 @@ class BukkitCollisionObserverSamplerTest {
             new Class<?>[] {type},
             (proxy, method, args) -> {
               String name = method.getName();
-              if ("getUniqueId".equals(name)) return id;
-              if ("getBoundingBox".equals(name)) return box;
-              if ("getPersistentDataContainer".equals(name)) return data;
+              if ("getUniqueId".equals(name)) {
+                return id;
+              }
+              if ("getBoundingBox".equals(name)) {
+                return box;
+              }
+              if ("getPersistentDataContainer".equals(name)) {
+                return data;
+              }
               return defaultValue(method.getReturnType());
             }));
   }

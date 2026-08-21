@@ -1,0 +1,61 @@
+---
+title: Ships
+description: "How Archimedes ships work: assemble a build, ride it, and put it back."
+---
+
+## The idea: a hull that leaves the world
+
+A ship in Archimedes is not a stack of blocks sitting in the world. You point at a build, and the plugin **captures** it: the original blocks disappear, and the hull reappears as a picture you can walk on. The deck is solid. The picture matches the blocks you captured. When the server comes back, the ship is still there.
+
+`/arch` is the command; `/ship` is the same thing under an older name. Only a player in the world can run these.
+
+## The basics: what you need on day one
+
+Look at a connected pile of blocks — a raft, a barge, a houseboat — from a few blocks away. `/arch assemble` takes the pile you are looking at, not a ship that is already moving.
+
+If nothing is in reach, you get a message that there is no target block close enough. If this world does not allow ships, assembly fails before anything is scanned or removed.
+
+Once it works, you get a short confirmation with a truncated ship id and a block count. Stand on the deck: it holds you. Jumping stays on the hull. The original blocks are gone until you disassemble.
+
+## Everyday: what you can do
+
+Most days you only need four things.
+
+`/arch assemble` captures the build in your sights. `/arch inspect` reports on the nearest hull you are standing on or standing next to — pose, motion, wind, mass, and the forces on it — even if you do not own it.
+
+`/arch disassemble` puts the nearby hull back as world blocks, then removes the runtime. You must own it, or be an operator. `/arch buoyancy` turns floating on and off for your ship in this world; `/arch sink <blocks>` lowers that ship by a positive number of blocks.
+
+If there is no hull nearby, those nearby commands tell you so. Failures keep a single prefix (`Cannot assemble:`, `Cannot disassemble:`, `Cannot toggle buoyancy:`, `Cannot lower ship:`) plus the reason.
+
+<Callout type="info">
+  Advanced — you do not need this to get started.
+</Callout>
+
+## Advanced: wiping a hull, and who can do it
+
+`/arch kill` destroys the nearby ship **without** putting the blocks back. That is the wipe you want when a hull is stuck or leftover. You must own it, or be an operator.
+
+`/arch kill all` wipes every loaded ship. Only operators can do that.
+
+Inspect also prints a collision line for operators who are comparing full hulls against streamed ones. `/arch collision a|b` (or `full` / `streamed`) is operator-only, lasts only for this runtime, and is not saved. Streamed is the default: you still walk on a solid deck; the server just does not keep every collision cube alive for every viewer.
+
+Some worlds refuse assembly entirely. That rejection happens before any scan.
+
+## What it means for you
+
+If you want the blocks back, disassemble. If you want the ship gone, kill. They are not the same. A restart restores ships from persistence, not from leftover entities, so a killed hull does not come back as blocks.
+
+Nearby commands pick the hull whose volume is closest to you, including the one you are standing on. They do not pick “your first ship in this world,” which is why a leftover distant hull no longer steals inspect.
+
+## Command reference
+
+| Command | What it does |
+| --- | --- |
+| `/arch assemble` | Capture the build you are looking at |
+| `/arch inspect` | Report on the nearby hull |
+| `/arch disassemble` | Restore the nearby hull as world blocks |
+| `/arch kill` | Destroy the nearby hull without restoring blocks |
+| `/arch kill all` | Wipe every loaded ship (operators) |
+| `/arch buoyancy` | Toggle floating for your ship in this world |
+| `/arch sink <blocks>` | Lower your ship by a positive number of blocks |
+| `/arch collision a\|b` | Operator switch between full and streamed collision |

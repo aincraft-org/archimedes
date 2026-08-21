@@ -26,8 +26,9 @@ public final class Aabb implements Shape, Bounds {
     this.halfExtents = new Vector3d(Objects.requireNonNull(halfExtents));
     Vectors.requireFinite(this.center);
     Vectors.requireFinite(this.halfExtents);
-    if (this.halfExtents.x() < 0 || this.halfExtents.y() < 0 || this.halfExtents.z() < 0)
+    if (this.halfExtents.x() < 0 || this.halfExtents.y() < 0 || this.halfExtents.z() < 0) {
       throw new IllegalArgumentException("negative half-extent");
+    }
   }
 
   /**
