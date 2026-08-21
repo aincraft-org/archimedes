@@ -9,11 +9,11 @@ Diagnose and fix Paper server lag with profiling, main-thread discipline, and sa
 
 Core principle: **measure before optimizing; the main thread is the bottleneck — never make it wait.**
 
-Pins verified 2026-08-21 against PaperMC docs and the Spark project.
+Pins verified 2026-08-21 against: Paper global configuration (https://docs.papermc.io/paper/reference/global-configuration/#chunk_system), Paper getting-started requirements (https://docs.papermc.io/paper/getting-started/#requirements), and the Spark installation docs (https://spark.lucko.me/docs/Installation).
 
 ## Profiling with Spark
 
-Spark is the standard profiler and is bundled with modern Paper. Profile during peak load, not on an empty server, for 60–180 seconds:
+Spark is bundled with Paper 1.21+ and is the standard profiler. Profile during peak load, not on an empty server, for 60–180 seconds:
 
 ```text
 /spark health          # quick TPS, MSPT, memory snapshot
@@ -92,9 +92,9 @@ Do not use per-request `ChunkLoadEvent` listeners — they leak unless unregiste
 
 ## Paper configuration
 
-- Leave `async-chunks` at `-1` (auto-detect) unless there is a specific reason to change it.
+- Set `chunk-system.worker-threads: -1` for auto-detected worker threads. Note that `chunk-system.io-threads: -1` means one I/O thread, not auto-detection.
 - Use `alternate-current` for redstone and adjust entity/mob spawn limits only when entity-related lag is confirmed.
-- Run the recommended Java version for the server (e.g. 25 for modern versions) to benefit from GC and performance improvements.
+- Run the recommended Java version: **25 for Paper 26.1+**, **21 for Paper 1.20 through 1.21.11**.
 
 ## Verify
 
