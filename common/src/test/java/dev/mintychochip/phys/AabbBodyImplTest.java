@@ -32,6 +32,17 @@ class AabbBodyImplTest {
   }
 
   @Test
+  void composeMultipliesOrientationsParentThenLocal() {
+    Transform parent = new Transform(new Vector3d(), new Quaterniond().rotateY(Math.PI / 2));
+    Transform local = new Transform(new Vector3d(), new Quaterniond().rotateX(Math.PI / 2));
+    Transform world = parent.compose(local);
+    Vector3d v = world.orientation().transform(new Vector3d(0, 1, 0));
+    assertEquals(1.0, v.x(), 1e-9);
+    assertEquals(0.0, v.y(), 1e-9);
+    assertEquals(0.0, v.z(), 1e-9);
+  }
+
+  @Test
   void boundsGrowsToWorldAabbOfRotatedBox() {
     Aabb box = new Aabb(new Vector3d(), new Vector3d(1, 0.5, 0.5));
     Transform yaw = new Transform(new Vector3d(), new Quaterniond().rotateY(Math.PI / 2));
@@ -58,6 +69,19 @@ class AabbBodyImplTest {
     assertEquals(expectedHalf.x(), world.max().x(), 1e-9);
     assertEquals(expectedHalf.y(), world.max().y(), 1e-9);
     assertEquals(expectedHalf.z(), world.max().z(), 1e-9);
+  }
+
+  @Test
+  void boundsRotatesNonOriginCenterThenTranslates() {
+    Aabb box = new Aabb(new Vector3d(1, 0, 0), new Vector3d(0.5, 0.5, 0.5));
+    Transform pose = new Transform(new Vector3d(10, 0, 0), new Quaterniond().rotateY(Math.PI / 2));
+    Bounds world = box.bounds(pose);
+    assertEquals(9.5, world.min().x(), 1e-9);
+    assertEquals(-0.5, world.min().y(), 1e-9);
+    assertEquals(-1.5, world.min().z(), 1e-9);
+    assertEquals(10.5, world.max().x(), 1e-9);
+    assertEquals(0.5, world.max().y(), 1e-9);
+    assertEquals(-0.5, world.max().z(), 1e-9);
   }
 
   @Test
