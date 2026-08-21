@@ -42,7 +42,6 @@ class ShipTabCompleterTest {
             "buoyancy",
             "sink",
             "sail",
-            "turn",
             "collision"),
         new ShipTabCompleter().onTabComplete(SENDER, COMMAND, SHIP_COMMAND, new String[] {""}));
   }
@@ -69,22 +68,6 @@ class ShipTabCompleterTest {
         List.of("small"),
         new ShipTabCompleter()
             .onTabComplete(SENDER, COMMAND, SHIP_COMMAND, new String[] {SAIL, "sm"}));
-  }
-
-  @Test
-  void completesSailFacings() {
-    assertEquals(
-        List.of("south"),
-        new ShipTabCompleter()
-            .onTabComplete(SENDER, COMMAND, SHIP_COMMAND, new String[] {SAIL, "so"}));
-  }
-
-  @Test
-  void completesTurnHeadings() {
-    assertEquals(
-        List.of("left"),
-        new ShipTabCompleter()
-            .onTabComplete(SENDER, COMMAND, SHIP_COMMAND, new String[] {"turn", "l"}));
   }
 
   @Test

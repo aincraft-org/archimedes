@@ -48,9 +48,6 @@ class ShipCommandTest {
   /** Sail spawn subcommand label. */
   private static final String SUB_SAIL = "sail";
 
-  /** Sail turn subcommand label. */
-  private static final String SUB_TURN = "turn";
-
   /** Destroy subcommand label. */
   private static final String SUB_KILL = "kill";
 
@@ -101,15 +98,6 @@ class ShipCommandTest {
       targetY = y;
       targetZ = z;
       return assembled;
-    }
-
-    @Override
-    public boolean turnSail(UUID shipId, UUID requesterId, boolean operator, String facing) {
-      calls.add(SUB_TURN);
-      lastRequester = requesterId;
-      lastOperator = operator;
-      lastSailSize = facing;
-      return assembled != null;
     }
 
     @Override
@@ -714,95 +702,6 @@ class ShipCommandTest {
     commandNoTarget(service).onCommand(player(service, true), CMD, SHIP, new String[] {SUB_SAIL});
     assertEquals(List.of(SUB_SAIL), service.calls);
     assertTrue(service.messages.get(0).contains("Cannot spawn sail: Ship assembly is disabled"));
-  }
-
-  @Test
-  void sailUsesPlayerLookAsDefaultFacing() {
-    RecordingService service = new RecordingService();
-    service.assembled = ship();
-    commandNoTarget(service)
-        .onCommand(
-            player(service, true, org.bukkit.block.BlockFace.EAST),
-            CMD,
-            SHIP,
-            new String[] {SUB_SAIL});
-    assertEquals("medium-east", service.lastSailSize);
-    assertEquals(13, service.targetX);
-    assertEquals(20, service.targetZ);
-  }
-
-  @Test
-  void sailNamedFacingOverridesLook() {
-    RecordingService service = new RecordingService();
-    service.assembled = ship();
-    commandNoTarget(service)
-        .onCommand(
-            player(service, true, org.bukkit.block.BlockFace.EAST),
-            CMD,
-            SHIP,
-            new String[] {SUB_SAIL, "south"});
-    assertEquals("medium", service.lastSailSize);
-  }
-
-  @Test
-  void sailAcceptsSizeMeshAndFacing() {
-    RecordingService service = new RecordingService();
-    service.assembled = ship();
-    commandNoTarget(service)
-        .onCommand(
-            player(service, true), CMD, SHIP, new String[] {SUB_SAIL, "large", "mesh", "west"});
-    assertEquals("large-mesh-west", service.lastSailSize);
-  }
-
-  @Test
-  void turnRequiresHeading() {
-    RecordingService service = new RecordingService();
-    commandNoTarget(service).onCommand(player(service, true), CMD, SHIP, new String[] {SUB_TURN});
-    assertTrue(service.messages.get(0).contains("Usage: /arch turn"));
-    assertTrue(service.calls.isEmpty());
-  }
-
-  @Test
-  void turnRequiresNearbyShip() {
-    RecordingService service = new RecordingService();
-    service.owned = shipAt(0, 64, 790);
-    commandNoTarget(service)
-        .onCommand(player(service, true), CMD, SHIP, new String[] {SUB_TURN, "left"});
-    assertTrue(service.messages.get(0).contains("No ship nearby"));
-    assertFalse(service.calls.contains(SUB_TURN));
-  }
-
-  @Test
-  void turnDelegatesToService() {
-    RecordingService service = new RecordingService();
-    service.assembled = nearbyShip();
-    service.owned = service.assembled;
-    commandNoTarget(service)
-        .onCommand(player(service, true), CMD, SHIP, new String[] {SUB_TURN, "left"});
-    assertTrue(service.calls.contains(SUB_TURN));
-    assertEquals(service.owner, service.lastRequester);
-    assertEquals("left", service.lastSailSize);
-    assertTrue(service.messages.get(0).contains("Turned sail left"));
-  }
-
-  @Test
-  void turnReportsServiceFailure() {
-    RecordingService service = new RecordingService();
-    service.assembled = null;
-    service.owned = nearbyShip();
-    service.error = "Unknown heading: up";
-    commandNoTarget(service)
-        .onCommand(player(service, true), CMD, SHIP, new String[] {SUB_TURN, "up"});
-    assertTrue(service.calls.contains(SUB_TURN));
-    assertTrue(service.messages.get(0).contains("Cannot turn sail: Unknown heading: up"));
-  }
-
-  @Test
-  void turnRejectsWithoutPermission() {
-    RecordingService service = new RecordingService();
-    commandNoTarget(service)
-        .onCommand(player(service, false), CMD, SHIP, new String[] {SUB_TURN, "left"});
-    assertTrue(service.calls.isEmpty());
   }
 
   @Test

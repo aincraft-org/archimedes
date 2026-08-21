@@ -216,11 +216,6 @@ public final class ArchimedesPlugin extends JavaPlugin {
       }
 
       @Override
-      public boolean turnSail(UUID shipId, UUID requesterId, boolean operator, String facing) {
-        return service.turnSail(shipId, requesterId, operator, facing);
-      }
-
-      @Override
       public Vehicle findOwnedInWorld(UUID playerId, UUID worldId) {
         return service.findOwnedInWorld(playerId, worldId);
       }

@@ -96,7 +96,7 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
           ChatColor.RED
               + "Usage: /"
               + commandLabel
-              + " assemble|inspect|disassemble|kill|buoyancy|sink|sail|turn|collision");
+              + " assemble|inspect|disassemble|kill|buoyancy|sink|sail|collision");
       return true;
     }
     switch (args[0].toLowerCase(java.util.Locale.ROOT)) {
@@ -114,8 +114,6 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
         return permitted(player, "archimedes.sink") && sink(player, args);
       case "sail":
         return permitted(player, "archimedes.sail") && sail(player, args);
-      case "turn":
-        return permitted(player, "archimedes.sail") && turn(player, args);
       case "collision":
         return collision(player, args);
       default:
@@ -315,18 +313,24 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
   }
 
   private boolean sail(Player player, String[] args) {
-    SailShipTemplate.Spec spec = parseSailSpec(args, player);
-    if (spec == null) {
-      player.sendMessage(
-          ChatColor.RED + "Usage: /arch sail [small|medium|large] [mesh] [north|south|east|west]");
+    String size;
+    if (args.length >= 3) {
+      size = args[1] + "-" + args[2];
+    } else if (args.length >= 2) {
+      size = args[1];
+    } else {
+      size = "medium";
+    }
+    if (SailShipTemplate.Spec.parse(size) == null) {
+      player.sendMessage(ChatColor.RED + "Usage: /arch sail [small|medium|large] [mesh]");
       return true;
     }
-    org.bukkit.block.BlockFace look = player.getFacing();
-    int x = player.getLocation().getBlockX() + look.getModX() * 3;
+    org.bukkit.block.BlockFace facing = player.getFacing();
+    int x = player.getLocation().getBlockX() + facing.getModX() * 3;
     int y = player.getLocation().getBlockY();
-    int z = player.getLocation().getBlockZ() + look.getModZ() * 3;
+    int z = player.getLocation().getBlockZ() + facing.getModZ() * 3;
     Vehicle ship =
-        service.spawnSail(player.getUniqueId(), player.getWorld().getUID(), x, y, z, spec.token());
+        service.spawnSail(player.getUniqueId(), player.getWorld().getUID(), x, y, z, size);
     if (ship == null) {
       player.sendMessage(ChatColor.RED + "Cannot spawn sail: " + service.lastError());
       return true;
@@ -334,57 +338,5 @@ public final class ShipCommand implements org.bukkit.command.CommandExecutor {
     player.sendMessage(
         ChatColor.GREEN + "Spawned sail ship " + ship.id().toString().substring(0, 8) + ".");
     return true;
-  }
-
-  private boolean turn(Player player, String[] args) {
-    if (args.length < 2) {
-      player.sendMessage(ChatColor.RED + "Usage: /arch turn [north|south|east|west|left|right]");
-      return true;
-    }
-    Vehicle ship = nearby(player);
-    if (ship == null) {
-      player.sendMessage(ChatColor.RED + "No ship nearby.");
-      return true;
-    }
-    if (!service.turnSail(ship.id(), player.getUniqueId(), player.isOp(), args[1])) {
-      player.sendMessage(ChatColor.RED + "Cannot turn sail: " + service.lastError());
-      return true;
-    }
-    player.sendMessage(
-        ChatColor.GREEN + "Turned sail " + args[1].toLowerCase(java.util.Locale.ROOT) + ".");
-    return true;
-  }
-
-  private static SailShipTemplate.Spec parseSailSpec(String[] args, Player player) {
-    SailShipTemplate.Facing look = playerFacing(player);
-    if (args.length <= 1) {
-      return new SailShipTemplate.Spec(
-          SailShipTemplate.Size.MEDIUM, SailShipTemplate.Shape.FLAT, look);
-    }
-    StringBuilder joined = new StringBuilder(args[1].toLowerCase(java.util.Locale.ROOT));
-    boolean namedFacing = SailShipTemplate.Facing.parse(args[1]) != null;
-    for (int i = 2; i < args.length; i++) {
-      joined.append('-').append(args[i].toLowerCase(java.util.Locale.ROOT));
-      if (SailShipTemplate.Facing.parse(args[i]) != null) {
-        namedFacing = true;
-      }
-    }
-    SailShipTemplate.Spec parsed = SailShipTemplate.Spec.parse(joined.toString());
-    if (parsed == null) {
-      return null;
-    }
-    if (namedFacing) {
-      return parsed;
-    }
-    return new SailShipTemplate.Spec(parsed.size(), parsed.shape(), look);
-  }
-
-  private static SailShipTemplate.Facing playerFacing(Player player) {
-    org.bukkit.block.BlockFace look = player.getFacing();
-    SailShipTemplate.Facing facing = SailShipTemplate.Facing.parse(look.name());
-    if (facing == null) {
-      return SailShipTemplate.Facing.SOUTH;
-    }
-    return facing;
   }
 }
