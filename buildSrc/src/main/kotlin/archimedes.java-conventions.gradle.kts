@@ -16,6 +16,8 @@ java {
 checkstyle {
     toolVersion = "13.11.0"
     isIgnoreFailures = false
+    // Custom XML on purpose: google_checks.xml rejects one-letter x/y/z fields
+    // used throughout the ship and physics model.
     configFile = rootProject.file("config/checkstyle/checkstyle.xml")
     configDirectory = rootProject.file("config/checkstyle")
 }
