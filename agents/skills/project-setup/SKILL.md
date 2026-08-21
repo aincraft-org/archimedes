@@ -97,6 +97,7 @@ name: ExamplePlugin
 version: '${version}'
 api-version: '26.2'
 description: An example plugin
+main: io.github.username.ExamplePlugin
 ```
 
 Main class — one class extends `JavaPlugin`; never name it `Main`; Google style = 2-space indent, 100-col limit, no wildcard imports:
