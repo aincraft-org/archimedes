@@ -142,7 +142,7 @@ public final class BodyImpl implements Body {
    * @return mass centroid of colliders, or the origin when there are none
    */
   public Vector3dc centerOfMassLocal() {
-    return centerOfMassLocal;
+    return new Vector3d(centerOfMassLocal);
   }
 
   private Matrix3d rotateTensor(Matrix3dc body) {

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.List;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
+import org.joml.Vector3dc;
 import org.junit.jupiter.api.Test;
 
 class MassPropertiesTest {
@@ -30,6 +31,26 @@ class MassPropertiesTest {
     BodyImpl body =
         new BodyImpl(new Transform(new Vector3d(), new Quaterniond()), 4, List.of(), List.of());
     assertEquals(0.0, body.centerOfMassLocal().length(), 1e-12);
+  }
+
+  @Test
+  void centerOfMassLocalIsNotAliasedToInternalState() {
+    BodyImpl body = densityWeightedBody();
+    Vector3dc com = body.centerOfMassLocal();
+    if (com instanceof Vector3d mutable) {
+      mutable.set(99, 0, 0);
+    }
+    assertEquals(1.0, body.centerOfMassLocal().x(), 1e-9);
+  }
+
+  @Test
+  void worldRadiusRotatesWithBodyYaw() {
+    BodyImpl body = densityWeightedBody();
+    body.setTransform(new Transform(new Vector3d(), new Quaterniond().rotateY(Math.PI / 2)));
+    Vector3d radius = MassProperties.radiusAboutCom(body, new Vector3d(2, 0, 0));
+    assertEquals(0.0, radius.x(), 1e-9);
+    assertEquals(0.0, radius.y(), 1e-9);
+    assertEquals(-1.0, radius.z(), 1e-9);
   }
 
   private static BodyImpl densityWeightedBody() {

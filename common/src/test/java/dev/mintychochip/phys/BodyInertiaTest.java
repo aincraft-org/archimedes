@@ -54,6 +54,25 @@ class BodyInertiaTest {
             box, new Material(1), new Transform(new Vector3d(0, 0, -2), new Quaterniond()));
     BodyImpl body =
         new BodyImpl(new Transform(new Vector3d(), new Quaterniond()), 2, List.of(a, b), List.of());
-    assertTrue(body.inertia().m00() > 2.0);
+    assertEquals(25.0 / 3.0, body.inertia().m00(), 1e-9);
+    assertEquals(25.0 / 3.0, body.inertia().m11(), 1e-9);
+    assertEquals(1.0 / 3.0, body.inertia().m22(), 1e-9);
+  }
+
+  @Test
+  void asymmetricCubesHaveInertiaAboutCentroidNotOrigin() {
+    Aabb box = new Aabb(new Vector3d(), new Vector3d(0.5, 0.5, 0.5));
+    Collider heavy =
+        new ColliderImpl(
+            box, new Material(3), new Transform(new Vector3d(2, 0, 0), new Quaterniond()));
+    Collider light =
+        new ColliderImpl(
+            box, new Material(1), new Transform(new Vector3d(-2, 0, 0), new Quaterniond()));
+    BodyImpl body =
+        new BodyImpl(
+            new Transform(new Vector3d(), new Quaterniond()), 4, List.of(heavy, light), List.of());
+    assertEquals(2.0 / 3.0, body.inertia().m00(), 1e-9);
+    assertEquals(38.0 / 3.0, body.inertia().m11(), 1e-9);
+    assertEquals(38.0 / 3.0, body.inertia().m22(), 1e-9);
   }
 }
