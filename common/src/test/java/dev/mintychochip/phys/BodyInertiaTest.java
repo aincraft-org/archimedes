@@ -29,7 +29,7 @@ class BodyInertiaTest {
   }
 
   @Test
-  void offsetColliderAddsParallelAxisMass() {
+  void singleOffsetColliderInertiaMatchesCubeAboutItsOwnCenter() {
     Aabb box = new Aabb(new Vector3d(), new Vector3d(0.5, 0.5, 0.5));
     Collider collider =
         new ColliderImpl(
@@ -37,9 +37,23 @@ class BodyInertiaTest {
     BodyImpl body =
         new BodyImpl(
             new Transform(new Vector3d(), new Quaterniond()), 1, List.of(collider), List.of());
+    // Ixx = m/3 (hy^2+hz^2) = 1/3 * (0.25+0.25) = 1/6
+    assertEquals(1.0 / 6.0, body.inertia().m00(), 1e-9);
+    assertEquals(body.inertia().m00(), body.inertia().m11(), 1e-9);
+    assertEquals(body.inertia().m00(), body.inertia().m22(), 1e-9);
+  }
 
-    Matrix3dc inertia = body.inertia();
-    assertTrue(inertia.m00() > inertia.m11());
-    assertEquals(inertia.m00(), inertia.m22(), 1e-9);
+  @Test
+  void twoSeparatedCubesHaveLargerInertiaThanOneCube() {
+    Aabb box = new Aabb(new Vector3d(), new Vector3d(0.5, 0.5, 0.5));
+    Collider a =
+        new ColliderImpl(
+            box, new Material(1), new Transform(new Vector3d(0, 0, 2), new Quaterniond()));
+    Collider b =
+        new ColliderImpl(
+            box, new Material(1), new Transform(new Vector3d(0, 0, -2), new Quaterniond()));
+    BodyImpl body =
+        new BodyImpl(new Transform(new Vector3d(), new Quaterniond()), 2, List.of(a, b), List.of());
+    assertTrue(body.inertia().m00() > 2.0);
   }
 }
