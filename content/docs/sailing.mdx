@@ -1,0 +1,49 @@
+---
+title: Sailing
+description: "Spawn a sail hull, watch the cloth move in the wind, and fire a captured cannon."
+---
+
+## The idea: cloth that catches the air
+
+A sail on Archimedes is wool (or a banner) treated as **cloth**, not as another hull cube. Still air keeps a thin sheet. Wind cups the sheet so the plates turn and shrink like fabric, while the mast stays put. Each wool block is a square metre of pressure sail. You do not need to tessellate anything yourself — the plugin draws the cloth.
+
+You can assemble a sail you built, as in [ships](/docs/ships), or spawn a ready-made demo hull with a command.
+
+## The basics: what you need on day one
+
+Face open space and run `/arch sail`. A medium oak deck, mast, and white wool wall appear three blocks in front of you. The default is a 5×5 deck with a 5×5 sail. The command does not scan a build and does not clear the world first. If the hull cannot rise out of the ground, it still stays in the world.
+
+You must be a player. Permission failures are explicit. If spawn is refused, you see `Cannot spawn sail:` plus the reason.
+
+## Everyday: what you can do
+
+`/arch sail small`, `/arch sail medium`, and `/arch sail large` pick the hull size (3×3, 5×5, and 7×7 decks and sails). `/arch sail mesh` (or `small mesh`, `large-mesh`, and the same idea for the other sizes) builds a thicker cloth volume so the sail occupies real depth, not only a one-block wall.
+
+Stand on the deck and wait for wind. A 1-block-thick wall stays a sheet in still air; breeze billows the plates. `/arch inspect` from [ships](/docs/ships) is how you read the sampled wind and the sail force. Same-facing cloth collapses to one vector in that report.
+
+If you captured a dispenser with a stone button on it, that button is the cannon. The owner or an operator right-clicks it to fire a visible, non-incendiary shot from the current muzzle. There is a two-second cooldown, no ammunition, and no special item model. Anyone else is told they cannot fire it.
+
+<Callout type="info">
+  Advanced — you do not need this to get started.
+</Callout>
+
+## Advanced: torn cloth, and what the picture is made of
+
+The server cannot upload a custom 3D model. Hull blocks stay one untransformed cube each. Cloth is many thin plates. If cloth tears, the torn piece becomes a ragdoll that keeps moving with the ship, and the remaining sail is redrawn from what is still intact. Torn marks are not saved; a restart restores the original captured blocks.
+
+A dry or blocked rise is ignored so a land spawn does not vanish. Demo sails are still ordinary ships: disassemble puts the oak, mast, and wool back; kill does not.
+
+## What it means for you
+
+Spawn a demo when you want to feel wind without building. Assemble when you already have a hull. Inspect is the only way to see whether the cloth is catching air — a sail edge-on to the wind can show a zero force even though the wind line is printed.
+
+Cannons fire only for the owner or an operator, and only from that captured button. There is no powder to keep track of; if the shot does not go, you are either on cooldown or not allowed.
+
+## Command reference
+
+| Command | What it does |
+| --- | --- |
+| `/arch sail` | Spawn a medium sail hull three blocks ahead |
+| `/arch sail small\|medium\|large` | Spawn a named-size hull |
+| `/arch sail mesh` | Spawn a medium 3D cloth volume |
+| `/arch sail <size> mesh` | Spawn a named-size 3D cloth volume |
