@@ -66,6 +66,21 @@ public final class SailMesh {
   }
 
   /**
+   * Block-data string Bukkit can parse. Wool has no block states, so {@code facing=} is stripped;
+   * banners keep their captured properties.
+   *
+   * @param blockData captured block data
+   * @return parseable block data
+   */
+  public static String worldData(String blockData) {
+    String key = materialKey(Objects.requireNonNull(blockData, "blockData"));
+    if (key.endsWith("_wool")) {
+      return key;
+    }
+    return blockData;
+  }
+
+  /**
    * Collects cloth cells from captured ship blocks, preserving iteration order.
    *
    * @param blocks captured ship blocks

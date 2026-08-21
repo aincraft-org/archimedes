@@ -19,6 +19,14 @@ class SailMeshTest {
   private static final double EPS = 1e-9;
 
   @Test
+  void worldDataStripsWoolBlockStatesAndKeepsBannerProperties() {
+    assertEquals(WHITE_WOOL, SailMesh.worldData(WHITE_WOOL + "[facing=east]"));
+    assertEquals(
+        "minecraft:white_banner[rotation=2]",
+        SailMesh.worldData("minecraft:white_banner[rotation=2]"));
+  }
+
+  @Test
   void isolatedClothCellEmitsOneThinPlateWithCapturedAppearance() {
     List<SailCell> cells = List.of(new SailCell(5, 6, 7, WHITE_WOOL));
 
