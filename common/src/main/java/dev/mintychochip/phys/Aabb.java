@@ -104,13 +104,13 @@ public final class Aabb implements Shape, Bounds {
     Vector3d worldHalf =
         new Vector3d(
             Math.abs(r.m00()) * halfExtents.x()
-                + Math.abs(r.m01()) * halfExtents.y()
-                + Math.abs(r.m02()) * halfExtents.z(),
-            Math.abs(r.m10()) * halfExtents.x()
+                + Math.abs(r.m10()) * halfExtents.y()
+                + Math.abs(r.m20()) * halfExtents.z(),
+            Math.abs(r.m01()) * halfExtents.x()
                 + Math.abs(r.m11()) * halfExtents.y()
-                + Math.abs(r.m12()) * halfExtents.z(),
-            Math.abs(r.m20()) * halfExtents.x()
-                + Math.abs(r.m21()) * halfExtents.y()
+                + Math.abs(r.m21()) * halfExtents.z(),
+            Math.abs(r.m02()) * halfExtents.x()
+                + Math.abs(r.m12()) * halfExtents.y()
                 + Math.abs(r.m22()) * halfExtents.z());
     return new Aabb(worldCenter, worldHalf);
   }

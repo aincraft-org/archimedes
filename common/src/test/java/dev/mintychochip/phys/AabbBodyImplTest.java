@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import org.joml.Matrix3d;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,22 @@ class AabbBodyImplTest {
     assertEquals(0.5, world.max().x(), 1e-9);
     assertEquals(0.5, world.max().y(), 1e-9);
     assertEquals(1.0, world.max().z(), 1e-9);
+  }
+
+  @Test
+  void boundsUsesRowsOfRotationMatrixNotColumns() {
+    Quaterniond q = new Quaterniond().rotateX(Math.PI / 4).rotateY(Math.PI / 4);
+    Aabb box = new Aabb(new Vector3d(), new Vector3d(1, 0.5, 0.5));
+    Bounds world = box.bounds(new Transform(new Vector3d(), q));
+    Matrix3d r = new Matrix3d().rotation(q);
+    Vector3d expectedHalf =
+        new Vector3d(
+            Math.abs(r.m00()) * 1 + Math.abs(r.m10()) * 0.5 + Math.abs(r.m20()) * 0.5,
+            Math.abs(r.m01()) * 1 + Math.abs(r.m11()) * 0.5 + Math.abs(r.m21()) * 0.5,
+            Math.abs(r.m02()) * 1 + Math.abs(r.m12()) * 0.5 + Math.abs(r.m22()) * 0.5);
+    assertEquals(expectedHalf.x(), world.max().x(), 1e-9);
+    assertEquals(expectedHalf.y(), world.max().y(), 1e-9);
+    assertEquals(expectedHalf.z(), world.max().z(), 1e-9);
   }
 
   @Test
