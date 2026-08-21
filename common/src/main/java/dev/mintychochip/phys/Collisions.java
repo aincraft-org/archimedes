@@ -211,7 +211,8 @@ public final class Collisions {
     if (body == null || !body.active()) {
       return;
     }
-    body.setLinearVelocity(new Vector3d(body.linearVelocity()).fma(sign, impulse));
+    body.setLinearVelocity(
+        new Vector3d(body.linearVelocity()).fma(sign * body.inverseMass(), impulse));
     Vector3d angularImpulse = new Vector3d(radius).cross(impulse, new Vector3d()).mul(sign);
     Vector3d deltaOmega = body.inverseInertia().transform(angularImpulse, new Vector3d());
     body.setAngularVelocity(new Vector3d(body.angularVelocity()).add(deltaOmega));
