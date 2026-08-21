@@ -15,7 +15,7 @@ Pins verified 2026-08-21 against Maven Central and the PaperMC developer docs.
 
 | Component | Version |
 |---|---|
-| HikariCP | **7.1.0** |
+| HikariCP | **7.0.2** |
 | SQLite JDBC driver | **bundled with Paper** (do not shade) |
 | Java toolchain | **25** |
 
@@ -26,7 +26,7 @@ Paper bundles the SQLite JDBC driver at runtime. Do not package or shade `org.xe
 ```kotlin
 dependencies {
     compileOnly("io.papermc.paper:paper-api:26.2.build.+")
-    implementation("com.zaxxer:HikariCP:7.1.0")
+    implementation("com.zaxxer:HikariCP:7.0.2")
 }
 ```
 
