@@ -1,7 +1,7 @@
 # Physics — Living Spec
 
 > Status: active
-> Last updated: 2026-08-19
+> Last updated: 2026-08-21
 > Owners: jlo
 
 The `dev.mintychochip.phys` package is a small, generic, Bukkit-independent rigid-body physics library. The Archimedes ship mechanics are one client of this library; `dev.mintychochip.archimedes.phys` contains the ship-specific forces, surfaces, and configuration.
@@ -15,7 +15,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - Generic math helpers on JOML (`Vectors`, `Quaternions`) plus `Transform`.
 - Generic abstractions: `Body`, `Collider`, `Shape`, `Material`, `Force`, `World`, `FluidField`, `DensityField`, `FlowField`, `Physics`.
 - Default `BodyImpl`, `Aabb`, `ColliderImpl`, `Octree`, and `PhysicsEngine` in `:common`.
-- Octree broadphase plus AABB contact depenetration on `Physics.step` (body–body).
+- Octree broadphase plus AABB contact depenetration on `Physics.step` (body–body). `Collisions.detectWorld` generates restitution-0 voxel contacts against `World.isObstacle` (callers resolve them; `PhysicsEngine.step` does not, so a half-space obstacle map cannot freeze ship ticks).
 - Reusable `Force` units: `GravityForce`, `FluidBuoyancyForce`, `QuadraticDragForce` (optional `DensityField` and `FlowField`), `ThrustForce`, `MediumThrustForce`, `LiftForce`, `PressureSailForce`, `LiftingSailForce`, `KeelForce`, `SupportForce`, `CoulombFrictionForce`, `ViscousDragForce`, `AngularDragForce`, `VegetationDragForce`.
 - Ship client (`dev.mintychochip.archimedes.phys`):
   - `ShipBody` / `VehicleFactory` construction from `Vehicle` blocks.
@@ -32,7 +32,7 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 
 ### Out of scope / non-goals
 
-- Rotational Archimedes ship gameplay (yaw/pitch/roll). `ShipPose` is now `x,y,z`; yaw is still out.
+- Rotational Archimedes ship gameplay (yaw/pitch/roll). Generic 6DOF now includes CoM integration, contact-point angular impulse, and world-voxel contacts. `ShipPose` is still `x,y,z`; `ShipBody` is still rebuilt at identity each tick.
 - In-game Minecraft airships/airplanes (commands, rendering, 6DOF `ShipRuntime`, player controls, fuel).
 - Full flight-sim aerodynamics (stall, control surfaces, stability derivatives, atmosphere tables).
 - Restitution, joints, constraint/LCP solvers, and replacing Minecraft Shulker hulls for player-solid ships.
@@ -63,11 +63,11 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - Parameterize hydrostatic buoyancy by `DensityField` so water and air share `F = −ρV g`. Watercraft uses `DensityField.liquid(FluidField)` (gated on `isFluid`). Airships use `DensityField.uniform(ρ_air)`.
 - `ShipBuoyancyForce` is waterline lift only. `ShipPhysics` attaches `GravityForce` + `ShipBuoyancyForce` and steps `Physics`. Do not add a second integrator or Y-search solver.
 - Lift is `c · |v × n|²` along the body-local lift axis: ~0 at rest, grows with airspeed, ignores purely vertical motion.
-- `MediumThrustForce` is `F = k · ρ(p) · n̂` at a body-local application point, with `τ = (p − X) × F`. The no-medium constructor uses `DensityField.liquid(world.fluidField())`. It never gates on `isFluid` directly.
+- `MediumThrustForce` is `F = k · ρ(p) · n̂` at a body-local application point, with `τ = r × F` and `r` from the center of mass. The no-medium constructor uses `DensityField.liquid(world.fluidField())`. It never gates on `isFluid` directly.
 - `ThrustForce` stays density-blind (rocket). `QuadraticDragForce(c)` stays lumped `−c |v| v` and does not sample density. `QuadraticDragForce(c, DensityField)` is `−c · ρ · |v| v` with volume-weighted mean `ρ` over colliders (body position if none). The one-arg constructor is not a world-liquid default.
 - Parameterize medium thrust and density drag by `DensityField` the same way as hydrostatic buoyancy. Watercraft uses liquid; airships use `DensityField.uniform(ρ_air)`. Do not add `World.densityField()`.
 - `FlowField` is pointwise flow velocity (`still`, `uniform`, axis-aligned `box`, and `compose`). Multiple winds exist by composing or by attaching different fields to different forces. Do not add `World.flowField()`. Do not use `isFluid` for air.
-- `PressureSailForce` is one-sided cloth: `F = q A max(n̂ · v̂_app, 0)² n̂`, `v_app = v_wind(p) − v − ω × r`, `τ = r × F`. Density and wind are constructor-injected. Still air or edge-on sheet is zero force.
+- `PressureSailForce` is one-sided cloth: `F = q A max(n̂ · v̂_app, 0)² n̂`, `v_app = v_wind(p) − v − ω × r`, `τ = r × F` with `r` from the center of mass. Density and wind are constructor-injected. Still air or edge-on sheet is zero force.
 - Hook sails to a structure with `ShipSails.forces`. `ShipPhysics.tick` attaches cloth (`*_wool`, `*_banner`, `*_wall_banner`) plus lumped air drag when a `FlowField` is supplied. The plugin default wind is `+Z`. `ShipPose` stores `x,y,z`; yaw is still out.
 - Sail snap uses the pre-step linear velocity and identity orientation. Gameplay has no retained spin, so post-step `ω` must not inflate apparent wind. Torn cloth is a gap in the rigging graph so failure can cascade on later ticks. Evaluate every intact cell against the same snapshot, then tear. An all-cloth vehicle has no hull to snap from and does not tear; a cell isolated from a present hull (`distance = MAX_VALUE`) does.
 - Engines and turbines are the same `MediumThrustForce` (`F = k ρ n̂` along `facing=`). `ShipPhysics.tick` attaches one per `engine-materials` block when `enginesEnabled`. Vacuum (`ρ = 0`) is zero thrust. Disabling engines omits the force, not the collider/mass.
@@ -75,7 +75,10 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - Viscous linear drag is `F = −c v`, distinct from quadratic `−c |v| v`. Angular drag is `τ = −c ω`. Neither is applied to Archimedes ships.
 - Relative-flow quadratic drag is `F = −c ρ |v_app| v_app` with `v_app = v − u_flow`. Omit `FlowField` for still medium. Do not add `World.flowField()`.
 - `LiftingSailForce` is AoA lift/drag on `v_app` (rest in a breeze is non-zero). `KeelForce` is `−c ρ |s| s n̂` on the beam-normal slip `s`; it does not resist surge.
-- `BodyImpl` inertia is the AABB tensor about the body origin (scaled to `mass`); no colliders ⇒ `m I`. `PhysicsEngine` uses `I ω̇ = τ − ω × (Iω)`.
+- `BodyImpl` inertia is the AABB tensor about the mass centroid (`centerOfMassLocal()`); no colliders ⇒ `m I` at the origin. `PhysicsEngine` integrates the world CoM and reconstructs the origin as `com − R comLocal`. `I ω̇ = τ − ω × (Iω)`.
+- Collider world pose is `body.transform().compose(local)`. `Aabb.bounds` is the world AABB of the oriented box (`worldHalf_i = Σ_j |R_ij| localHalf_j`).
+- `Contact` includes a point. Resolve uses restitution-0 sequential impulse on `v` and `ω`. `Collisions.detectWorld` emits the deepest solid voxel contact per collider whose center is not already buried; fluid voxels are skipped. Callers resolve those contacts (`WorldContactTest`); `PhysicsEngine.step` does not, because a half-space `isObstacle` map storms ship ticks.
+- `FluidBuoyancyForce` and `ShipBuoyancyForce` apply `τ = r_cb × F`. `EnvelopeBuoyancyForce` remains τ = 0.
 - Put Bukkit-specific material/world parsing behind interfaces and implement them only in `:paper`.
 - Gate ship physics on `World.isChunkLoaded`. Bukkit implementation must call `org.bukkit.World#isChunkLoaded` (Paper: `ServerChunkCache` / `ChunkMap.getUpdatingChunkIfPresent`). Never `getChunkAt` or `loadChunk` for this probe.
 - The ship client is responsible for turning a `Ship` into a `Body` and for driving `ShipRuntime` after integration.
@@ -124,6 +127,11 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - [x] Unsupported cloth snaps when wind load exceeds rigging strength (`SailRigging`); mast-adjacent cells hold default wind, far cells tear.
 - [x] Torn cloth leaves mass/colliders/sail force and becomes `ClothDebris` stepped with gravity + drag + spin.
 - [x] `ShipPhysics.inspect` reports the sampled `FlowField` wind plus sail force; cloth plates billow from the same wind.
+- [x] Inertia and integration about CoM (`centerOfMassLocal`, `com − R comLocal`).
+- [x] Oriented collider bounds (`Transform.compose`, `Aabb.bounds` uses rotation rows).
+- [x] Contact point + angular impulse (body–body).
+- [x] World-voxel contacts (`Collisions.detectWorld`; proof `WorldContactTest.supportUnderOneEndPitchesTheFreeEndDown`).
+- [x] Buoyancy torque `r_cb × F` (waterline + `FluidBuoyancyForce`; envelope stays τ = 0).
 
 ### Current notes
 
@@ -132,10 +140,10 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 - Sail ideas (not an implementation contract): `docs/superpowers/specs/2026-08-17-sail-propulsion-ideas.md`.
 - Ships / airships / sail-aesthetics review: `docs/superpowers/specs/2026-08-17-physics-models-review.md`.
 - `docs/specs/buoyancy.md` remains the ship-client vertical contract.
-- Generic 6DOF is available to any caller. Archimedes `ShipPose` stores `x,y,z`; yaw is still out. `ShipBody` is rebuilt at identity orientation every tick, so sail torque never becomes heading.
+- Generic 6DOF now includes CoM integration, contact-point angular impulse, and world-voxel contacts. Archimedes `ShipPose` stores `x,y,z`; yaw is still out. `ShipBody` is rebuilt at identity orientation every tick, so sail torque never becomes heading.
 - `archimedes.phys` review (2026-08-17): `Body` is the per-step physics object. `ShipPhysics` is the ship facade (rebuild body, clamp, path, `ShipRuntime`). `RiderCount` and `MaterialKeyResolver` are one-method seams so `:common` stays off Bukkit; they are not unused. No type in that package is a pass-through.
 - Propulsion split from the 2026-08-17 review: watercraft stay liquid buoyancy + sails (lifting sails later); airships should hover on envelope/`FluidBuoyancy(uniform ρ_air)` and drive with `MediumThrustForce`. Pressure sails on airships are optional flavor, not the look.
-- Accuracy (2026-08-19): `QuadraticDragForce` can take a `FlowField` (`v_app = v − u`). AABB colliders give anisotropic `I`; `PhysicsEngine` includes `ω × Iω`. `LiftingSailForce` and `KeelForce` are catalog units. Live `ShipPhysicsImpl.tick` still uses still-medium hull drag and does not attach lifting sails or keels. Waterline/envelope lift remain τ = 0.
+- Accuracy (2026-08-21): `QuadraticDragForce` can take a `FlowField` (`v_app = v − u`). AABB colliders give anisotropic `I` about CoM; `PhysicsEngine` includes `ω × Iω`. `LiftingSailForce` and `KeelForce` are catalog units. Live `ShipPhysicsImpl.tick` still uses still-medium hull drag and does not attach lifting sails or keels. Waterline lift has CoB torque; envelope lift remains τ = 0.
 - Engines/turbines on tick: configured furnace-family blocks apply `MediumThrustForce` along facing. Same law in water or air (`ρ` from liquid if `isFluid`, else injected air). Proof: `ShipPhysicsTest.furnaceFacingSouthAdvancesPoseZOnTick`.
 - Sail snap (2026-08-19): `PressureSailForce` load vs `breakLoad/(1+distance)`. Proof: `ShipPhysicsTest.unsupportedWoolTearsOffInStrongWind`. Ragdoll physics: `ClothDebrisTest.ragdollFallsAndTumbles`.
 
@@ -156,12 +164,13 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 ## Future
 
 - [ ] Propulsion, steering, yaw wired into Archimedes ship gameplay.
-- [ ] Ship-vs-ship and terrain collision.
+- [ ] Ship-vs-ship collision.
+- [x] Terrain voxel contacts in the generic library (`Collisions.detectWorld`)
 - [ ] Multi-ship fluid displacement.
 - [ ] Water entry/splash effects and drowning rules.
 - [ ] Stall, control surfaces, and atmosphere tables (`ρ(z)` as a `DensityField`, not `World.densityField()`).
 - [ ] Attach `AngularDragForce` once vehicle yaw is retained.
-- [ ] Buoyancy torque `r_cb × F` (waterline and envelope lift are still τ = 0).
+- [x] Buoyancy torque `r_cb × F` (waterline + `FluidBuoyancyForce`; envelope still τ = 0)
 - [ ] Added mass / virtual mass in fluid.
 - [x] Attach structure sails on `ShipPhysics.tick` and integrate `ShipPose` x/z
 - [x] Rider carry along XZ (same best-effort carrier as Y; players get velocity, others teleport)
@@ -211,6 +220,8 @@ Success looks like: any domain can create a `Body`, attach `Collider`s and `Forc
 | 2026-08-19 | Ship relative-flow drag, AABB inertia, gyro, lifting sail, and keel as catalog units | User asked to implement the accuracy list; plugin tick still uses still-medium hull drag |
 | 2026-08-19 | Engines/turbines on live tick are `MediumThrustForce`, not rockets | Same density-scaled law; flag drops thrust only |
 | 2026-08-19 | Unsupported wool snaps; torn cells ragdoll as `BlockDisplay`s | User: a sail with no structure should tear off under wind, not stay a rigid sheet |
+| 2026-08-21 | Complete library CoM, buoyancy torque, and world-contact angular impulse; do not wire `ShipPose` orientation | User: physics numbers first; in-game hull stays a brick until a follow-up |
+| 2026-08-21 | `PhysicsEngine.step` does not auto-resolve `detectWorld` | A half-space `isObstacle` (seafloor tests) storms ship ticks; callers that want terrain pitch resolve world contacts themselves |
 
 ## Open questions
 
