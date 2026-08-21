@@ -126,7 +126,7 @@ public final class WaterlineResolver {
 
   /**
    * @param world fluid map
-   * @param bounds collider world bounds
+   * @param b collider world bounds
    * @return highest water-block Y in the collider's column, or {@link #NO_WATER}
    */
   private static int waterSurface(World world, Bounds b) {

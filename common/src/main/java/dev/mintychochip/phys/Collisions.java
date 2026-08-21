@@ -92,8 +92,7 @@ public final class Collisions {
       }
       for (Collider collider : body.colliders()) {
         Bounds box = colliderBounds(body, collider);
-        Vector3d colliderCenter =
-            new Vector3d(box.min()).add(box.max(), new Vector3d()).mul(0.5);
+        Vector3d colliderCenter = new Vector3d(box.min()).add(box.max(), new Vector3d()).mul(0.5);
         if (world.isObstacle(colliderCenter) && !world.fluidField().isFluid(colliderCenter)) {
           continue;
         }
@@ -120,8 +119,7 @@ public final class Collisions {
                 continue;
               }
               Contact contact = aabbContact(body, null, box, new Aabb(p, voxelHalf));
-              if (contact != null
-                  && (best == null || contact.penetration() > best.penetration())) {
+              if (contact != null && (best == null || contact.penetration() > best.penetration())) {
                 best = contact;
               }
             }
