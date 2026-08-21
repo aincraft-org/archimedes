@@ -192,16 +192,14 @@ public final class WaterlineResolver {
   }
 
   /**
-   * Builds a collider transform by combining the body's world position with local collider pose.
+   * Builds a collider transform by composing the body's world pose with the local collider pose.
    *
    * @param body body supplying the world transform
    * @param c collider supplying the local transform
    * @return world-space collider transform
    */
   private static Transform transform(Body body, Collider c) {
-    return new Transform(
-        body.transform().position().add(c.localTransform().position(), new Vector3d()),
-        c.localTransform().orientation());
+    return body.transform().compose(c.localTransform());
   }
 
   /**

@@ -11,7 +11,7 @@ final class DensitySampling {
   /**
    * Displaced fluid mass of one collider under {@code field}.
    *
-   * @param body body providing the world translation
+   * @param body body providing the world pose
    * @param collider collider whose volume is sampled
    * @param field density sampler
    * @return finite non-negative mass
@@ -21,12 +21,7 @@ final class DensitySampling {
     if (volume <= 0) {
       return 0;
     }
-    Vector3d worldCenter =
-        body.transform().position().add(collider.localTransform().position(), new Vector3d());
-    Bounds bounds =
-        collider
-            .shape()
-            .bounds(new Transform(worldCenter, collider.localTransform().orientation()));
+    Bounds bounds = collider.shape().bounds(body.transform().compose(collider.localTransform()));
     Vector3dc min = bounds.min();
     Vector3dc max = bounds.max();
     double sx = max.x() - min.x();

@@ -165,9 +165,7 @@ public final class Collisions {
   }
 
   private static Bounds colliderBounds(Body body, Collider collider) {
-    Vector3d world =
-        body.transform().position().add(collider.localTransform().position(), new Vector3d());
-    return collider.shape().bounds(new Transform(world, collider.localTransform().orientation()));
+    return collider.shape().bounds(body.transform().compose(collider.localTransform()));
   }
 
   private static Aabb enclose(Bounds a, Bounds b) {
